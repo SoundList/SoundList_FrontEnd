@@ -36,18 +36,31 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Simulate registration process
+        const submitButton = registerForm.querySelector('button[type="submit"]');
+        setButtonLoading(submitButton, true);
         showAlert('Creando cuenta...', 'info');
-        
-        // Here you would typically make an API call to your backend
-        // For now, we'll simulate a successful registration
-        setTimeout(() => {
+
+        const API_BASE_URL = 'https://localhost:32769';
+        axios.post(`${API_BASE_URL}/api/User`, {
+            username: username,
+            email: email,
+            password: password
+        })
+        .then(response => {
             showAlert('¡Cuenta creada exitosamente!', 'success');
-            // Redirect to login page or dashboard
             setTimeout(() => {
                 window.location.href = 'login.html';
-            }, 2000);
-        }, 1500);
+            }, 1200);
+        })
+        .catch(error => {
+            const message = (error.response && error.response.data && (error.response.data.message || error.response.data.error))
+                ? error.response.data.message || error.response.data.error
+                : 'No se pudo crear la cuenta';
+            showAlert(message, 'danger');
+        })
+        .finally(() => {
+            setButtonLoading(submitButton, false);
+        });
     });
 
     // Alternative registration method

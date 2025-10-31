@@ -40,17 +40,17 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Creando cuenta...', 'info');
 
-        const API_BASE_URL = 'https://localhost:32769';
+        const API_BASE_URL = 'https://localhost:32771';
         axios.post(`${API_BASE_URL}/api/User`, {
             username: username,
             email: email,
             password: password
         })
         .then(response => {
-            showAlert('¡Cuenta creada exitosamente!', 'success');
+            showAlert('¡Cuenta creada! Te enviamos un mail con el token de verificación. Revisa tu bandeja o spam.', 'info');
             setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1200);
+                window.location.href = 'verify.html';
+            }, 1500);
         })
         .catch(error => {
             const message = (error.response && error.response.data && (error.response.data.message || error.response.data.error))

@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Iniciando sesión...', 'info');
 
-        const API_BASE_URL = 'https://localhost:32769';
+        const API_BASE_URL = 'https://localhost:32771';
         axios.post(`${API_BASE_URL}/api/User/Login`, {
             Usuario: username,
             Password: password

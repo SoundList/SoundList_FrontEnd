@@ -1,0 +1,38 @@
+    .notification-wrapper {
+    position: relative;
+    }
+
+    .notification-icon {
+    font-size: 1.6rem;
+    background-color: rgba(255,255,255,0.12);
+    color: var(--blanco);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    }
+
+    .notification-icon:hover {
+    background-color: var(--morado);
+    box-shadow: 0 0 18px rgba(108,99,255,0.6);
+    }
+
+    .notification-dropdown {
+    position: absolute;
+    right: 0;
+    top: 55px;
+    background: rgba(28,31,74,0.95);
+    border-radius: 12px;
+    padding: 0.8rem;
+    width: 240px;
+    display: none;
+    transition: all 0.3s ease;
+    }
+
+    .notification-dropdown.show {
+    display: block;
+    }

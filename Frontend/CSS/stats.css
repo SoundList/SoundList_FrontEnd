@@ -1,0 +1,31 @@
+    .stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    }
+
+    .stats div strong {
+    font-size: 1.8rem;
+    color: var(--blanco);
+    }
+
+    .stats div p {
+    margin: 0;
+    font-size: 1.4rem;
+    color: rgba(255,255,255,0.8);
+    }
+
+    .btn-container {
+    text-align: center;
+    }
+
+    .btn-edit {
+    background: var(--morado);
+    border: none;
+    border-radius: 25px;
+    padding: 0.7rem 2rem;
+    color: #fff;
+    font-weight: 600;
+    width: 240px;
+    transition: all 0.3s ease;
+    }

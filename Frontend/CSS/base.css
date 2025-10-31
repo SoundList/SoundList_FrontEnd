@@ -1,0 +1,20 @@
+    @import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;600&family=League+Spartan:wght@500;700&display=swap');
+
+    :root {
+    --morado: #6C63FF;
+    --magenta: #FF4F81;
+    --azul-profundo: #1C1F4A;
+    --blanco: #F5F5FA;
+    --amarillo: #FFD85E;
+    }
+
+    body.profile-body {
+    font-family: 'Arimo', sans-serif;
+    background: linear-gradient(to bottom, #1c1f4a 100%, #8d31f3 0%);
+    color: var(--blanco);
+    margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    opacity: 0;
+    animation: fadeIn 0.8s ease-out forwards;
+    }

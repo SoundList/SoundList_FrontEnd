@@ -1,0 +1,32 @@
+    .btn-nav {
+    background: var(--morado);
+    border: none;
+    border-radius: 25px;
+    padding: 0.6rem 1.8rem;
+    font-weight: 600;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(114,0,235,0.3);
+    font-size: 1.2rem;
+    }
+
+    .btn-nav:hover {
+    transform: translateY(-2px);
+    }
+
+    .btn-nav.clicked {
+    background-color: rgba(108,99,255,0.2);
+    box-shadow: 0 0 10px rgba(108,99,255,0.6);
+    }
+
+    .like-btn {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    }
+
+    .like-btn:hover {
+    transform: scale(1.2);
+    }
+
+    .like-btn.liked i {
+    color: red;
+    }

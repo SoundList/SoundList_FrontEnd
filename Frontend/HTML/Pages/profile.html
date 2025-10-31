@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - SoundList</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<link rel="stylesheet" href="../../CSS/base.css">
+<link rel="stylesheet" href="../../CSS/header.css">
+<link rel="stylesheet" href="../../CSS/profile-header.css">
+<link rel="stylesheet" href="../../CSS/stats.css">
+<link rel="stylesheet" href="../../CSS/reviews.css">
+<link rel="stylesheet" href="../../CSS/review-menu.css">
+<link rel="stylesheet" href="../../CSS/notifications.css">
+<link rel="stylesheet" href="../../CSS/buttons.css">
+<link rel="stylesheet" href="../../CSS/animations.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="profile-body">
+
+    <div class="header">
+        <div class="left-section d-flex align-items-center">
+            <img src="../../assets/SOUDLIST_FRONTENDassetsimgdefault-avatar.png" alt="Tu icono" class="header-icon me-3">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar...">
+            </div>
+        </div>
+
+        <div class="nav-buttons d-flex justify-content-center flex-grow-1">
+            <button id="btnInicio" class="btn-nav">Inicio</button>
+            <button id="btnRankings" class="btn-nav">Rankings</button>
+            <button id="btnExplorar" class="btn-nav">Explorar</button>
+        </div>
+
+        <div class="right-icons d-flex align-items-center">
+            <div class="notification-wrapper">
+                <div id="notificationBell" class="notification-icon">🔔</div>
+                <div id="notificationDropdown" class="notification-dropdown">
+                    <p class="no-notifications">No tienes notificaciones</p>
+                    <ul id="notificationList"></ul>
+                </div>
+            </div>
+            <img src="../../assets/SOUDLIST_FRONTENDassetsimgdefault-avatar.png" alt="Tu icono" class="header-icon me-3">
+        </div>
+    </div>
+
+    <main class="container py-3">
+<section class="profile-section mb-3">
+    <div class="user-info d-flex align-items-center">
+        <img id="user-avatar" src="../../assets/SOUDLIST_FRONTENDassetsimgdefault-avatar.png" alt="avatar" class="profile-avatar me-2">
+        <div>
+            <h2 id="user-username" class="username mb-0">WakaPato12</h2>
+            <p id="user-quote" class="user-quote mb-0 small">La música es para mí lo que para el Diego era la pelota</p>
+        </div>
+    </div>
+
+    <div class="stats d-flex justify-content-center gap-4 text-center mb-2">
+        <div>
+            <strong id="user-reviews">5</strong>
+            <p class="mb-0 small">Reviews</p>
+        </div>
+        <div>
+            <strong id="user-following">3</strong>
+            <p class="mb-0 small">Following</p>
+        </div>
+        <div>
+            <strong id="user-followers">5</strong>
+            <p class="mb-0 small">Followers</p>
+        </div>
+    </div>
+    </section>
+
+    <div class="text-center mb-4">
+        <button id="editProfileBtn" class="btn-edit">Editar Perfil</button>
+    </div>
+        </section>
+
+        <div class="d-flex justify-content-between align-items-start" style="gap: 2rem;">
+            <div class="reviews-container flex-fill" style="max-width: 58%;">
+                <h4 class="section-title">RESEÑAS RECIENTES</h4>
+                <div class="reviews-scroll">
+                    <div id="recent-reviews"></div>
+                </div>
+            </div>
+
+    <div class="best-reviews-container flex-fill" style="max-width: 38%;">
+    <h4 class="section-title text-center">MEJORES RESEÑAS</h4>
+
+   <div id="reviewsCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000" style="width: 100%; height: 100%;">
+          <div class="carousel-inner" style="height: 100%;">
+            <div class="carousel-item active">
+              <div class="card p-3 text-center" style="background-color: var(--blanco); border-radius: 12px; height: 100%;">
+                <img src="../../assets/SOUDLIST_FRONTENDassetsimgdefault-avatar.png" alt="user" class="rounded-circle mb-2" width="50" height="50">
+                <h5 class="fw-bold">WakaPato12</h5>
+                <p class="text-muted small mb-2">“Excelente canción, tiene un ritmo increíble y la letra es muy profunda.”</p>
+                <div><i class="fa-solid fa-heart text-danger me-1"></i> <span>24</span></div>
+              </div>
+            </div>
+
+            <div class="carousel-item">
+              <div class="card p-3 text-center" style="background-color: var(--blanco); border-radius: 12px; height: 100%;">
+                <img src="../../assets/SOUDLIST_FRONTENDassetsimgdefault-avatar.png" alt="user" class="rounded-circle mb-2" width="50" height="50">
+                <h5 class="fw-bold">Melomanía88</h5>
+                <p class="text-muted small mb-2">“Una producción impecable, se nota la evolución del artista.”</p>
+                <div><i class="fa-solid fa-heart text-danger me-1"></i> <span>19</span></div>
+              </div>
+            </div>
+
+            <div class="carousel-item">
+              <div class="card p-3 text-center" style="background-color: var(--blanco); border-radius: 12px; height: 100%;">
+                <img src="../../assets/SOUDLIST_FRONTENDassetsimgdefault-avatar.png" alt="user" class="rounded-circle mb-2" width="50" height="50">
+                <h5 class="fw-bold">BeatHunter</h5>
+                <p class="text-muted small mb-2">“El bajo en esta canción es una locura, me encanta el groove.”</p>
+                <div><i class="fa-solid fa-heart text-danger me-1"></i> <span>32</span></div>
+              </div>
+            </div>
+          </div>
+
+          <button class="carousel-control-prev" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Anterior</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Siguiente</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+    <script type="module">
+
+        import { createReviewCard } from '../../JS/Components/reviewCard.js';
+        import { createBestReviewCard } from '../../JS/Components/bestReviewCard.js';
+
+ 
+        import * as userApi from '../../JS/APIs/userApi.js';
+        import * as profileHandler from '../../JS/Handlers/profileHandler.js';
+        import * as navHandler from '../../JS/Handlers/navHandler.js';
+        import * as editProfileHandler from '../../JS/Handlers/editProfileHandler.js';
+        import * as notificationHandler from '../../JS/Handlers/notificationHandler.js';
+        import * as profilePage from '../../JS/Pages/profile.js';
+
+        profilePage.loadUserProfile?.();
+
+        document.getElementById('recent-reviews').innerHTML = createReviewCard('WakaPato12', 'Mi reseña', 'Me encantó esta canción', 5);
+        document.getElementById('best-reviews').innerHTML = createBestReviewCard('Mejor Review', 5, 20);
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

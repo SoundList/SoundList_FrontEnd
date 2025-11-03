@@ -1,12 +1,17 @@
-import { getInicioData, getRankingsData, getExplorarData } from "../../JS/APIs/navApi.js";
+// ================================
+// ⚙️ JS/Handlers/navHandler.js
+// ================================
 
-export function setupNavButtons() {
+// 💡 Ya no hay 'import'. Usamos 'window.navApi'
+
+function setupNavButtons() {
     const inicioBtn = document.getElementById("btnInicio");
     const rankingBtn = document.getElementById("btnRankings");
     const explorarBtn = document.getElementById("btnExplorar");
 
     if (!inicioBtn || !rankingBtn || !explorarBtn) {
-        console.warn("⚠️ No se encontraron los botones de navegación");
+        // console.warn("⚠️ No se encontraron los botones de navegación");
+        // (Es normal si no estás en una página que cargó el header)
         return;
     }
 
@@ -21,37 +26,27 @@ async function handleNavClick(section) {
     try {
         let data;
 
+        // 💡 Llama a la API global
         switch (section) {
             case "inicio":
-                console.log("🔹 Cargando datos de INICIO...");
-                data = await getInicioData();
+                data = await window.navApi.getInicioData();
                 break;
             case "rankings":
-                console.log("🔹 Cargando datos de RANKINGS...");
-                data = await getRankingsData();
+                data = await window.navApi.getRankingsData();
                 break;
             case "explorar":
-                console.log("🔹 Cargando datos de EXPLORAR...");
-                data = await getExplorarData();
+                data = await window.navApi.getExplorarData();
                 break;
         }
-
         console.log(`✅ Datos recibidos de ${section}:`, data);
+
+        // Aquí iría tu lógica para MOSTRAR los datos
 
     } catch (error) {
         console.error(`❌ Error al conectar con la API de "${section}":`, error);
-        alert("Hubo un error al cargar la sección. Intenta de nuevo más tarde.");
-    }
-
-    const btn = document.getElementById(`btn${capitalize(section)}`);
-    if (btn) {
-        btn.classList.add("clicked");
-        setTimeout(() => btn.classList.remove("clicked"), 100);
+        alert("Hubo un error al cargar la sección.");
     }
 }
 
-function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
+// 💡 Se ejecuta cuando el HTML está listo
 document.addEventListener("DOMContentLoaded", setupNavButtons);

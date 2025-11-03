@@ -1,33 +1,79 @@
-    .profile-header {
-    background: rgba(255,255,255,0.05);
-    border-radius: 20px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
+/* ===============================================
+   🎨 CSS/profile.css (CONSOLIDADO)
+   (Layout de la Imagen 1 - "WakaPato12")
+   =============================================== */
 
-    .profile-avatar {
-    width: 108px;
-    height: 108px;
+/* --- 1. Header del Perfil (SIN FONDO) --- */
+.profile-header {
+    background: none;
+    box-shadow: none;
+    border-bottom: 1px solid var(--border-color, #554477);
+    border-radius: 0;
+    padding: 2rem 1rem;
+    
+    /* 💡 ¡CAMBIO! Alinea todo a la izquierda */
+    display: flex;
+    justify-content: flex-start; /* <-- CAMBIADO A 'flex-start' */
+    align-items: center;
+    gap: 5rem; /* <-- ESPACIO entre las dos columnas (ajusta esto a tu gusto) */
+    margin-bottom: 2rem;
+}
+
+/* --- 2. Sección de Info (Izquierda) (Tamaño +20%) --- */
+.profile-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    /* justify-self: start; */ /* No se necesita con flex */
+}
+.profile-avatar {
+    width: 108px; /* 90px * 1.2 */
+    height: 108px; /* 90px * 1.2 */
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--azul-profundo), var(--morado));
-    padding: 4px;
-    }
-
-    .username {
+    border: 3px solid var(--white, #fff); 
+    object-fit: cover;
+    padding: 0;
+}
+.username {
     font-family: 'League Spartan', sans-serif;
     font-weight: 700;
-    font-size: 2.4rem;
-    }
-
-    .user-quote {
-    color: rgba(255,255,255,0.8);
+    font-size: 2.88rem; /* 2.4rem * 1.2 */
+    margin: 0;
+}
+.user-quote {
+    color: var(--text-medium, #B0B0B0);
     font-style: italic;
-    font-size: 1rem;
-    }
+    font-size: 1.2rem; /* 1rem * 1.2 */
+    margin: 0;
+}
 
-    .profile-section {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 1rem;
-    align-items: center;
-    }
+/* --- Contenedor de Columna Derecha (ELIMINADO) --- */
+/* (Ya no se necesita .profile-right-column) */
+
+/* --- 3. Estadísticas (Centro) (Tamaño +20%) --- */
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    flex-shrink: 0; /* Evita que se encoja */
+}
+.stats div {
+    text-align: center; 
+}
+.stats div strong {
+    font-size: 2.16rem; /* 1.8rem * 1.2 */
+    color: var(--text-light, #F0F0F0);
+    display: block; 
+}
+.stats div p {
+    margin: 0;
+    font-size: 1.44rem; /* 1.2rem * 1.2 */
+    color: var(--text-medium, #B0B0B0);
+}
+
+/* --- 4. Botón de Editar (Derecha) --- */
+.btn-container {
+    flex-shrink: 0; /* Evita que se encoja */
+}
+/* (El estilo de .btn-edit se controla en buttons.css) */
+

@@ -1,27 +1,32 @@
-    .notification-wrapper {
+.notification-wrapper {
     position: relative;
-    }
+}
 
-    .notification-icon {
+/* TU .notification-icon original. 
+   PERO, .header.css ya define .notification-icon.
+   Para evitar conflictos, haré este más específico.
+*/
+.notification-wrapper .notification-icon {
     font-size: 1.6rem;
     background-color: rgba(255,255,255,0.12);
     color: var(--blanco);
+    width: 45px; /* Ligeramente diferente a header.css */
+    height: 45px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    /* (Propiedades de .header.css que faltaban) */
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    }
+}
 
-    .notification-icon:hover {
+.notification-wrapper .notification-icon:hover {
     background-color: var(--morado);
     box-shadow: 0 0 18px rgba(108,99,255,0.6);
-    }
+}
 
-    .notification-dropdown {
+.notification-dropdown {
     position: absolute;
     right: 0;
     top: 55px;
@@ -31,8 +36,28 @@
     width: 240px;
     display: none;
     transition: all 0.3s ease;
-    }
+    z-index: 1001; /* Añadido z-index */
+}
 
-    .notification-dropdown.show {
+.notification-dropdown.show {
     display: block;
-    }
+}
+
+/* --- ¡NUEVO! (Añadido de la Imagen 1) --- */
+.notification-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 10px;
+    height: 10px;
+    background-color: #007bff; /* Azul brillante */
+    border-radius: 50%;
+    border: 2px solid var(--azul-profundo);
+}
+.notification-icon.notif-unread {
+    color: var(--amarillo); /* Tu color amarillo */
+    animation: pulse 1.5s infinite;
+}
+.notification-dropdown li.unread-item {
+    font-weight: bold;
+}

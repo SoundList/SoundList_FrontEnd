@@ -1,36 +1,36 @@
-    .header {
+.header {
     background: linear-gradient(0deg, #1c1f4a, #8d31f3);
     padding: 2rem 3rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 3px 10px rgba(2, 0, 97, 0.3);
-    }
+}
 
-    .left-section {
+.left-section {
     display: flex;
     align-items: center;
-    }
+}
 
-    .header-icon {
+.header-icon {
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    }
+}
 
-    .nav-buttons {
+.nav-buttons {
     display: flex;
     gap: 2.5rem;
     justify-content: center;
-    }
+}
 
-    .right-icons {
+.right-icons {
     display: flex;
     align-items: center;
     gap: 50px;
-    }
+}
 
-    .search-bar input {
+.search-bar input {
     border-radius: 25px;
     border: 2px solid rgba(255,255,255,0.3);
     background: var(--blanco);
@@ -38,19 +38,39 @@
     padding: 0.6rem 1.2rem;
     width: 336px;
     transition: all 0.3s ease;
-    }
+}
 
-    .search-bar input:focus {
+.search-bar input:focus {
     outline: none;
     border-color: rgba(255,255,255,0.5);
-    }
+}
 
-    .page-logo, .notification-icon {
-    width: 50px;
-    height: 50px;
+.page-logo {
+    /* 2. Tamaño +15% (50px * 1.15 = 57.5px) */
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(255,255,255,0.2);
-    }
+    /* 1. Sombra eliminada (no hay background-color) */
+    background-color: transparent; 
+    overflow: hidden; /* Para que la imagen respete el círculo */
+}
+
+.page-logo img {
+    width: 160%;
+    height: 160%;
+    object-fit: cover; /* Asegura que la imagen llene el círculo */
+}
+
+/* El icono de notificación (mantiene el estilo original) */
+.notification-icon {
+   width: 50px;
+   height: 50px;
+   border-radius: 50%;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   background-color: rgba(255,255,255,0.2);
+}

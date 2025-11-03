@@ -1,9 +1,9 @@
 /* ===============================================
    🎨 CSS/reviews.css (CONSOLIDADO)
-   (Contiene reviews.css y review-menu.css)
+   (ACTUALIZADO para Menú Modal)
    =============================================== */
 
-/* --- 1. Contenedores de Reseñas (de reviews.css) --- */
+/* --- 1. Contenedores de Columna --- */
 .reviews-container,
 .best-reviews-container {
     background: rgba(255, 255, 255, 0.05); /* Tu fondo original */
@@ -15,85 +15,288 @@
     overflow: visible !important; 
     z-index: 10;
 }
-
-/* --- 2. Tarjeta de Reseña (de ambos archivos) --- */
-.review-card {
-    background: linear-gradient(70deg, #001c9a, #7b008e); /* Tu gradiente */
-    border-radius: 20px;
-    padding: 1.2rem 1.44rem;
-    margin-bottom: 1rem;
-    color: #fff;
-    position: relative;
-    overflow: visible !important;
-    z-index: 20;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--blanco);
+    margin-bottom: 1.5rem;
+    text-align: center;
 }
 
-.review-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35);
-}
-
-/* --- 3. Scroll (de reviews.css) --- */
+/* --- 2. Scroll (de reviews.css) --- */
 .reviews-scroll {
     max-height: 450px; 
     overflow-y: auto;
     padding-right: 6px;
     scrollbar-width: thin;
     scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
-    scroll-behavior: smooth;
-    position: relative;
-    z-index: 1; 
 }
 .reviews-scroll::-webkit-scrollbar { width: 8px; }
 .reviews-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
 .reviews-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
 
-/* --- 4. Opciones de Menú (de ambos archivos) --- */
+
+/* --- 3. Tarjeta de Reseña Estándar --- */
+.review-card {
+    background: linear-gradient(70deg, #001c9a, #7b008e); /* Tu gradiente */
+    border-radius: 20px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    color: #fff;
+    position: relative;
+    
+    /* Layout de 2 Filas */
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto; 
+    grid-template-rows: auto auto;
+    grid-template-areas: 
+        "avatar title stars likes menu"
+        "avatar body  body  body  body";
+    gap: 5px 15px;
+    align-items: center;
+}
+.rc-avatar { grid-area: avatar; }
+.rc-title { grid-area: title; min-width: 0; }
+.rc-body { grid-area: body; min-width: 0; }
+.rc-stars { grid-area: stars; }
+.rc-likes { grid-area: likes; }
+.rc-menu { grid-area: menu; position: relative; }
+
+.review-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35);
+}
+
+.review-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+.rc-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rc-body {
+    font-size: 0.9rem;
+    color: var(--blanco);
+    opacity: 0.8;
+    margin: 0;
+    padding-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.review-stars { color: var(--amarillo); }
+
+.rc-likes {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--blanco);
+    font-weight: 600;
+}
+.rc-likes .fa-heart {
+    font-size: 0.9rem;
+}
+.review-card .btn-like {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    color: inherit;
+}
+.review-card .btn-like i {
+    transition: all 0.2s ease;
+}
+
+
+/* --- 4. Tarjeta del Carrusel (Mejores Reseñas) --- */
+.carousel-item .review-card {
+    margin: 0 0.5rem; 
+}
+
+/* --- 5. Menú Desplegable (MODIFICADO A MODAL) --- */
+
+/* 💡 ¡NUEVO! El overlay (fondo) */
+.review-menu-overlay {
+    display: none; /* Oculto por defecto */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 9999; /* Alto, pero bajo el menú */
+}
+
 .review-options {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     color: rgba(255,255,255,0.7);
     cursor: pointer;
-    position: absolute;
-    top: 10px;
-    right: 14px;
-    z-index: 5000;
+    z-index: 100;
     transition: color 0.15s ease;
 }
 .review-options:hover { color: #fff; }
 
-/* --- 5. Menú Desplegable (de review-menu.css) --- */
+/* 💡 ¡MODIFICADO! El menú ahora es un modal centrado */
 .review-menu {
-    position: absolute;
-    top: 35px;
-    right: 0;
-    background: rgba(4, 13, 177, 0.95);
+    position: fixed; /* 👈 CAMBIO (de absolute) */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    background: rgba(4, 13, 177, 0.95); /* Tu color original */
     border-radius: 16px;
     padding: 0.5rem 0;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
-    min-width: 160px;
+    min-width: 200px; /* Un poco más ancho */
     backdrop-filter: blur(8px);
     display: none;
-    z-index: 999999 !important;
-    pointer-events: auto;
+    z-index: 10000; /* 👈 Por encima del overlay */
+    padding-top: 45px; /* Espacio para el botón de cerrar */
 }
 .review-menu.visible {
     display: block;
 }
-.review-menu button {
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.9);
-    width: 100%;
-    padding: 10px 16px;
-    text-align: left;
-    font-size: 0.95rem;
+
+/* 💡 ¡NUEVO! El botón de la "cruz" (idéntico a Bootstrap) */
+.btn-close-review-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    box-sizing: content-box;
+    width: 1em;
+    height: 1em;
+    padding: 0.25em 0.25em;
+    color: #fff;
+    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
+    border: 0;
+    border-radius: 0.375rem;
+    opacity: 0.7;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+}
+.btn-close-review-menu:hover {
+    opacity: 1;
+}
+
+.review-menu button {
+    background: none; border: none;
+    color: rgba(255,255,255,0.9);
+    width: 100%; padding: 10px 16px;
+    text-align: left; font-size: 0.95rem;
+    cursor: pointer; display: flex;
+    align-items: center; gap: 8px;
 }
 .review-menu button:hover {
     background: rgba(255,255,255,0.15);
     color:#fff;
+}
+
+
+/* --- 6. Modal de Comentarios (CSS) --- */
+/* (Estilos del modal de comentarios, que ya era un modal) */
+.review-modal-content {
+    background: rgba(4, 13, 177, 0.95);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+}
+.modal-header { border-bottom: 1px solid rgba(255,255,255,0.2); }
+.modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-bottom: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+
+/* Estilo para el Item de Comentario */
+.comment-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    
+    display: grid;
+    grid-template-columns: auto 1fr auto; 
+    grid-template-rows: auto auto;
+    grid-template-areas: 
+        "avatar username like"
+        "avatar text     like";
+    gap: 0px 10px;
+    align-items: center;
+}
+.comment-item .comment-avatar {
+    grid-area: avatar;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+}
+.comment-item .comment-username {
+    grid-area: username;
+    color: var(--amarillo);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.comment-item .comment-text {
+    grid-area: text;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--blanco);
+    opacity: 0.9;
+}
+.comment-item .comment-like {
+    grid-area: like;
+    justify-self: end;
+}
+.comment-item .btn-like {
+    font-size: 1rem;
+    color: var(--blanco);
+}
+.comment-item .btn-like i.fa-heart {
+    transition: all 0.2s ease;
+}
+
+/* Estilo para el formulario de Añadir Comentario */
+.comment-form-container {
+    display: flex;
+    padding: 1rem;
+    gap: 10px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+.comment-form-container textarea {
+    flex-grow: 1;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--blanco);
+    resize: none;
+    font-size: 0.9rem;
+    height: 40px; 
+}
+.comment-form-container textarea::placeholder {
+    color: rgba(255,255,255,0.5);
+}
+.btn-send-comment {
+    background: var(--morado);
+    border: none;
+    border-radius: 8px;
+    color: var(--blanco);
+    font-size: 1.2rem;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.btn-send-comment:hover {
+    background: var(--magenta);
 }

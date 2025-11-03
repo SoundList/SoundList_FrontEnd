@@ -1,13 +1,15 @@
 // ================================
 // 📜 JS/Pages/profile.js
-// (Controlador UNIFICADO para la Página de Perfil)
+// (ACTUALIZADO: El carrusel ahora usa la "tarjeta completa")
 // ================================
-// (Datos de prueba - copiados de profileHandler.js para que esta función también los tenga)
+
+// (Datos de prueba para el carrusel)
 const MOCK_REVIEWS_FOR_CAROUSEL = [
-    { id: 102, userId: 99, username: "MusicFan88", avatar: "https://placehold.co/40x40/634F94/F0F0F0?text=M", title: "Random Access Memories", text: "Un clásico moderno.", stars: 4.5, likes: 22, userLiked: true },
-    { id: 103, userId: 98, username: "SaraTune", avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S", title: "After Hours", text: "Oscuro, cinematográfico.", stars: 4, likes: 15, userLiked: false },
-    { id: 106, userId: 96, username: "LofiLover", avatar: "https://placehold.co/40x40/FFD85E/2A1A45?text=L", title: "Modal Soul", text: "Perfecto para relajarse.", stars: 5, likes: 19, userLiked: true }
+    { id: 102, userId: 99, username: "MusicFan88", avatar: "https://placehold.co/40x40/634F94/F0F0F0?text=M", title: "Random Access Memories", text: "Un clásico moderno.", stars: 4.5, likes: 221, userLiked: true },
+    { id: 103, userId: 98, username: "SaraTune", avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S", title: "After Hours", text: "Oscuro, cinematográfico.", stars: 4, likes: 90, userLiked: false },
+    { id: 106, userId: 96, username: "LofiLover", avatar: "https://placehold.co/40x40/FFD85E/2A1A45?text=L", title: "Modal Soul", text: "Perfecto para relajarse.", stars: 5, likes: 260, userLiked: true }
 ];
+
 // Variable global para guardar la instancia del modal (la usará reviewHandler.js)
 var commentsModalInstance = null;
 
@@ -16,7 +18,7 @@ var commentsModalInstance = null;
  * @param {string} type - "best" o "less_rated"
  */
 async function loadCarouselData(type) {
-    const containerId = "featured-reviews-container"; // ID del .carousel-inner
+    const containerId = "featured-reviews-container"; 
     const container = document.getElementById(containerId);
     
     if (!container) {
@@ -30,27 +32,32 @@ async function loadCarouselData(type) {
         let reviewsToShow;
         let emptyMessage = "No hay reseñas disponibles.";
 
+        // 💡 USANDO MOCK DATA (puedes cambiarlo por la API cuando quieras)
         if (type === "best") {
-            reviewsToShow = await window.reviewApi.getBestReviews();
+            // reviewsToShow = await window.reviewApi.getBestReviews();
+            reviewsToShow = MOCK_REVIEWS_FOR_CAROUSEL; 
             emptyMessage = "No hay reseñas destacadas por ahora.";
         } else if (type === "less_rated") {
-            reviewsToShow = await window.reviewApi.getLessCommentedReviews(); 
+            // reviewsToShow = await window.reviewApi.getLessCommentedReviews(); 
+            reviewsToShow = MOCK_REVIEWS_FOR_CAROUSEL.slice(0, 2); 
             emptyMessage = "No hay reseñas menos puntuadas.";
         } else {
             reviewsToShow = [];
         }
+        
         console.warn(`Usando MOCK DATA para el carrusel (tipo: ${type}).`);
+
         // --- Renderizado con el Renderizador Genérico ---
         
         const currentUserId = parseInt(localStorage.getItem("userId"), 10);
         
-        // 1. Creamos la "función dibujadora" que le pasaremos
+        // 💡 ¡CAMBIO! 
+        // Creamos la "función dibujadora" que llama a tu 'createReviewCard' completo.
         const reviewCardRenderer = (review) => {
-            // Pasamos ambos argumentos a createReviewCard
             return createReviewCard(review, currentUserId);
         };
 
-        // 2. Llamamos a la función correcta 'renderGenericCarousel'
+        // Le pasamos la tarjeta completa (reviewCardRenderer) al carrusel
         renderGenericCarousel(containerId, reviewsToShow, reviewCardRenderer, emptyMessage);
 
     } catch (error) {
@@ -63,24 +70,19 @@ async function loadCarouselData(type) {
 // --- PUNTO DE ENTRADA PRINCIPAL ---
 document.addEventListener("DOMContentLoaded", () => {
     
-    // 1. Inicializa la instancia del Modal de Comentarios
     const modalElement = document.getElementById('commentsModal');
     if (modalElement) {
         commentsModalInstance = new bootstrap.Modal(modalElement); 
     }
 
-    // 2. Llama al handler principal para cargar el perfil y las reseñas recientes
-    // (Esta función 'loadUserProfile' viene de profileHandler.js)
     if (typeof loadUserProfile === 'function') {
         loadUserProfile();
     } else {
         console.error("Error: profileHandler.js no se cargó correctamente.");
     }
 
-    // 3. Carga el carrusel con el filtro "Mejores Reseñas" por defecto
     loadCarouselData("best");
 
-    // 4. Asigna la lógica a los botones de filtro del carrusel
     const btnBest = document.getElementById("btnShowBest");
     const btnLessRated = document.getElementById("btnShowLessRated");
 

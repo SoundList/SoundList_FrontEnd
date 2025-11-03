@@ -1,13 +1,10 @@
 // ================================
-// 🌐 JS/APIs/commentsApi.js
-// (Maneja todas las llamadas al microservicio de Comentarios)
+// 🌐 JS/APIs/commentsApi.js (ACTUALIZADO)
 // ================================
 (function() {
 
-    // URL base de tu API de Comentarios
     const API_BASE = "http://localhost:32768/api/Comments";
 
-    // Función auxiliar para los headers (si usas autenticación)
     function getAuthHeaders() {
         const token = localStorage.getItem("authToken");
         return {
@@ -18,7 +15,7 @@
 
     /**
      * 🔹 Obtener comentarios de una reseña específica
-     * (Conecta con tu endpoint: GET /api/Comments/review/{reviewId})
+     * USA TU ENDPOINT: GET /api/Comments/review/{reviewId}
      */
     async function getCommentsForReview(reviewId) {
         try {
@@ -27,32 +24,54 @@
                 headers: getAuthHeaders()
             });
             if (!response.ok) {
-                throw new Error("Error al obtener los comentarios de la reseña");
+                throw new Error("Error al obtener los comentarios");
             }
             return await response.json();
         } catch (error) {
             console.error("❌ Error en getCommentsForReview:", error);
-            throw error; // Lanza el error para que el handler (reviewHandler.js) lo atrape
+            throw error;
         }
     }
 
-    /* // --- FUTURAS FUNCIONES ---
-    // (Añadiremos estas cuando construyamos el formulario de crear comentario)
+    /**
+     * 💡 ¡NUEVO! Crea un nuevo comentario
+     * USA TU ENDPOINT: POST /api/Comments
+     */
+    async function createComment(reviewId, commentText) {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            throw new Error("Usuario no logueado");
+        }
+        
+        // 💡 Asumo que tu backend espera un campo 'text'
+        // y que 'commentId' puede ser null si es un comentario principal
+        const payload = {
+            create: new Date().toISOString(),
+            reviewId: reviewId,
+            commentId: null, 
+            userId: userId,
+            text: commentText 
+        };
 
-    async function createComment(reviewId, text) {
-        // ... (lógica para POST /api/Comments) ...
+        try {
+            const response = await fetch(API_BASE, {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                throw new Error("Error al crear el comentario");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("❌ Error en createComment:", error);
+            throw error;
+        }
     }
 
-    async function deleteComment(commentId) {
-        // ... (lógica para DELETE /api/Comments/{id}) ...
-    }
-    */
-
-
-    // 💡 Exponemos las funciones al objeto global 'window'
     window.commentsApi = {
-        getCommentsForReview
-        // , createComment, deleteComment (cuando las añadamos)
+        getCommentsForReview,
+        createComment // 👈 Añadido
     };
 
 })();

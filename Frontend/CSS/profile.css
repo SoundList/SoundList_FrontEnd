@@ -1,6 +1,6 @@
 /* ===============================================
    🎨 CSS/profile.css (CONSOLIDADO)
-   (Layout de la Imagen 1 - "WakaPato12")
+   (Layout de 3 columnas + Tus tamaños +20%)
    =============================================== */
 
 /* --- 1. Header del Perfil (SIN FONDO) --- */
@@ -11,11 +11,13 @@
     border-radius: 0;
     padding: 2rem 1rem;
     
-    /* 💡 ¡CAMBIO! Alinea todo a la izquierda */
+    /* 💡 ¡CAMBIO DE LAYOUT! */
     display: flex;
-    justify-content: flex-start; /* <-- CAMBIADO A 'flex-start' */
+    /* 'flex-start' alinea todo a la izquierda */
+    justify-content: flex-start; 
     align-items: center;
-    gap: 5rem; /* <-- ESPACIO entre las dos columnas (ajusta esto a tu gusto) */
+    /* Este 'gap' separará los 3 bloques */
+    gap: 5rem; /* <-- ESPACIO entre bloques (ajusta esto a tu gusto) */
     margin-bottom: 2rem;
 }
 
@@ -24,11 +26,12 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    /* justify-self: start; */ /* No se necesita con flex */
+    
+    /* 💡 ¡CAMBIO! Se quitó 'margin-right: auto;' */
 }
 .profile-avatar {
-    width: 108px; /* 90px * 1.2 */
-    height: 108px; /* 90px * 1.2 */
+    width: 108px; /* Tus 90px * 1.2 */
+    height: 108px; /* Tus 90px * 1.2 */
     border-radius: 50%;
     border: 3px solid var(--white, #fff); 
     object-fit: cover;
@@ -37,18 +40,15 @@
 .username {
     font-family: 'League Spartan', sans-serif;
     font-weight: 700;
-    font-size: 2.88rem; /* 2.4rem * 1.2 */
+    font-size: 2.88rem; /* Tus 2.4rem * 1.2 */
     margin: 0;
 }
 .user-quote {
     color: var(--text-medium, #B0B0B0);
     font-style: italic;
-    font-size: 1.2rem; /* 1rem * 1.2 */
+    font-size: 1.2rem; /* Tus 1rem * 1.2 */
     margin: 0;
 }
-
-/* --- Contenedor de Columna Derecha (ELIMINADO) --- */
-/* (Ya no se necesita .profile-right-column) */
 
 /* --- 3. Estadísticas (Centro) (Tamaño +20%) --- */
 .stats {
@@ -61,13 +61,13 @@
     text-align: center; 
 }
 .stats div strong {
-    font-size: 2.16rem; /* 1.8rem * 1.2 */
+    font-size: 2.16rem; /* Tus 1.8rem * 1.2 */
     color: var(--text-light, #F0F0F0);
     display: block; 
 }
 .stats div p {
     margin: 0;
-    font-size: 1.44rem; /* 1.2rem * 1.2 */
+    font-size: 1.44rem; /* Tus 1.2rem * 1.2 */
     color: var(--text-medium, #B0B0B0);
 }
 
@@ -76,4 +76,3 @@
     flex-shrink: 0; /* Evita que se encoja */
 }
 /* (El estilo de .btn-edit se controla en buttons.css) */
-

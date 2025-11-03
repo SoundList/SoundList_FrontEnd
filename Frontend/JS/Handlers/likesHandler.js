@@ -1,50 +1,61 @@
 // ===============================================
 // 👍 JS/Handlers/likesHandler.js
-// MANEJA LA LÓGICA DE DAR Y QUITAR "ME GUSTA"
+// (ACTUALIZADO para manejar Likes de Reviews Y Comentarios)
 // ===============================================
 
 /**
- * Función global que maneja el toggle de like y la interacción con la API.
+ * Función global que maneja el toggle de like (para Reviews O Comentarios).
  * @param {Event} event - El evento de click en el botón de like.
  */
 window.handleLikeToggle = async function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
+    
+    // 💡 ¡CAMBIO! Revisa qué tipo de ID tiene el botón
     const reviewId = button.getAttribute('data-review-id');
+    const commentId = button.getAttribute('data-comment-id');
+
+    if (!reviewId && !commentId) {
+        console.error("Botón de like no tiene ID de review o comentario.");
+        return;
+    }
+
     const icon = button.querySelector("i");
+    // (Ajuste: el like-count puede estar en diferentes lugares)
     const countEl = button.parentElement.querySelector(".like-count");
     let count = parseInt(countEl.textContent);
     
-    // Estado actual del like
-    const liked = icon.style.color === "red";
+    const liked = icon.style.color === 'var(--magenta)'; // (Revisa tu color 'liked')
 
+    // 1. Lógica optimista (actualiza el frontend primero)
+    if (liked) {
+        icon.style.color = "var(--blanco)"; // Color no-like
+        countEl.textContent = count - 1;
+    } else {
+        icon.style.color = "var(--magenta)"; // Color like
+        countEl.textContent = count + 1;
+    }
+
+    // 2. 📡 Llama a la API
     try {
-        // 1. Lógica optimista (actualiza el frontend primero)
-        if (liked) {
-            icon.style.color = "gray";
-            countEl.textContent = count - 1;
-        } else {
-            icon.style.color = "red";
-            countEl.textContent = count + 1;
+        if (reviewId) {
+            // Es un like de Reseña
+            await window.reviewApi.toggleLikeReview(reviewId);
+        } else if (commentId) {
+            // Es un like de Comentario
+            // 💡 (Asegúrate de añadir 'toggleLikeComment' a reviewApi.js)
+            await window.reviewApi.toggleLikeComment(commentId);
         }
-
-        // 2. 📡 Llama a la API
-        // Usamos la función del API global que creamos
-        await window.reviewApi.toggleLikeReview(reviewId);
-
-        // (Opcional) Si la API devuelve el conteo real, actualízalo
-        // const apiResponse = await window.reviewApi.toggleLikeReview(reviewId);
-        // countEl.textContent = apiResponse.newLikeCount;
 
     } catch (error) {
         console.error("Error al manejar el like:", error);
         
         // 3. ❌ Revertir el cambio si la llamada al API falla
-        if (liked) { // Si falló al *quitar* el like
-            icon.style.color = "red";
+        if (liked) {
+            icon.style.color = "var(--magenta)";
             countEl.textContent = count;
-        } else { // Si falló al *dar* el like
-            icon.style.color = "gray";
+        } else {
+            icon.style.color = "var(--blanco)";
             countEl.textContent = count;
         }
         alert("Error al procesar la reacción.");

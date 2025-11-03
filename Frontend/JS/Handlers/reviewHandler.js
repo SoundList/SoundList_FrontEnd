@@ -1,9 +1,11 @@
 // ===============================================
 // ⚙️ JS/Handlers/reviewHandler.js
-// MANEJA EL MENÚ DE OPCIONES (Editar, Eliminar, Reportar)
+// (ACTUALIZADO para lógica de Dropdown)
 // ===============================================
 
-// Función para abrir/cerrar el menú desplegable
+/**
+ * 💡 ¡REVERTIDO! Vuelve a la lógica de calcular posición
+ */
 window.toggleReviewMenu = function(event, menuId) {
     event.stopPropagation();
     const menu = document.getElementById(menuId);
@@ -27,6 +29,7 @@ window.toggleReviewMenu = function(event, menuId) {
     const icon = event.currentTarget;
     const rect = icon.getBoundingClientRect();
     
+    // (Ya no usamos el overlay)
     document.body.appendChild(menu); 
     menu.style.position = "absolute";
     menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
@@ -36,7 +39,9 @@ window.toggleReviewMenu = function(event, menuId) {
     menu.classList.add("visible");
 };
 
-// Cierre global del menú al hacer click afuera
+/**
+ * 💡 ¡RESTAURADO! Cierre global del menú al hacer click afuera
+ */
 document.addEventListener("click", e => {
     if (!e.target.closest(".review-menu") && !e.target.closest(".review-options")) {
         document.querySelectorAll(".review-menu.visible").forEach(m => {
@@ -48,14 +53,13 @@ document.addEventListener("click", e => {
 
 
 // Función que maneja las acciones del menú
-// AHORA ES ASYNC para esperar la llamada a la API
 window.handleMenuAction = async function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
     const action = button.getAttribute('data-action');
     const reviewId = button.getAttribute('data-review-id');
 
-    // Cierra el menú inmediatamente
+    // Cierra el menú (la cajita)
     const menu = button.closest('.review-menu');
     if (menu) {
         menu.classList.remove("visible");
@@ -64,36 +68,26 @@ window.handleMenuAction = async function(event) {
 
     switch (action) {
         case 'edit':
-            // 📞 Llamar a reviewApi.getReview(reviewId) y cargar el formulario
             alert(`Acción: Editar reseña #${reviewId}`);
-            // (Aquí irá la lógica para abrir el modal/página de edición)
             break;
             
         case 'delete':
             if (confirm(`¿Confirma eliminar la reseña #${reviewId}?`)) {
                 try {
-                    // 📞 Llamada a la API
                     await window.reviewApi.deleteReview(reviewId);
-                    
-                    // ✅ Éxito: Eliminar la tarjeta del DOM
                     const cardToRemove = document.querySelector(`.review-card[data-review-id="${reviewId}"]`);
-                    if (cardToRemove) {
-                        cardToRemove.remove();
-                    }
+                    if (cardToRemove) cardToRemove.remove();
                     alert(`Reseña #${reviewId} eliminada.`);
-
                 } catch (error) {
-                    // ❌ Error
                     console.error("Error al eliminar:", error);
-                    alert("No se pudo eliminar la reseña. Inténtalo de nuevo.");
+                    alert("No se pudo eliminar la reseña.");
                 }
             }
             break;
             
         case 'report':
-            // 💡 Llama a la API de Reportar
             const reason = prompt("¿Por qué quieres reportar esta reseña?");
-            if (reason) { // Si el usuario escribe algo y no cancela
+            if (reason) {
                 try {
                     await window.reviewApi.reportReview(reviewId, reason);
                     alert("Reseña reportada exitosamente.");
@@ -104,41 +98,37 @@ window.handleMenuAction = async function(event) {
             }
             break;
             
-       // ... (dentro de la función window.handleMenuAction) ...
-
         case 'comments':
+            // Esta lógica no cambia, sigue abriendo el MODAL
             const modalList = document.getElementById("modalCommentsList");
             if (!modalList || !commentsModalInstance) {
                 console.error("El modal de comentarios no está inicializado.");
-                alert("Error: No se puede abrir la ventana de comentarios.");
                 return;
             }
 
             modalList.innerHTML = "<p>Cargando comentarios...</p>";
-            commentsModalInstance.show();
+            commentsModalInstance.show(); // Sigue abriendo el modal de Bootstrap
 
             try {
-                // 💡 ¡CAMBIO! Llama a la nueva API de Comentarios
                 const comments = await window.commentsApi.getCommentsForReview(reviewId);
 
                 if (comments && comments.length > 0) {
                     modalList.innerHTML = "";
                     comments.forEach(comment => {
-                        modalList.innerHTML += `
-                            <div class="comment-item">
-                                <strong>${comment.username || 'Usuario'}</strong>
-                                <p>${comment.text || '...'}</p>
-                            </div>
-                        `;
+                        modalList.innerHTML += createCommentCard(comment);
                     });
                 } else {
                     modalList.innerHTML = "<p>No hay comentarios en esta reseña.</p>";
                 }
+
+                if (typeof setupCommentForm === 'function') {
+                    setupCommentForm(reviewId);
+                }
+
             } catch (error) {
                 console.error("Error al cargar comentarios:", error);
                 modalList.innerHTML = "<p class='text-danger'>Error al cargar los comentarios.</p>";
             }
             break;
-// ... (resto de tu switch) ...
     }
 };

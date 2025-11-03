@@ -4,7 +4,7 @@
 (function() {
 
     const API_BASE = "http://localhost:32768/Review";
-    const REACTION_API_BASE = "http://localhost:32768/api/Reaction"; // URL Corregida
+    const REACTION_API_BASE = "http://localhost:32768/api/Reaction";
     
     function getAuthHeaders() {
         const token = localStorage.getItem("authToken");
@@ -14,6 +14,7 @@
         };
     }
 
+    // --- (Funciones de Review) ---
     async function createReview(reviewData) {
         try {
             const response = await fetch(`${API_BASE}`, {
@@ -42,8 +43,7 @@
         }
     }
 
-    // 💡 ATENCIÓN: Los siguientes endpoints no están en tu lista.
-    // Los apunto a 'GET /Review' como fallback.
+    // Fallbacks (como pediste, para que apunten a algo)
     async function getMyReviews() {
         console.warn("API: /MyReviews no existe, usando GET /Review como fallback.");
         return getAllReviews(); 
@@ -74,16 +74,28 @@
         }
     }
     
-    // 💡 Esta función llama a 'POST /api/Reaction'
-    // Tu backend debe estar preparado para recibir esto.
+    // --- (Funciones de Reaction) ---
+    
+    /**
+     * 🔹 [ACTUALIZADO] Dar Like a una RESEÑA
+     */
     async function toggleLikeReview(reviewId) {
+        const userId = localStorage.getItem("userId");
+        if (!userId) throw new Error("Usuario no logueado");
+
+        const payload = {
+            create: new Date().toISOString(),
+            reviewId: reviewId,
+            commentId: null, // 👈 Nulo para like de reseña
+            userId: userId
+        };
          try {
-            const response = await fetch(`${REACTION_API_BASE}`, {
+            const response = await fetch(REACTION_API_BASE, {
                 method: "POST",
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ ReviewId: reviewId }) 
+                body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error("Error al dar/quitar like");
+            if (!response.ok) throw new Error("Error al dar/quitar like de reseña");
             return await response.json();
         } catch (error) {
             console.error("❌ Error en toggleLikeReview:", error);
@@ -91,8 +103,37 @@
         }
     }
     
+    /**
+     * 💡 ¡NUEVO! Dar Like a un COMENTARIO
+     */
+    async function toggleLikeComment(commentId) {
+        const userId = localStorage.getItem("userId");
+        if (!userId) throw new Error("Usuario no logueado");
+
+        const payload = {
+            create: new Date().toISOString(),
+            reviewId: null, // 👈 Nulo para like de comentario
+            commentId: commentId,
+            userId: userId
+        };
+         try {
+            const response = await fetch(REACTION_API_BASE, {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error("Error al dar/quitar like de comentario");
+            return await response.json();
+        } catch (error) {
+            console.error("❌ Error en toggleLikeComment:", error);
+            throw error;
+        }
+    }
+    
+    // --- (Función de Reportar - Placeholder) ---
     async function reportReview(reviewId, reason = "Sin motivo") {
         console.warn(`API: Reportar no implementado. Reporte simulado para ${reviewId}`);
+        // Cuando la API esté lista:
         // await fetch(`${API_BASE}/${reviewId}/Report`, { ... });
         return { success: true, message: "Reporte simulado" };
     }
@@ -102,12 +143,13 @@
         createReview,
         getAllReviews,
         getMyReviews,
-        getReviewsByUser: getAllReviews, // Fallback
+        getReviewsByUser: getAllReviews,
         getBestReviews,
         getLessCommentedReviews,
         getRecentReviews,
         deleteReview,
-        toggleLikeReview,
+        toggleLikeReview, 
+        toggleLikeComment, // 👈 Añadido
         reportReview
     };
 

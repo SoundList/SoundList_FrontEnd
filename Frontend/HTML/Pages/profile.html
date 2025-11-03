@@ -30,7 +30,7 @@
         <!-- 2.1. SECCIÓN: HEADER DE PERFIL -->
         <section class="profile-header mb-4">
             
-            <!-- Columna Izquierda: Info -->
+            <!-- Bloque Izquierdo: Avatar e Info -->
             <div class="profile-section">
                 <img src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar">
                 <div>
@@ -39,9 +39,10 @@
                 </div>
             </div>
             
-            <!-- 💡 ¡CAMBIO! Nuevo contenedor para la columna derecha -->
+            <!-- Bloque Derecho: Stats y Botón -->
             <div class="profile-right-column">
-                <!-- Columna Derecha (Arriba): Stats -->
+                
+                <!-- Bloque de Stats -->
                 <div class="stats my-3">
                     <div>
                         <strong id="user-reviews">0</strong>
@@ -56,11 +57,13 @@
                         <p>Seguidos</p>
                     </div>
                 </div>
-                <!-- Columna Derecha (Abajo): Botón -->
+
+                <!-- Botón de Editar (ahora dentro del mismo bloque) -->
                 <div class="btn-container">
                     <button class="btn-edit">Editar Perfil</button>
                 </div>
-            </div>
+
+            </div> <!-- Fin del profile-right-column -->
 
         </section>
 
@@ -96,44 +99,52 @@
         
     </main>
 
+    <!-- 💡 ¡AÑADIDO! Este es el overlay para el menú modal -->
+    <div id="menu-overlay" class="review-menu-overlay"></div>
+
     <!-- 3. MODAL DE COMENTARIOS (Oculto por defecto) -->
     <div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content review-modal-content">
+                
                 <div class="modal-header">
                     <h5 class="modal-title">Comentarios</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                
                 <div class="modal-body" id="modalCommentsList">
                     <!-- 'reviewHandler.js' llenará esto -->
                 </div>
+
+                <!-- Formulario para añadir comentario -->
+                <div class="comment-form-container">
+                    <textarea id="commentTextArea" placeholder="Escribe tu comentario..."></textarea>
+                    <button id="sendCommentBtn" class="btn-send-comment">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
 
 
-    <!-- 4. =============================================== -->
-    <!--           ORDEN DE CARGA DE SCRIPTS (CORREGIDO)     -->
-    <!-- =============================================== -->
-
-    <!-- 4.1. LIBRERÍAS JS (¡Bootstrap DEBE ir primero!) -->
+    <!-- 4. ORDEN DE CARGA DE SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-    <!-- 4.2. APIS -->
     <script src="../../JS/APIs/userApi.js"></script>
     <script src="../../JS/APIs/reviewApi.js"></script>
     <script src="../../JS/APIs/commentsApi.js"></script> 
     <script src="../../JS/APIs/navApi.js"></script>
     <script src="../../JS/APIs/notificationsApi.js"></script>
     
-    <!-- 4.3. COMPONENTES -->
     <script src="../../JS/Components/starRenderer.js"></script>
     <script src="../../JS/Components/header.js"></script>
     <script src="../../JS/Components/reviewCard.js"></script>
     <script src="../../JS/Components/reviewList.js"></script>
+    <script src="../../JS/Components/commentCard.js"></script> 
 
-    <!-- 4.4. HANDLERS -->
     <script src="../../JS/Handlers/headerHandler.js"></script>
     <script src="../../JS/Handlers/navHandler.js"></script>
     <script src="../../JS/Handlers/notificationHandler.js"></script> 
@@ -141,17 +152,15 @@
     <script src="../../JS/Handlers/likesHandler.js"></script>
     <script src="../../JS/Handlers/editProfileHandler.js"></script>
     <script src="../../JS/Handlers/profileHandler.js"></script>
+    <script src="../../JS/Handlers/commentHandler.js"></script>
 
-    <!-- 4.5. SCRIPT DE PÁGINA -->
     <script src="../../JS/Pages/profile.js"></script>
     
-    <!-- 4.6. SCRIPT INYECTOR (Carga el header) -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const headerHTML = window.createHeader();
             document.getElementById("header-placeholder").innerHTML = headerHTML;
 
-            // Llama a los handlers que dependen del header INYECTADO
             if (typeof setupHeaderHandlers === 'function') {
                 setupHeaderHandlers();
             }

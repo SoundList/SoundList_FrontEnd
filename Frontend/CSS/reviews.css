@@ -1,12 +1,12 @@
 /* ===============================================
    🎨 CSS/reviews.css (CONSOLIDADO)
-   (ACTUALIZADO para Menú Modal)
+   (CORREGIDO: Layout del grid de comentarios)
    =============================================== */
 
 /* --- 1. Contenedores de Columna --- */
 .reviews-container,
 .best-reviews-container {
-    background: rgba(255, 255, 255, 0.05); /* Tu fondo original */
+    background: rgba(255, 255, 255, 0.05); 
     border-radius: 20px;
     padding: 1.2rem;
     margin-bottom: 2rem;
@@ -38,14 +38,14 @@
 
 /* --- 3. Tarjeta de Reseña Estándar --- */
 .review-card {
-    background: linear-gradient(70deg, #001c9a, #7b008e); /* Tu gradiente */
+    background: linear-gradient(70deg, #001c9a, #7b008e); 
     border-radius: 20px;
     padding: 1rem 1.2rem;
     margin-bottom: 1rem;
     color: #fff;
     position: relative;
+    z-index: 20;
     
-    /* Layout de 2 Filas */
     display: grid;
     grid-template-columns: auto 1fr auto auto auto; 
     grid-template-rows: auto auto;
@@ -60,11 +60,11 @@
 .rc-body { grid-area: body; min-width: 0; }
 .rc-stars { grid-area: stars; }
 .rc-likes { grid-area: likes; }
-.rc-menu { grid-area: menu; position: relative; }
+.rc-menu { grid-area: menu; position: relative; } 
 
 .review-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35);
+    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35), 0 0 25px rgba(255, 79, 129, 0.3);
 }
 
 .review-avatar {
@@ -120,21 +120,7 @@
     margin: 0 0.5rem; 
 }
 
-/* --- 5. Menú Desplegable (MODIFICADO A MODAL) --- */
-
-/* 💡 ¡NUEVO! El overlay (fondo) */
-.review-menu-overlay {
-    display: none; /* Oculto por defecto */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    z-index: 9999; /* Alto, pero bajo el menú */
-}
-
+/* --- 5. Menú Desplegable (de Reseñas) --- */
 .review-options {
     font-size: 1.3rem;
     color: rgba(255,255,255,0.7);
@@ -144,45 +130,21 @@
 }
 .review-options:hover { color: #fff; }
 
-/* 💡 ¡MODIFICADO! El menú ahora es un modal centrado */
 .review-menu {
-    position: fixed; /* 👈 CAMBIO (de absolute) */
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    
-    background: rgba(4, 13, 177, 0.95); /* Tu color original */
+    position: absolute; 
+    top: 25px; 
+    right: 0;
+    background: rgba(4, 13, 177, 0.95);
     border-radius: 16px;
     padding: 0.5rem 0;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
-    min-width: 200px; /* Un poco más ancho */
+    min-width: 160px;
     backdrop-filter: blur(8px);
     display: none;
-    z-index: 10000; /* 👈 Por encima del overlay */
-    padding-top: 45px; /* Espacio para el botón de cerrar */
+    z-index: 999999 !important;
 }
 .review-menu.visible {
     display: block;
-}
-
-/* 💡 ¡NUEVO! El botón de la "cruz" (idéntico a Bootstrap) */
-.btn-close-review-menu {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    box-sizing: content-box;
-    width: 1em;
-    height: 1em;
-    padding: 0.25em 0.25em;
-    color: #fff;
-    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
-    border: 0;
-    border-radius: 0.375rem;
-    opacity: 0.7;
-    cursor: pointer;
-}
-.btn-close-review-menu:hover {
-    opacity: 1;
 }
 
 .review-menu button {
@@ -200,7 +162,6 @@
 
 
 /* --- 6. Modal de Comentarios (CSS) --- */
-/* (Estilos del modal de comentarios, que ya era un modal) */
 .review-modal-content {
     background: rgba(4, 13, 177, 0.95);
     border-radius: 20px;
@@ -219,7 +180,17 @@
 .modal-body::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
 .modal-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
 
-/* Estilo para el Item de Comentario */
+/* Mensajes de error/vacío en blanco */
+.modal-body .text-danger,
+.modal-body .no-reviews {
+    color: var(--blanco) !important;
+    opacity: 0.8;
+    text-align: center;
+    padding: 2rem 0;
+}
+
+
+/* --- 7. Estilo para el Item de Comentario --- */
 .comment-item {
     background: rgba(0,0,0,0.2);
     padding: 10px 15px;
@@ -227,19 +198,22 @@
     margin-bottom: 10px;
     
     display: grid;
-    grid-template-columns: auto 1fr auto; 
-    grid-template-rows: auto auto;
+    /* 💡 ¡ARREGLO! 4 Columnas */
+    grid-template-columns: auto 1fr auto auto; 
+    grid-template-rows: auto auto; 
+    /* 💡 ¡ARREGLO! 'text' solo ocupa una celda, 'icons' es nuevo */
     grid-template-areas: 
-        "avatar username like"
-        "avatar text     like";
+        "avatar username .    like"  /* (Likes en Fila 1) */
+        "avatar text     text icons"; /* (Iconos en Fila 2) */
     gap: 0px 10px;
-    align-items: center;
+    align-items: start;
 }
 .comment-item .comment-avatar {
     grid-area: avatar;
     width: 35px;
     height: 35px;
     border-radius: 50%;
+    margin-top: 5px;
 }
 .comment-item .comment-username {
     grid-area: username;
@@ -256,7 +230,10 @@
 }
 .comment-item .comment-like {
     grid-area: like;
-    justify-self: end;
+    justify-self: end; 
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 .comment-item .btn-like {
     font-size: 1rem;
@@ -266,7 +243,36 @@
     transition: all 0.2s ease;
 }
 
-/* Estilo para el formulario de Añadir Comentario */
+/* Iconos de acción (Lápiz, Tacho, Bandera) */
+.comment-action-icons {
+    /* 💡 ¡ARREGLO! Asignado a su propia área */
+    grid-area: icons; 
+    justify-self: end; 
+    align-self: end;   
+    
+    display: flex;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+.comment-action-icons i {
+    color: rgba(255,255,255,0.5); 
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.comment-action-icons i:hover {
+    color: var(--morado); 
+    transform: scale(1.1);
+}
+.comment-action-icons i:active {
+    transform: scale(0.9);
+    color: var(--magenta); 
+}
+.comment-action-icons .fa-trash:hover {
+    color: var(--magenta); 
+}
+
+
+/* --- 8. Formulario de Añadir Comentario --- */
 .comment-form-container {
     display: flex;
     padding: 1rem;
@@ -275,28 +281,38 @@
 }
 .comment-form-container textarea {
     flex-grow: 1;
-    background: rgba(0,0,0,0.2);
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 8px;
-    padding: 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    border-radius: 0;
+    padding: 10px 5px;
     color: var(--blanco);
     resize: none;
     font-size: 0.9rem;
-    height: 40px; 
+    height: 45px; 
+    transition: border-color 0.2s ease;
+}
+.comment-form-container textarea:focus {
+    outline: none;
+    border-bottom-color: var(--morado);
 }
 .comment-form-container textarea::placeholder {
     color: rgba(255,255,255,0.5);
 }
+
 .btn-send-comment {
-    background: var(--morado);
+    background: transparent;
     border: none;
     border-radius: 8px;
     color: var(--blanco);
     font-size: 1.2rem;
     padding: 0 12px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    opacity: 0.7;
 }
-.btn-send-comment:hover {
-    background: var(--magenta);
+.btn-send-comment:hover,
+.btn-send-comment:active {
+    background: var(--morado);
+    opacity: 1;
 }

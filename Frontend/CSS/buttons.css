@@ -14,33 +14,25 @@
     box-shadow: 0 3px 10px rgba(114,0,235,0.3);
     font-size: 1.2rem; /* Original */
     
-    /* --- Añadido --- */
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
-/* Efecto Hover (Lila) */
 .btn-nav:hover {
     transform: translateY(-2px);
-    background-color: #8a6be6; /* Tono "lila" más claro que --morado */
+    background-color: #8a6be6; 
     box-shadow: 0 6px 15px rgba(114,0,235,0.5);
 }
-
-/* Efecto Active (Click) */
 .btn-nav:active {
     transform: translateY(0);
-    background-color: #5a4fcf; /* Tono más oscuro de --morado */
+    background-color: #5a4fcf; 
     box-shadow: 0 2px 5px rgba(114,0,235,0.3);
 }
-
-/* Estado 'clicked' de tu JS */
 .btn-nav.clicked {
     background-color: rgba(108,99,255,0.2);
     box-shadow: 0 0 10px rgba(108,99,255,0.6);
 }
 
 /* --- Botón "Editar Perfil" (Tu estilo original - Tamaño +20%) --- */
-/* (Basado en el original de stats.css: 0.7rem, 2rem, 240px) */
 .btn-edit {
     background: var(--morado);
     border: none;
@@ -48,58 +40,52 @@
     padding: 0.84rem 2.4rem; /* (0.7 * 1.2) (2 * 1.2) */
     color: #fff;
     font-weight: 600;
-    width: 288px; /* 240px * 1.2 */
+    
+    /* 💡 ¡CAMBIO! Ancho 100% para ajustarse al contenedor */
+    width: 100%;
+    font-size: 1.32rem;
     transition: all 0.3s ease;
     cursor: pointer;
 }
-
-/* Efecto Hover (Lila) */
 .btn-edit:hover {
-    background-color: #8a6be6; /* Tono "lila" más claro */
+    background-color: #8a6be6; 
     border-color: var(--accent-purple, #9A7BFF);
     transform: translateY(-2px);
     box-shadow: 0 6px 15px var(--shadow-color, rgba(0,0,0,0.2));
 }
-
-/* Efecto Active (Click) */
 .btn-edit:active {
     transform: translateY(0);
-    background: #5a4fcf; /* Tono más oscuro de --morado */
+    background: #5a4fcf; 
     box-shadow: 0 2px 5px var(--shadow-color, rgba(0,0,0,0.2));
 }
 
 
-/* --- Botón "Iniciar Sesión" (Estilo Imagen 1 - Tamaño +14%) --- */
-/* 💡 ¡CAMBIO! Ahora usa el estilo de .btn-nav por defecto */
+/* --- Botón "Iniciar Sesión" (Morado -> Rojo al click) --- */
 .btn-login {
     background: var(--morado); /* Color morado por defecto */
     border: none;
-    border-radius: 25px; /* Igual que .btn-nav */
-    padding: 0.6rem 1.8rem; /* Igual que .btn-nav */
-    font-size: 1.2rem; /* Igual que .btn-nav */
+    border-radius: 25px; 
+    padding: 0.6rem 1.8rem; 
+    font-size: 1.2rem; 
     font-weight: 600;
     color: #fff;
     box-shadow: 0 3px 10px rgba(114,0,235,0.3);
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
-/* Efecto Hover (Lila) */
 .btn-login:hover {
     transform: translateY(-2px);
     background-color: #8a6be6; /* Tono "lila" */
     box-shadow: 0 6px 15px rgba(114,0,235,0.5);
 }
-
-/* Efecto Active (Click) - 💡 ¡CAMBIO! Ahora es rojo */
 .btn-login:active {
-    background-color: var(--accent-red, #FF4757); /* Rojo al hacer clic */
+    background-color: var(--magenta, #FF4F81); /* Rojo al hacer clic */
     transform: translateY(0);
     box-shadow: 0 2px 5px var(--shadow-color, rgba(0,0,0,0.2));
 }
 
 
-/* --- Botón de Like (Tu original - sin cambios de tamaño) --- */
+/* --- Botón de Like (Tu original) --- */
 .like-btn,
 .btn-like {
     cursor: pointer;
@@ -109,12 +95,10 @@
     padding: 0;
     color: rgba(255,255,255,0.6);
 }
-
 .like-btn:hover,
 .btn-like:hover {
     transform: scale(1.2);
 }
-
 .like-btn.liked i,
 .btn-like.liked i {
     color: red;

@@ -1,6 +1,6 @@
 /* ===============================================
    🎨 CSS/profile.css (CONSOLIDADO)
-   (Layout de 3 columnas + Tus tamaños +20%)
+   (Layout "casi tocando" + Avatar +20%)
    =============================================== */
 
 /* --- 1. Header del Perfil (SIN FONDO) --- */
@@ -11,27 +11,25 @@
     border-radius: 0;
     padding: 2rem 1rem;
     
-    /* 💡 ¡CAMBIO DE LAYOUT! */
+    /* 💡 Tu layout "casi tocando" (Avatar/Info a la izq) */
     display: flex;
-    /* 'flex-start' alinea todo a la izquierda */
     justify-content: flex-start; 
     align-items: center;
-    /* Este 'gap' separará los 3 bloques */
-    gap: 5rem; /* <-- ESPACIO entre bloques (ajusta esto a tu gusto) */
+    gap: 5rem; /* <-- ESPACIO entre los dos bloques */
     margin-bottom: 2rem;
 }
 
-/* --- 2. Sección de Info (Izquierda) (Tamaño +20%) --- */
+/* --- 2. Sección de Info (Columna Izquierda) (Tamaño +20%) --- */
 .profile-section {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    
-    /* 💡 ¡CAMBIO! Se quitó 'margin-right: auto;' */
+    flex-shrink: 0; 
 }
 .profile-avatar {
-    width: 108px; /* Tus 90px * 1.2 */
-    height: 108px; /* Tus 90px * 1.2 */
+    /* (Tu tamaño +20% de 108px -> 130px) */
+    width: 220px; /* (El tamaño que tenías) */
+    height: 220px; /* (El tamaño que tenías) */
     border-radius: 50%;
     border: 3px solid var(--white, #fff); 
     object-fit: cover;
@@ -40,39 +38,100 @@
 .username {
     font-family: 'League Spartan', sans-serif;
     font-weight: 700;
-    font-size: 2.88rem; /* Tus 2.4rem * 1.2 */
+    font-size: 2.88rem; /* (Tu tamaño +20% anterior) */
     margin: 0;
 }
 .user-quote {
     color: var(--text-medium, #B0B0B0);
     font-style: italic;
-    font-size: 1.2rem; /* Tus 1rem * 1.2 */
+    font-size: 1.2rem; /* (Tu tamaño +20% anterior) */
     margin: 0;
 }
 
-/* --- 3. Estadísticas (Centro) (Tamaño +20%) --- */
+/* --- 3. 💡 COLUMNA DERECHA --- */
+/* (Agrupa Stats y Botón) */
+.profile-right-column {
+    display: flex;
+    flex-direction: column; /* Pone el botón DEBAJO de las stats */
+    align-items: stretch;  /* Estira el contenido (el botón) */
+    gap: 1.5rem; /* Espacio entre stats y botón */
+}
+
+/* --- 4. Estadísticas (Tamaño +20%) --- */
+/* (Ahora es hijo de .profile-right-column) */
 .stats {
     display: flex;
     justify-content: center;
     gap: 3rem;
-    flex-shrink: 0; /* Evita que se encoja */
+    flex-shrink: 0;
 }
 .stats div {
     text-align: center; 
 }
 .stats div strong {
-    font-size: 2.16rem; /* Tus 1.8rem * 1.2 */
+    font-size: 2.16rem; /* (Tu tamaño +20% anterior) */
     color: var(--text-light, #F0F0F0);
     display: block; 
 }
 .stats div p {
     margin: 0;
-    font-size: 1.44rem; /* Tus 1.2rem * 1.2 */
+    font-size: 1.44rem; /* (Tu tamaño +20% anterior) */
     color: var(--text-medium, #B0B0B0);
 }
 
-/* --- 4. Botón de Editar (Derecha) --- */
-.btn-container {
-    flex-shrink: 0; /* Evita que se encoja */
-}
+/* --- 5. Botón de Editar --- */
 /* (El estilo de .btn-edit se controla en buttons.css) */
+
+
+
+/* ===============================================
+   CÓDIGO DE LAYOUT (para las columnas "lado a lado" de reseñas)
+   =============================================== */
+
+.profile-main-content {
+    display: flex;
+    flex-wrap: wrap; 
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+/* 💡 ¡MODIFICADO! Añadidos estilos de contenedor */
+.recent-reviews-section,
+.featured-reviews-section {
+    /* 1. Color claro (como en la foto ...204304.png) */
+    background: rgba(255, 69, 249, 0.11); /* Tu fondo original de .reviews-container */
+    border-radius: 20px;
+    padding: 1.2rem;
+    box-shadow: 0 4px 15px rgba(255, 0, 221, 0.441);
+
+    /* Layout de Columna */
+    min-width: 300px;
+}
+.recent-reviews-section {
+    flex: 3;
+    min-width: 400px;
+}
+.featured-reviews-section {
+    flex: 2;
+}
+
+/* 💡 ¡AÑADIDO! Títulos más grandes y gruesos */
+.recent-reviews-section h2,
+.featured-reviews-section h2 {
+    font-size: 1.5rem;  /* Más grande */
+    font-weight: 700;   /* Más grueso */
+    text-align: center; /* Centrado como en la foto */
+    color: var(--blanco);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase; /* (Como en la foto) */
+}
+
+@media (max-width: 992px) {
+    .profile-main-content {
+        flex-direction: column;
+    }
+    .recent-reviews-section,
+    .featured-reviews-section {
+        min-width: 100%;
+    }
+}

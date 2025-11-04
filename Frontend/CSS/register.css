@@ -1,309 +1,317 @@
-/* Register Page Styles */
-body {
-    font-family: 'Arimo', sans-serif;
-    opacity: 0;
-    animation: gentleFadeIn 0.8s ease-out forwards;
-    background: #1c1f4a;
-    margin: 0;
-    padding: 0;
-}
+/* ===============================================
+   🎨 CSS/reviews.css (CONSOLIDADO)
+   (CORREGIDO: Menú de comentario reemplazado por iconos)
+   =============================================== */
 
-@keyframes gentleFadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.register-container {
-    background: linear-gradient(to bottom, #8d31f3 0%, #1c1f4a 100%);
-    min-height: 100vh;
-}
-
-.register-form-container {
-    background: transparent;
+/* --- 1. Contenedores de Columna --- */
+.reviews-container,
+.best-reviews-container {
+    background: rgba(255, 255, 255, 0.05); 
     border-radius: 20px;
-    padding: 3rem;
-    max-width: 600px;
-    width: 100%;
-}
-
-.logo-container {
-    margin-bottom: 0.5rem;
-}
-
-.robot-logo {
-    margin-bottom: 0.2rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.logo-image {
-    width: 180px;
-    height: 180px;
-    object-fit: contain;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-    transition: transform 0.3s ease;
-}
-
-.logo-image:hover {
-    transform: scale(1.05);
-}
-
-.logo-text {
-    color: #fff;
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin: 0;
-}
-
-.form-title {
-    color: #fff;
-    font-family: 'League Spartan', sans-serif;
-    font-size: 1.9rem;
-    font-weight: 600;
-    margin-top: -1.3rem;
+    padding: 1.2rem;
     margin-bottom: 2rem;
-    text-align: center;
-    line-height: 1.1;
-    white-space: nowrap;
-    display: block;
-    width: 100%;
-    transform: translateX(-70px);
+    box-shadow: 0 4px 15px rgba(86, 60, 255, 0.3);
+    position: relative;
+    overflow: visible !important; 
+    z-index: 10;
 }
-
-.form-label {
-    color: #fff;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-}
-
-.form-control {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 10px;
-    color: #fff;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.form-control:focus {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
-    color: #fff;
-}
-
-.form-control::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.form-text {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-}
-
-.btn-continue {
-    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%);
-    border: none;
-    border-radius: 25px;
-    padding: 0.75rem 2rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #fff;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-}
-
-.btn-continue:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-    color: #fff;
-}
-
-.btn-alternative {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 25px;
-    color: #fff;
-    padding: 0.75rem 1rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.btn-alternative:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.5);
-    color: #fff;
-    transform: translateY(-1px);
-}
-
-.text-decoration-none {
-    color: #fff;
-    opacity: 0.8;
-    transition: opacity 0.3s ease;
-}
-
-.text-decoration-none:hover {
-    opacity: 1;
-    color: #fff;
-}
-
-.login-link {
-    color: #fff;
-    text-decoration: none;
-    border-bottom: 1px solid #fff;
-    padding-bottom: 1px;
-    transition: all 0.3s ease;
-}
-
-.login-link:hover {
-    color: #fff;
-    border-bottom-color: rgba(255, 255, 255, 0.7);
-    opacity: 0.8;
-}
-
-/* Custom Alert Styles */
-.custom-alert {
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--blanco);
     margin-bottom: 1.5rem;
-    border-radius: 12px;
-    padding: 0;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    animation: slideDown 0.3s ease-out;
+    text-align: center;
 }
 
-.custom-alert-warning {
-    background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
-    border-left: 4px solid #ff4757;
+/* --- 2. Scroll (de reviews.css) --- */
+.reviews-scroll {
+    max-height: 450px; 
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+.reviews-scroll::-webkit-scrollbar { width: 8px; }
+.reviews-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
+.reviews-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+
+
+/* --- 3. Tarjeta de Reseña Estándar --- */
+.review-card {
+    background: linear-gradient(70deg, #001c9a, #7b008e); 
+    border-radius: 20px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    color: #fff;
+    position: relative;
+    z-index: 20;
+    
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto; 
+    grid-template-rows: auto auto;
+    grid-template-areas: 
+        "avatar title stars likes menu"
+        "avatar body  body  body  body";
+    gap: 5px 15px;
+    align-items: center;
+}
+.rc-avatar { grid-area: avatar; }
+.rc-title { grid-area: title; min-width: 0; }
+.rc-body { grid-area: body; min-width: 0; }
+.rc-stars { grid-area: stars; }
+.rc-likes { grid-area: likes; }
+.rc-menu { grid-area: menu; position: relative; } 
+
+.review-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35), 0 0 25px rgba(255, 79, 129, 0.3);
 }
 
-.custom-alert-info {
-    background: linear-gradient(135deg, #4ecdc4, #6dd5ed);
-    border-left: 4px solid #26d0ce;
+.review-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
 }
-
-.custom-alert-success {
-    background: linear-gradient(135deg, #51cf66, #69db7c);
-    border-left: 4px solid #40c057;
+.rc-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+.rc-body {
+    font-size: 0.9rem;
+    color: var(--blanco);
+    opacity: 0.8;
+    margin: 0;
+    padding-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.review-stars { color: var(--amarillo); }
 
-.alert-content {
+.rc-likes {
     display: flex;
     align-items: center;
-    padding: 1rem 1.25rem;
-    color: #fff;
-    font-weight: 500;
+    gap: 5px;
+    color: var(--blanco);
+    font-weight: 600;
 }
-
-.alert-icon {
-    margin-right: 0.75rem;
-    font-size: 1.2rem;
-    font-weight: bold;
+.rc-likes .fa-heart {
+    font-size: 0.9rem;
 }
-
-.custom-alert-warning .alert-icon::before {
-    content: "⚠️";
-}
-
-.custom-alert-info .alert-icon::before {
-    content: "ℹ️";
-}
-
-.custom-alert-success .alert-icon::before {
-    content: "✅";
-}
-
-.alert-message {
-    flex: 1;
-    font-size: 0.95rem;
-}
-
-.alert-close {
+.review-card .btn-like {
     background: none;
     border: none;
-    color: #fff;
-    font-size: 1.5rem;
-    cursor: pointer;
     padding: 0;
-    margin-left: 0.75rem;
+    margin: 0;
+    line-height: 1;
+    color: inherit;
+}
+.review-card .btn-like i {
+    transition: all 0.2s ease;
+}
+
+
+/* --- 4. Tarjeta del Carrusel (Mejores Reseñas) --- */
+.carousel-item .review-card {
+    margin: 0 0.5rem; 
+}
+
+/* --- 5. Menú Desplegable (de Reseñas) --- */
+.review-options {
+    font-size: 1.3rem;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    z-index: 100;
+    transition: color 0.15s ease;
+}
+.review-options:hover { color: #fff; }
+
+.review-menu {
+    position: absolute; 
+    top: 25px; 
+    right: 0;
+    background: rgba(4, 13, 177, 0.95);
+    border-radius: 16px;
+    padding: 0.5rem 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+    min-width: 160px;
+    backdrop-filter: blur(8px);
+    display: none;
+    z-index: 999999 !important;
+}
+.review-menu.visible {
+    display: block;
+}
+
+.review-menu button {
+    background: none; border: none;
+    color: rgba(255,255,255,0.9);
+    width: 100%; padding: 10px 16px;
+    text-align: left; font-size: 0.95rem;
+    cursor: pointer; display: flex;
+    align-items: center; gap: 8px;
+}
+.review-menu button:hover {
+    background: rgba(255,255,255,0.15);
+    color:#fff;
+}
+
+
+/* --- 6. Modal de Comentarios (CSS) --- */
+.review-modal-content {
+    background: rgba(4, 13, 177, 0.95);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+}
+.modal-header { border-bottom: 1px solid rgba(255,255,255,0.2); }
+.modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-bottom: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+
+/* Mensajes de error/vacío en blanco */
+.modal-body .text-danger,
+.modal-body .no-reviews {
+    color: var(--blanco) !important;
     opacity: 0.8;
-    transition: opacity 0.2s ease;
+    text-align: center;
+    padding: 2rem 0;
 }
 
-.alert-close:hover {
-    opacity: 1;
-}
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* --- 7. Estilo para el Item de Comentario --- */
+.comment-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    
+    display: grid;
+    grid-template-columns: auto 1fr auto; 
+    grid-template-rows: auto auto; 
+    grid-template-areas: 
+        "avatar username like"
+        "avatar text     text"; 
+    gap: 0px 10px;
+    align-items: start;
 }
-
-/* Field Error Styles */
-.form-control.is-invalid {
-    border-color: #ff4757;
-    box-shadow: 0 0 0 0.2rem rgba(255, 71, 87, 0.25);
+.comment-item .comment-avatar {
+    grid-area: avatar;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    margin-top: 5px;
 }
-
-.field-error {
-    color: #ff4757;
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
+.comment-item .comment-username {
+    grid-area: username;
+    color: var(--amarillo);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.comment-item .comment-text {
+    grid-area: text;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--blanco);
+    opacity: 0.9;
+}
+.comment-item .comment-like {
+    grid-area: like;
+    justify-self: end; 
     display: flex;
     align-items: center;
-    font-weight: 500;
+    gap: 5px;
+}
+.comment-item .btn-like {
+    font-size: 1rem;
+    color: var(--blanco);
+}
+.comment-item .btn-like i.fa-heart {
+    transition: all 0.2s ease;
 }
 
-.field-error::before {
-    content: "⚠️";
-    margin-right: 0.5rem;
-    font-size: 0.8rem;
+/* Iconos de acción (Lápiz, Tacho, Bandera) */
+.comment-action-icons {
+    grid-area: text; 
+    justify-self: end; 
+    align-self: end;   
+    
+    display: flex;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+.comment-action-icons i {
+    color: rgba(255,255,255,0.5); 
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.comment-action-icons i:hover {
+    color: var(--morado); 
+    transform: scale(1.1);
+}
+/* 💡 ¡NUEVO! Efecto :active para el clic */
+.comment-action-icons i:active {
+    transform: scale(0.9);
+    color: var(--magenta); /* Se pone rojo/magenta al hacer clic */
+}
+/* Específicos (opcional) */
+.comment-action-icons .fa-trash:hover {
+    color: var(--magenta); /* Rojo para el tacho */
 }
 
 
-/* Responsive Design */
-@media (max-width: 991.98px) {
-    .register-form-container {
-        margin: 2rem 1rem;
-        padding: 2rem;
-    }
-    
-    .logo-text {
-        font-size: 2rem;
-    }
-    
-    .form-title {
-        font-size: 1.5rem;
-    }
+/* --- 8. Formulario de Añadir Comentario --- */
+.comment-form-container {
+    display: flex;
+    padding: 1rem;
+    gap: 10px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+.comment-form-container textarea {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    border-radius: 0;
+    padding: 10px 5px;
+    color: var(--blanco);
+    resize: none;
+    font-size: 0.9rem;
+    height: 45px; 
+    transition: border-color 0.2s ease;
+}
+.comment-form-container textarea:focus {
+    outline: none;
+    border-bottom-color: var(--morado);
+}
+.comment-form-container textarea::placeholder {
+    color: rgba(255,255,255,0.5);
 }
 
-@media (max-width: 575.98px) {
-    .register-form-container {
-        padding: 1.5rem;
-        margin: 1rem;
-    }
-    
-    .logo-icon {
-        font-size: 2.5rem;
-    }
-    
-    .logo-text {
-        font-size: 1.8rem;
-    }
-    
-    .form-title {
-        font-size: 1.3rem;
-    }
+.btn-send-comment {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--blanco);
+    font-size: 1.2rem;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+.btn-send-comment:hover,
+.btn-send-comment:active {
+    background: var(--morado);
+    opacity: 1;
 }

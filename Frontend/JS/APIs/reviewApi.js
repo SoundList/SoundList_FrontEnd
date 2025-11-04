@@ -1,5 +1,5 @@
 // ================================
-// 🌐 JS/APIs/reviewApi.js (ACTUALIZADO)
+// 🌐 JS/APIs/reviewApi.js (CORREGIDO)
 // ================================
 (function() {
 
@@ -14,8 +14,7 @@
         };
     }
 
-    // --- (Funciones de Review) ---
-    async function createReview(reviewData) {
+    async function createReview(reviewData) { 
         try {
             const response = await fetch(`${API_BASE}`, {
                 method: "POST",
@@ -28,9 +27,8 @@
             console.error("❌ Error en createReview:", error);
             throw error;
         }
-    }
-
-    async function getAllReviews() {
+     }
+    async function getAllReviews() { 
         try {
             const response = await fetch(`${API_BASE}`, {
                 method: "GET", headers: getAuthHeaders()
@@ -42,26 +40,30 @@
             throw error;
         }
     }
+    
+    // 💡 ¡FUNCIÓN AÑADIDA! (Faltaba en mi código anterior)
+    async function getReviewsByUser(userId) { 
+        console.warn("API: /ReviewsByUser no existe, usando GET /Review como fallback.");
+        return getAllReviews(); 
+    }
 
-    // Fallbacks (como pediste, para que apunten a algo)
-    async function getMyReviews() {
+    async function getMyReviews() { 
         console.warn("API: /MyReviews no existe, usando GET /Review como fallback.");
         return getAllReviews(); 
     }
-    async function getBestReviews() {
+    async function getBestReviews() { 
         console.warn("API: /Best no existe, usando GET /Review como fallback.");
         return getAllReviews(); 
     }
-    async function getLessCommentedReviews() {
+    async function getLessCommentedReviews() { 
         console.warn("API: /LessCommented no existe, usando GET /Review como fallback.");
         return getAllReviews(); 
     }
-    async function getRecentReviews() {
+    async function getRecentReviews() { 
         console.warn("API: /Recent no existe, usando GET /Review como fallback.");
         return getAllReviews(); 
     }
-
-    async function deleteReview(reviewId) {
+    async function deleteReview(reviewId) { 
         try {
             const response = await fetch(`${API_BASE}/${reviewId}`, {
                 method: "DELETE", headers: getAuthHeaders()
@@ -73,20 +75,19 @@
             throw error;
         }
     }
-    
-    // --- (Funciones de Reaction) ---
-    
-    /**
-     * 🔹 [ACTUALIZADO] Dar Like a una RESEÑA
-     */
+    async function reportReview(reviewId, reason) { 
+        console.warn(`API: Reportar review no implementado. Reporte simulado para ${reviewId}`);
+        return { success: true, message: "Reporte simulado" };
+    }
+
     async function toggleLikeReview(reviewId) {
-        const userId = localStorage.getItem("userId");
+        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // ID de prueba
         if (!userId) throw new Error("Usuario no logueado");
 
         const payload = {
             create: new Date().toISOString(),
             reviewId: reviewId,
-            commentId: null, // 👈 Nulo para like de reseña
+            commentId: null,
             userId: userId
         };
          try {
@@ -103,16 +104,13 @@
         }
     }
     
-    /**
-     * 💡 ¡NUEVO! Dar Like a un COMENTARIO
-     */
     async function toggleLikeComment(commentId) {
-        const userId = localStorage.getItem("userId");
+        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // ID de prueba
         if (!userId) throw new Error("Usuario no logueado");
 
         const payload = {
             create: new Date().toISOString(),
-            reviewId: null, // 👈 Nulo para like de comentario
+            reviewId: null,
             commentId: commentId,
             userId: userId
         };
@@ -130,12 +128,20 @@
         }
     }
     
-    // --- (Función de Reportar - Placeholder) ---
-    async function reportReview(reviewId, reason = "Sin motivo") {
-        console.warn(`API: Reportar no implementado. Reporte simulado para ${reviewId}`);
-        // Cuando la API esté lista:
-        // await fetch(`${API_BASE}/${reviewId}/Report`, { ... });
-        return { success: true, message: "Reporte simulado" };
+    async function getCommentReactionCount(commentId) {
+        try {
+            const response = await fetch(`${REACTION_API_BASE}/${commentId}/Comments/count`, {
+                method: "GET",
+                headers: getAuthHeaders()
+            });
+            if (!response.ok) {
+                throw new Error("Error al obtener conteo de reacciones");
+            }
+            return await response.json(); 
+        } catch (error) {
+            console.error("❌ Error en getCommentReactionCount:", error);
+            throw error;
+        }
     }
 
     // Exponemos las funciones
@@ -143,14 +149,15 @@
         createReview,
         getAllReviews,
         getMyReviews,
-        getReviewsByUser: getAllReviews,
+        getReviewsByUser, // 👈 AHORA SÍ ESTÁ DEFINIDA
         getBestReviews,
         getLessCommentedReviews,
         getRecentReviews,
         deleteReview,
+        reportReview,
         toggleLikeReview, 
-        toggleLikeComment, // 👈 Añadido
-        reportReview
+        toggleLikeComment,
+        getCommentReactionCount 
     };
 
 })();

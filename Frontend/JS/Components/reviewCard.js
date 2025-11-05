@@ -1,14 +1,15 @@
 // ===============================================
 // 💬 JS/Components/reviewCard.js
-// (ACTUALIZADO: Añadido botón "X" estilo Bootstrap)
+// (ACTUALIZADO: Lógica para "no logueado")
 // ===============================================
 
-/**
- * Genera el HTML para una tarjeta de reseña estándar.
- */
 function createReviewCard(review, currentUserId) {
     const menuId = `menu-${review.id || Math.random().toString(36).substr(2, 9)}`;
 
+    // 💡 ¡NUEVO! Comprueba si el usuario está logueado
+    // (parseInt(null) da NaN, !isNaN(NaN) es false)
+    const isLoggedIn = !isNaN(currentUserId);
+    
     const isOwner = review.userId === currentUserId;
     const isLiked = review.userLiked || false;
     const likeCount = review.likes || 0;
@@ -39,7 +40,11 @@ function createReviewCard(review, currentUserId) {
         <!-- Fila 1, Col 4: Likes -->
         <div class="rc-likes">
             <span class="like-count">${likeCount}</span>
-            <button class="btn-like" data-review-id="${review.id}" onclick="handleLikeToggle(event)">
+            <!-- 💡 ¡CAMBIO! Deshabilitado si no está logueado -->
+            <button class="btn-like" 
+                    data-review-id="${review.id}" 
+                    onclick="handleLikeToggle(event)" 
+                    ${!isLoggedIn ? 'disabled' : ''}>
                 <i class="fa-solid fa-heart" style="color: ${isLiked ? 'var(--magenta)' : 'var(--blanco)'};"></i>
             </button>
         </div>
@@ -49,30 +54,31 @@ function createReviewCard(review, currentUserId) {
             <i class="fa-solid fa-ellipsis-vertical review-options" 
                onclick="toggleReviewMenu(event, '${menuId}')"></i>
             
-            <!-- Este es el menú dropdown -->
             <div id="${menuId}" class="review-menu">
                 
-                <!-- 💡 ¡AÑADIDO! La "cruz" estilo Bootstrap -->
-                <!-- Llama a closeAllMenus() de reviewHandler.js -->
                 <button type="button" class="btn-close-review-menu" onclick="closeAllMenus()"></button>
 
-                ${isOwner ? `
-                    <!-- Opciones SI ERES EL DUEÑO -->
-                    ${canEdit ? `
-                        <button data-action="edit" data-review-id="${review.id}" onclick="handleMenuAction(event)">
-                            <i class="fa-solid fa-pen"></i> Editar
-                        </button>` 
-                    : ''}<!-- Bug de sintaxis arreglado aquí -->
-                    <button data-action="delete" data-review-id="${review.id}" onclick="handleMenuAction(event)">
-                        <i class="fa-solid fa-trash"></i> Eliminar
-                    </button>
-                ` : `
-                    <!-- Opciones SI NO ERES EL DUEÑO -->
-                    <button data-action="report" data-review-id="${review.id}" onclick="handleMenuAction(event)">
-                        <i class="fa-solid fa-flag"></i> Reportar
-                    </button>
-                `}
+                <!-- 💡 ¡CAMBIO! Solo muestra botones de acción si está logueado -->
+                ${isLoggedIn ? `
+                    ${isOwner ? `
+                        <!-- Opciones SI ERES EL DUEÑO -->
+                        ${canEdit ? `
+                            <button data-action="edit" data-review-id="${review.id}" onclick="handleMenuAction(event)">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>` 
+                        : ''}
+                        <button data-action="delete" data-review-id="${review.id}" onclick="handleMenuAction(event)">
+                            <i class="fa-solid fa-trash"></i> Eliminar
+                        </button>
+                    ` : `
+                        <!-- Opciones SI NO ERES EL DUEÑO (pero estás logueado) -->
+                        <button data-action="report" data-review-id="${review.id}" onclick="handleMenuAction(event)">
+                            <i class="fa-solid fa-flag"></i> Reportar
+                        </button>
+                    `}
+                ` : ''} <!-- Fin del check isLoggedIn -->
                 
+                <!-- "Ver comentarios" se muestra SIEMPRE -->
                 <button data-action="comments" data-review-id="${review.id}" onclick="handleMenuAction(event)">
                     <i class="fa-solid fa-comment"></i> Ver comentarios
                 </button>

@@ -1,6 +1,6 @@
 // ===============================================
 // 📋 JS/Components/reviewList.js
-// (CORREGIDO: Arreglado el bucle 'innerHTML +=')
+// (ACTUALIZADO con renderMultiItemCarousel)
 // ===============================================
 
 /**
@@ -32,16 +32,21 @@ function renderReviewList(containerId, reviews) {
     });
     
     // 💡 PASO 2: Insertar el HTML en el DOM una sola vez.
-    // Esto evita que el navegador rompa el HTML a mitad del bucle.
     container.innerHTML = reviewsHtml;
 }
 
 
 /**
- * 🚀 Renderizador de Carrusel GENÉRICO 🚀
- * (Esta función ya estaba correcta, pero la incluimos)
+ * 🚀 ¡NUEVO! Renderizador de Carrusel Multi-Ítem 🚀
+ * Agrupa varios items (reseñas) dentro de un solo slide (.carousel-item).
+ *
+ * @param {string} containerId - El ID del elemento ".carousel-inner".
+ * @param {Array<object>} items - El array de datos (ej: reseñas).
+ * @param {Function} itemRenderer - La FUNCIÓN que sabe cómo dibujar un item (ej: createReviewCard).
+ * @param {number} [itemsPerSlide=3] - Cuántos items mostrar por slide.
+ * @param {string} [emptyMessage="No hay items."] - Mensaje si el array está vacío.
  */
-function renderGenericCarousel(containerId, items, itemRenderer, emptyMessage = "No hay items disponibles.") {
+function renderMultiItemCarousel(containerId, items, itemRenderer, itemsPerSlide = 3, emptyMessage = "No hay items disponibles.") {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Error: Contenedor de carrusel #${containerId} no encontrado.`);
@@ -57,23 +62,35 @@ function renderGenericCarousel(containerId, items, itemRenderer, emptyMessage = 
         return;
     }
 
+    const currentUserId = parseInt(localStorage.getItem("userId"), 10);
     let carouselHtml = "";
-    const currentUserId = parseInt(localStorage.getItem("userId"), 10); // Necesario para el renderer
 
-    items.forEach((item, index) => {
-        const activeClass = (index === 0) ? 'active' : '';
-
-        // Llama a la función "dibujadora" (itemRenderer)
-        const itemHtml = itemRenderer(item, currentUserId); // Pasamos el userId
+    // Agrupa los items de N en N (ej: de 3 en 3)
+    for (let i = 0; i < items.length; i += itemsPerSlide) {
+        const chunk = items.slice(i, i + itemsPerSlide);
+        
+        const activeClass = (i === 0) ? 'active' : '';
 
         carouselHtml += `
             <div class="carousel-item ${activeClass}">
-                <div class="p-2"> 
-                    ${itemHtml}
+                <!-- Contenedor Flex para los items lado a lado -->
+                <div class="multi-carousel-slide">
+        `;
+
+        // Dibuja cada item dentro del slide
+        chunk.forEach(item => {
+            carouselHtml += `
+                <div class="multi-carousel-item">
+                    ${itemRenderer(item, currentUserId)}
+                </div>
+            `;
+        });
+
+        carouselHtml += `
                 </div>
             </div>
         `;
-    });
+    }
     
     container.innerHTML = carouselHtml;
 }

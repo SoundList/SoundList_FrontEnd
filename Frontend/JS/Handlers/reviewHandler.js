@@ -6,6 +6,12 @@
 /**
  * 💡 ¡REVERTIDO! Vuelve a la lógica de calcular posición
  */
+window.closeAllMenus = function() {
+    document.querySelectorAll(".review-menu.visible").forEach(m => {
+        m.classList.remove("visible");
+        m.style.display = "none";
+    });
+}
 window.toggleReviewMenu = function(event, menuId) {
     event.stopPropagation();
     const menu = document.getElementById(menuId);
@@ -39,17 +45,6 @@ window.toggleReviewMenu = function(event, menuId) {
     menu.classList.add("visible");
 };
 
-/**
- * 💡 ¡RESTAURADO! Cierre global del menú al hacer click afuera
- */
-document.addEventListener("click", e => {
-    if (!e.target.closest(".review-menu") && !e.target.closest(".review-options")) {
-        document.querySelectorAll(".review-menu.visible").forEach(m => {
-            m.classList.remove("visible");
-            m.style.display = "none";
-        });
-    }
-});
 const MOCK_COMMENTS = [
     {
         commentId: 1,
@@ -86,6 +81,24 @@ const MOCK_COMMENTS = [
         text: "¡Gran reseña! 10/10.",
         likes: 1,
         userLiked: false
+    },
+        {
+        commentId: 4,
+        userId: 98, // Otro usuario
+        username: "SaraTune",
+        avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S",
+        text: "¡Gran reseña! 10/10.",
+        likes: 1,
+        userLiked: false
+    },
+        {
+        commentId: 3,
+        userId: 1, // El dueño
+        username: "TuUsuarioDePrueba",
+        avatar: "../../Assets/default-avatar.png",
+        text: "Aunque pensándolo bien... Este comentario tiene likes, así que NO puedo editarlo, solo borrarlo.",
+        likes: 2, // 👈 >0 LIKES = NO EDITABLE
+        userLiked: true
     }
 ];
 

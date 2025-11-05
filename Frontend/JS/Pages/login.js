@@ -20,32 +20,65 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Iniciando sesión...', 'info');
 
-        const API_BASE_URL = 'https://localhost:32769';
-        axios.post(`${API_BASE_URL}/api/User/Login`, {
-            Usuario: username,
-            Password: password
-        })
-        .then(response => {
-            const token = response.data.token || response.data.Token;
-            const userId = response.data.userId || response.data.UserId;
-            const usernameResp = response.data.username || response.data.Username;
+        // --- 💡 INICIO DE LA SIMULACIÓN (MOCK) ---
+        // Si usas "mock" / "mock", te loguea como el Dueño (ID 1)
+        if (username === "mock" && password === "mock") {
+            console.warn("--- MODO DE PRUEBA (MOCK) ACTIVADO ---");
+            
+            // Simula una respuesta exitosa
+            setTimeout(() => {
+                showAlert('¡Inicio de sesión SIMULADO exitoso!', 'success');
+                
+                // Guarda los datos de prueba del "dueño" (para TuUsuarioDePrueba)
+                localStorage.setItem('authToken', 'mock_token_123456789');
+                localStorage.setItem('userId', '1'); // 💡 ID del dueño (coincide con los mocks)
+                localStorage.setItem('username', 'TuUsuarioDePrueba');
+                localStorage.setItem('userAvatar', '../../Assets/default-avatar.png');
 
-            if (token) localStorage.setItem('authToken', token);
-            if (userId) localStorage.setItem('userId', userId);
-            if (usernameResp) localStorage.setItem('username', usernameResp);
+                setButtonLoading(submitButton, false);
+                
+                // Redirige a la página de perfil
+                // (Asumiendo que login.html está en /HTML/ y profile.html está en /HTML/Pages/)
+                window.location.href = './Pages/profile.html'; 
+            }, 1000); // Simula 1 segundo de carga
 
-            showAlert('¡Inicio de sesión exitoso!', 'success');
-            // window.location.href = '../index.html';
-        })
-        .catch(error => {
-            const message = (error.response && error.response.data && (error.response.data.message || error.response.data.error))
-                ? error.response.data.message || error.response.data.error
-                : 'Usuario o contraseña inválidos';
-            showAlert(message, 'danger');
-        })
-        .finally(() => {
-            setButtonLoading(submitButton, false);
-        });
+        } else {
+            // --- INICIO DEL CÓDIGO ORIGINAL (API REAL) ---
+            // (Si no es "mock", intenta conectar con el backend real)
+            const API_BASE_URL = 'https://localhost:32769';
+            axios.post(`${API_BASE_URL}/api/User/Login`, {
+                Usuario: username,
+                Password: password
+            })
+            .then(response => {
+                const token = response.data.token || response.data.Token;
+                const userId = response.data.userId || response.data.UserId;
+                const usernameResp = response.data.username || response.data.Username;
+                // 💡 ¡AÑADIDO! Guarda el avatar si la API lo envía
+                const avatarResp = response.data.avatar || response.data.Avatar;
+
+
+                if (token) localStorage.setItem('authToken', token);
+                if (userId) localStorage.setItem('userId', userId);
+                if (usernameResp) localStorage.setItem('username', usernameResp);
+                if (avatarResp) localStorage.setItem('userAvatar', avatarResp); // 💡 Añadido
+
+                showAlert('¡Inicio de sesión exitoso!', 'success');
+                
+                // 💡 Redirección corregida
+                window.location.href = './Pages/profile.html';
+            })
+            .catch(error => {
+                const message = (error.response && error.response.data && (error.response.data.message || error.response.data.error))
+                    ? error.response.data.message || error.response.data.error
+                    : 'Usuario o contraseña inválidos';
+                showAlert(message, 'danger');
+            })
+            .finally(() => {
+                setButtonLoading(submitButton, false);
+            });
+            // --- FIN DEL CÓDIGO ORIGINAL (API REAL) ---
+        }
     });
 
     const googleButton = document.querySelector('.btn-alternative');

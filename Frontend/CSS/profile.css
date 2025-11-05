@@ -11,11 +11,10 @@
     border-radius: 0;
     padding: 2rem 1rem;
     
-    /* 💡 Tu layout "casi tocando" (Avatar/Info a la izq) */
     display: flex;
     justify-content: flex-start; 
     align-items: center;
-    gap: 5rem; /* <-- ESPACIO entre los dos bloques */
+    gap: 5rem; 
     margin-bottom: 2rem;
 }
 
@@ -27,9 +26,8 @@
     flex-shrink: 0; 
 }
 .profile-avatar {
-    /* (Tu tamaño +20% de 108px -> 130px) */
-    width: 220px; /* (El tamaño que tenías) */
-    height: 220px; /* (El tamaño que tenías) */
+    width: 220px; 
+    height: 220px; 
     border-radius: 50%;
     border: 3px solid var(--white, #fff); 
     object-fit: cover;
@@ -38,27 +36,25 @@
 .username {
     font-family: 'League Spartan', sans-serif;
     font-weight: 700;
-    font-size: 2.88rem; /* (Tu tamaño +20% anterior) */
+    font-size: 2.88rem; 
     margin: 0;
 }
 .user-quote {
     color: var(--text-medium, #B0B0B0);
     font-style: italic;
-    font-size: 1.2rem; /* (Tu tamaño +20% anterior) */
+    font-size: 1.2rem; 
     margin: 0;
 }
 
-/* --- 3. 💡 COLUMNA DERECHA --- */
-/* (Agrupa Stats y Botón) */
+/* --- 3. COLUMNA DERECHA --- */
 .profile-right-column {
     display: flex;
-    flex-direction: column; /* Pone el botón DEBAJO de las stats */
-    align-items: stretch;  /* Estira el contenido (el botón) */
-    gap: 1.5rem; /* Espacio entre stats y botón */
+    flex-direction: column; 
+    align-items: stretch;  
+    gap: 1.5rem; 
 }
 
 /* --- 4. Estadísticas (Tamaño +20%) --- */
-/* (Ahora es hijo de .profile-right-column) */
 .stats {
     display: flex;
     justify-content: center;
@@ -69,13 +65,13 @@
     text-align: center; 
 }
 .stats div strong {
-    font-size: 2.16rem; /* (Tu tamaño +20% anterior) */
+    font-size: 2.16rem; 
     color: var(--text-light, #F0F0F0);
     display: block; 
 }
 .stats div p {
     margin: 0;
-    font-size: 1.44rem; /* (Tu tamaño +20% anterior) */
+    font-size: 1.44rem; 
     color: var(--text-medium, #B0B0B0);
 }
 
@@ -83,9 +79,8 @@
 /* (El estilo de .btn-edit se controla en buttons.css) */
 
 
-
 /* ===============================================
-   CÓDIGO DE LAYOUT (para las columnas "lado a lado" de reseñas)
+   💡 CÓDIGO DE LAYOUT (para las columnas "lado a lado" de reseñas)
    =============================================== */
 
 .profile-main-content {
@@ -95,15 +90,15 @@
     margin-top: 2rem;
 }
 
-/* 💡 ¡MODIFICADO! Añadidos estilos de contenedor */
+/* 💡 ¡MODIFICADO! Estilos de fondo y padding AÑADIDOS aquí */
 .recent-reviews-section,
 .featured-reviews-section {
     /* 1. Color claro (como en la foto ...204304.png) */
-    background: rgba(255, 69, 249, 0.11); /* Tu fondo original de .reviews-container */
+    background: rgba(255, 255, 255, 0.05); /* Tu fondo original */
     border-radius: 20px;
     padding: 1.2rem;
-    box-shadow: 0 4px 15px rgba(255, 0, 221, 0.441);
-
+    box-shadow: 0 4px 15px rgba(86, 60, 255, 0.3);
+    
     /* Layout de Columna */
     min-width: 300px;
 }
@@ -120,11 +115,22 @@
 .featured-reviews-section h2 {
     font-size: 1.5rem;  /* Más grande */
     font-weight: 700;   /* Más grueso */
-    text-align: center; /* Centrado como en la foto */
+    text-align: center; 
     color: var(--blanco);
     margin-bottom: 1.5rem;
-    text-transform: uppercase; /* (Como en la foto) */
+    text-transform: uppercase; 
 }
+
+/* 💡 ¡AÑADIDO! Estilo para el título DENTRO del slide del carrusel */
+.section-title-carousel {
+    font-size: 1.5rem; /* (Coincide con el h2) */
+    font-weight: 700;
+    color: var(--blanco);
+    margin-bottom: 1rem;
+    text-align: center;
+    text-transform: uppercase;
+}
+
 
 @media (max-width: 992px) {
     .profile-main-content {

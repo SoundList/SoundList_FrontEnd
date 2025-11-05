@@ -69,7 +69,6 @@
 
         <!-- Contenedor Flex para las columnas "lado a lado" -->
         <div class="profile-main-content">
-
             <!-- 2.2. SECCIÓN: RESEÑAS RECIENTES (Columna Izquierda) -->
             <section class="recent-reviews-section mb-4">
                 <h2 class="mb-3">Reseñas Recientes</h2>
@@ -77,35 +76,40 @@
                     <!-- 'profileHandler.js' llenará esto -->
                 </div>
             </section>
-
             <!-- 2.3. SECCIÓN: RESEÑAS DESTACADAS (Columna Derecha) -->
             <section class="featured-reviews-section">
                 <h2 class="mb-3">Reseñas Destacadas</h2>
-
                 <div class="carousel-controls mb-2">
                     <button class="btn-nav active" id="btnShowBest">Mejores Reseñas</button>
                     <button class="btn-nav" id="btnShowLessRated">Menos Puntuadas</button>
                 </div>
+              <!-- 💡 CAMBIO: El carrusel ahora tiene los 'items' dentro -->
+                <div id="featured-reviews-carousel" class="carousel slide">
+                    <div class="carousel-inner">
+                        
+                        <!-- Slide 1: Mejores Reseñas -->
+                        <div class="carousel-item active">
+                            <h2 class="mb-3 section-title-carousel"></h2>
+                            <!-- Usamos la misma clase de scroll -->
+                            <div class="reviews-scroll" id="best-reviews-list">
+                                <!-- 'profile.js' llenará esto -->
+                            </div>
+                        </div>
 
-                <div id="featured-reviews-carousel" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner" id="featured-reviews-container">
-                        <!-- 'profile.js' llenará esto -->
+                        <!-- Slide 2: Menos Votadas -->
+                        <div class="carousel-item">
+                            <h2 class="mb-3 section-title-carousel"></h2>
+                            <div class="reviews-scroll" id="less-rated-list">
+                                <!-- 'profile.js' llenará esto -->
+                            </div>
+                        </div>
                     </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#featured-reviews-carousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#featured-reviews-carousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    </button>
                 </div>
             </section>
-        
         </div> <!-- Fin del profile-main-content -->
-
     </main>
 
-    <!-- Overlay para el menú modal -->
-    <div id="menu-overlay" class="review-menu-overlay"></div>
+    <!-- 💡 ELIMINADO: <div id="menu-overlay">...</div> -->
 
     <!-- 3. MODAL DE COMENTARIOS (Oculto por defecto) -->
     <div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
@@ -133,28 +137,41 @@
         </div>
     </div>
 
+    <!-- 4. MODAL GENÉRICO (para Confirmar, Reportar, Editar) -->
+    <div class="modal fade" id="genericModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content review-modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="genericModalTitle">Confirmar</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="genericModalBody">
+                    <!-- El JS pondrá el contenido aquí (texto o textarea) -->
+                </div>
+                <div class="modal-footer" id="genericModalFooter">
+                    <!-- El JS pondrá los botones (Cancelar, Aceptar) aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- 4. ORDEN DE CARGA DE SCRIPTS -->
 
-    <!-- 4.1. LIBRERÍAS JS -->
+    <!-- 5. ORDEN DE CARGA DE SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-    <!-- 4.2. APIS -->
     <script src="../../JS/APIs/userApi.js"></script>
     <script src="../../JS/APIs/reviewApi.js"></script>
     <script src="../../JS/APIs/commentsApi.js"></script> 
     <script src="../../JS/APIs/navApi.js"></script>
     <script src="../../JS/APIs/notificationsApi.js"></script>
     
-    <!-- 4.3. COMPONENTES -->
     <script src="../../JS/Components/starRenderer.js"></script>
     <script src="../../JS/Components/header.js"></script>
     <script src="../../JS/Components/reviewCard.js"></script>
     <script src="../../JS/Components/reviewList.js"></script>
-    <script src="../../JS/Components/commentCard.js"></script> <!-- 💡 (Necesario para los comentarios) -->
+    <script src="../../JS/Components/commentCard.js"></script> 
 
-    <!-- 4.4. HANDLERS -->
     <script src="../../JS/Handlers/headerHandler.js"></script>
     <script src="../../JS/Handlers/navHandler.js"></script>
     <script src="../../JS/Handlers/notificationHandler.js"></script> 
@@ -162,12 +179,10 @@
     <script src="../../JS/Handlers/likesHandler.js"></script>
     <script src="../../JS/Handlers/editProfileHandler.js"></script>
     <script src="../../JS/Handlers/profileHandler.js"></script>
-    <script src="../../JS/Handlers/commentHandler.js"></script> <!-- 💡 (¡AQUÍ ESTÁ!) -->
+    <script src="../../JS/Handlers/commentHandler.js"></script>
 
-    <!-- 4.5. SCRIPT DE PÁGINA -->
     <script src="../../JS/Pages/profile.js"></script>
     
-    <!-- 4.6. SCRIPT INYECTOR (Carga el header) -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const headerHTML = window.createHeader();

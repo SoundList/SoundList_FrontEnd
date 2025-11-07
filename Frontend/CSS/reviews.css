@@ -1,6 +1,3 @@
-/* ===============================================
-   🎨 CSS/reviews.css (ACTUALIZADO con acciones horizontales)
-   =============================================== */
 
 /* --- 1. Contenedores de Reseñas --- */
 .reviews-container,
@@ -26,9 +23,7 @@
 .reviews-scroll::-webkit-scrollbar { width: 8px; }
 .reviews-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
 .reviews-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
-/* --- 💡 ¡NUEVO! Estilo para las listas DENTRO del carrusel --- */
 .carousel-list-scroll {
-    /* Usamos la misma altura que el scroll de reseñas recientes */
     height: 450px; 
     overflow-y: auto;
     padding-right: 6px;
@@ -39,21 +34,16 @@
 .carousel-list-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
 .carousel-list-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
 
-/* (Oculta las flechas de control de Bootstrap, ya que usamos botones) */
 #featured-reviews-carousel .carousel-control-prev,
 #featured-reviews-carousel .carousel-control-next {
     display: none;
 }
-/* --- 9. 💡 ¡NUEVO! Ajuste de Velocidad del Carrusel --- */
+
 #featured-reviews-carousel .carousel-item {
-    /* Bootstrap usa 0.6s. 
-      Lo bajamos a 0.3s para que sea el doble de rápido.
-      (Funciona tanto para 'slide' como para 'fade')
-    */
     transition-duration: 0.3s;
 }
 
-/* --- 3. Tarjeta de Reseña Estándar (CSS Grid) --- */
+
 .review-card-grid {
     background: linear-gradient(70deg, #001c9a, #7b008e); 
     border-radius: 20px;
@@ -62,14 +52,11 @@
     color: #fff;
     position: relative;
     z-index: 20;
-    
     display: grid;
     
-    /* Layout de 3 Columnas */
-    grid-template-columns: auto 1fr auto; /* Avatar | Contenido | Acciones */
-    grid-template-rows: auto 1fr;    /* Fila 1: Título | Fila 2: Cuerpo/Acciones */
-    
-    /* Áreas de Grid (Título en Fila 1, Cuerpo y Acciones en Fila 2) */
+
+    grid-template-columns: auto 1fr auto; 
+    grid-template-rows: auto 1fr;   
     grid-template-areas: 
         "avatar title   title"   
         "avatar body    actions"; 
@@ -83,27 +70,20 @@
     box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35);
 }
 
-/* Asignación de áreas del Grid */
 .rc-avatar { grid-area: avatar; padding-top: 5px; }
 .rc-title { grid-area: title; min-width: 0; align-self: center; } 
-.rc-body { grid-area: body; min-width: 0; align-self: center; } /* 💡 Centrado vertical con las acciones */
+.rc-body { grid-area: body; min-width: 0; align-self: center; } 
 
-/* 💡 NUEVO: Contenedor del Stack de Acciones */
 .rc-actions-stack {
     grid-area: actions;
-    
-    /* 💡 ¡LA CORRECCIÓN! */
     display: flex;
-    flex-direction: row;    /* <-- Acciones en HORIZONTAL */
-    align-items: center;    /* <-- Alineadas verticalmente */
-    justify-content: flex-end; /* <-- Pegadas a la derecha */
-    gap: 1rem;              /* <-- Espacio entre iconos */
-    
-    align-self: center;     /* 💡 Centra todo el stack con la opinión (rc-body) */
+    flex-direction: row;    
+    align-items: center;    
+    justify-content: flex-end; 
+    gap: 1rem;          
+    align-self: center;     
 }
 
-
-/* Estilos de los elementos */
 .review-avatar {
     width: 40px;
     height: 40px;
@@ -128,7 +108,7 @@
 }
 
 .review-stars {
-    font-size: 1.155em; /* 💡 5% más grande */
+    font-size: 1.155em; 
 }
 .review-stars .star { display: inline-block; line-height: 1; overflow: hidden; }
 .review-stars .full-star { color: var(--amarillo, #FFD85E); }
@@ -154,14 +134,13 @@
     transition: all 0.2s ease;
 }
 
-/* Estilo para el botón "Ver Comentarios" */
 .rc-view-comments button {
     background: none;
     border: none;
     color: var(--blanco);
     opacity: 0.7;
     cursor: pointer;
-    font-size: 1.155rem; /* 💡 5% más grande */
+    font-size: 1.155rem; 
     transition: all 0.2s ease;
     padding: 0;
 }
@@ -171,11 +150,8 @@
 }
 .rc-menu {
     position: relative;
-    /* justify-self: end; (ya no es necesario, el stack se encarga) */
 }
 
-
-/* --- 5. Menú Desplegable (Posicionamiento) --- */
 .review-options {
     font-size: 1.4rem;
     color: rgba(255,255,255,0.7);
@@ -217,8 +193,21 @@
     color:#fff;
 }
 
+.btn-close-review-menu {
+    position:relative; 
+    left: 140px;     
+    background: none;
+    border: none;
+    padding: 2px;
+}
 
-/* --- 6. Modal de Comentarios (CSS) --- */
+.btn-close-review-menu:hover {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    background: none !important; 
+}
+
+
 .review-modal-content {
     background: rgba(4, 13, 177, 0.95);
     border-radius: 20px;
@@ -260,8 +249,6 @@
     padding: 2rem 0;
 }
 
-
-/* --- 7. Estilo para el Item de Comentario --- */
 .comment-item {
     background: rgba(0,0,0,0.2);
     padding: 10px 15px;
@@ -277,19 +264,19 @@
     align-items: start;
     transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
-/* 💡 ¡NUEVO! Estilos estéticos para los íconos (sin fondo blanco) */
+
 .comment-action-icons {
     grid-area: icons; 
-    justify-self: end; /* Alinea a la derecha */
-    align-self: end;   /* Alinea abajo */
+    justify-self: end; 
+    align-self: end;   
     
     display: flex;
     gap: 12px;
     font-size: 0.9rem;
-    padding-top: 5px; /* Espacio del texto */
+    padding-top: 5px; 
 }
 .comment-action-icons i {
-    color: rgba(255,255,255,0.5); /* Color grisáceo */
+    color: rgba(255,255,255,0.5); 
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -399,56 +386,49 @@
     background: var(--morado);
     opacity: 1;
 }
-/* --- 10. 💡 ¡NUEVO! Estilos para Edición en Línea --- */
+
 .inline-edit-container {
-    /* Ocupa el espacio del texto */
     grid-area: body / body / body / actions; 
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-top: 5px;
 }
-/* 💡 ¡NUEVO! Bloqueo de fondo para COMENTARIOS */
 
-/* Cuando el modal-body está en modo edición... */
 .modal-body.is-editing-something .comment-item {
-    /* ...todos los comentarios se apagan... */
     opacity: 0.5;
-    pointer-events: none; /* <-- Evita clics */
+    pointer-events: none; 
     transition: opacity 0.3s ease;
 }
 
-/* ...EXCEPTO el que se está editando. */
 .modal-body.is-editing-something .comment-item.is-editing {
-    background: transparent !important; /* Quita el fondo violeta */
+    background: transparent !important; 
     border-color: var(--morado); 
     box-shadow: 0 0 8px var(--morado); 
     opacity: 1;
     pointer-events: auto;
-    z-index: 100; /* Lo trae al frente */
+    z-index: 100; 
 }
 .comment-item.is-editing {
-    background: transparent !important; /* Quita el fondo violeta */
-    border-color: var(--morado); /* Resalta el borde */
-    box-shadow: 0 0 8px ; /* Añade un brillo de "edición" */
+    background: transparent !important; 
+    border-color: var(--morado); 
+    box-shadow: 0 0 8px ; 
 }
 
-/* Oculta el texto y los iconos cuando se está editando */
 .comment-item.is-editing .comment-text,
 .comment-item.is-editing .comment-action-icons {
     display: none;
 }
 
-/* Contenedor de edición (para Reseñas y Comentarios) */
 .inline-edit-container {
-    display: none; /* Oculto por defecto */
+    display: none; 
 }
-/* Se muestra cuando el JS añade/quita elementos */
+
 .comment-item.is-editing .inline-edit-container {
     display: flex;
 }
 
-/* Para la RESEÑA GRANDE (en profile.html) */
+
 .review-card-grid .inline-edit-container {
     grid-area: body / body / body / actions; 
     display: flex;
@@ -457,7 +437,7 @@
     margin-top: 5px;
 }
 
-/* Para el COMENTARIO EN EL MODAL */
+
 .comment-item .inline-edit-container {
     grid-column: 2 / span 2; 
     grid-row: 2;
@@ -466,13 +446,11 @@
     gap: 8px;
     margin-top: 5px;
 }
-/* 💡 ¡NUEVO! Para el COMENTARIO EN EL MODAL */
-/* Esto hace que la caja de edición sea más ancha */
+
 .comment-item .inline-edit-container {
-    /* Ocupa el espacio del 'text' (col 2) y 'icons' (col 3) */
+
     grid-column: 2 / span 2; 
-    grid-row: 2; /* Se asegura de estar en la fila 2 */
-    
+    grid-row: 2; 
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -518,4 +496,115 @@
 .inline-edit-button:hover {
     opacity: 1;
     box-shadow: 0 0 5px rgb(255, 255, 255);
+}
+body.is-editing-something .modal#commentsModal .btn-close {
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+body.menu-is-open {
+    overflow: hidden;
+}
+
+body.menu-is-open::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 99998; 
+}
+
+.modal-is-editing .comment-item:not(.is-editing) {
+    pointer-events: none;
+    opacity: 0.5; 
+}
+
+@media (max-width: 992px) {
+    .review-card-grid {
+        grid-template-columns: auto 1fr; 
+        grid-template-areas: 
+            "avatar title"
+            "avatar body"
+            "actions actions";
+        gap: 10px 12px;
+    }
+
+    .rc-actions-stack {
+        justify-content: flex-start;
+        margin-top: 6px;
+    }
+
+    .reviews-scroll,
+    .carousel-list-scroll {
+        max-height: 380px;
+    }
+}
+
+@media (max-width: 600px) {
+    .review-card-grid {
+        grid-template-columns: 1fr; 
+        grid-template-areas: 
+            "avatar"
+            "title"
+            "body"
+            "actions";
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .rc-avatar img,
+    .review-avatar {
+        width: 55px;
+        height: 55px;
+        margin: 0 auto;
+        display: block;
+    }
+
+    .rc-title {
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    .rc-body {
+        font-size: 0.88rem;
+        text-align: center;
+        padding: 4px 0;
+    }
+
+    .rc-actions-stack {
+        justify-content: center;
+        gap: 0.8rem;
+    }
+
+    .reviews-container,
+    .best-reviews-container {
+        padding: 1rem;
+    }
+
+    .reviews-scroll,
+    .carousel-list-scroll {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 400px) {
+    .review-card-grid {
+        padding: 0.8rem;
+    }
+
+    .rc-title {
+        font-size: 0.9rem;
+    }
+
+    .rc-body {
+        font-size: 0.82rem;
+    }
+
+    .rc-actions-stack i,
+    .rc-view-comments button {
+        font-size: 1rem;
+    }
 }

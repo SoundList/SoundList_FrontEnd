@@ -2,7 +2,7 @@
 // ⚙️ JS/Handlers/navHandler.js
 // ================================
 
-// 💡 Ya no hay 'import'. Usamos 'window.navApi'
+
 
 function setupNavButtons() {
     const inicioBtn = document.getElementById("btnInicio");

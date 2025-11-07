@@ -3,9 +3,6 @@
 // (ACTUALIZADO: Revertido a Dropdown + Botón "X")
 // ===============================================
 
-/**
- * Genera el HTML para una tarjeta de reseña (usando CSS Grid).
- */
 function createReviewCard(review, currentUserId) {
     const menuId = `menu-${review.id || Math.random().toString(36).substr(2, 9)}`;
 
@@ -83,7 +80,7 @@ function createReviewCard(review, currentUserId) {
                 ` : ``}
             </div>
 
-        </div> <!-- Fin de .rc-actions-stack -->
+        </div> 
 
     </div>
     `;

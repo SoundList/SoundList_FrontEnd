@@ -8,7 +8,6 @@
     --amarillo: #FFD85E;
 }
 :root {
-    /* Paleta de Colores (Basada en Imagen 1) */
     --bg-dark: #2A1A45;
     --bg-medium: #443266;
     --bg-light: #634F94;
@@ -39,7 +38,8 @@ body.profile-body {
     color: var(--blanco);
     margin: 0;
     min-height: 100vh;
-    overflow-x: hidden;
+    
+    
     opacity: 0;
-    animation: fadeIn 0.8s ease-out forwards;
+animation: fadeIn 0.8s ease-out forwards;
 }

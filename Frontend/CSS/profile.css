@@ -1,129 +1,200 @@
 /* ===============================================
-   🎨 CSS/profile.css (CONSOLIDADO)
-   (Layout "casi tocando" + Avatar +20%)
+   🎨 CSS/profile.css (¡AHORA ES RESPONSIVE!)
+   (Estrategia "Mobile-First" aplicada)
    =============================================== */
 
-/* --- 1. Header del Perfil (SIN FONDO) --- */
+/* --- 1. ESTILOS BASE (MÓVIL PRIMERO) --- */
+/* (Se aplica a todas las pantallas) */
+
 .profile-header {
     background: none;
     box-shadow: none;
     border-bottom: 1px solid var(--border-color, #554477);
     border-radius: 0;
-    padding: 2rem 1rem;
+    padding: 1rem; /* Menos padding en móvil */
     
+    /* 💡 MÓVIL: Apilado y centrado */
     display: flex;
-    justify-content: flex-start; 
-    align-items: center;
-    gap: 5rem; 
+    flex-direction: column; /* Apilado */
+    align-items: center; /* Centrado */
+    gap: 1.5rem; /* Espacio entre avatar/stats/botón */
     margin-bottom: 2rem;
 }
 
-/* --- 2. Sección de Info (Columna Izquierda) (Tamaño +20%) --- */
+/* --- Sección de Info (MÓVIL) --- */
 .profile-section {
     display: flex;
+    flex-direction: column; /* Avatar encima del texto */
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
+    text-align: center; /* Centra el texto */
     flex-shrink: 0; 
 }
+
 .profile-avatar {
-    width: 220px; 
-    height: 220px; 
-    border-radius: 300%;
+    /* 💡 MÓVIL: Más pequeño */
+    width: 140px; 
+    height: 140px; 
+    border-radius: 50%; /* Círculo perfecto */
     border: 3px solid var(--white, #fff); 
     object-fit: cover;
     padding: 0;
 }
+
 .username {
     font-family: 'League Spartan', sans-serif;
     font-weight: 700;
-    font-size: 2.88rem; 
+    /* 💡 MÓVIL: Tamaño de fuente más pequeño */
+    font-size: 2.2rem; 
     margin: 0;
 }
+
 .user-quote {
     color: var(--text-medium, #B0B0B0);
     font-style: italic;
-    font-size: 1.2rem; 
+    /* 💡 MÓVIL: Tamaño de fuente más pequeño */
+    font-size: 1rem; 
     margin: 0;
 }
 
-/* --- 3. COLUMNA DERECHA --- */
+/* --- Columna Derecha (MÓVIL) --- */
+/* (Ahora contiene stats y botón, apilados) */
 .profile-right-column {
     display: flex;
     flex-direction: column; 
-    align-items: stretch;  
+    align-items: center; /* Centra los stats y el botón */
     gap: 1.5rem; 
+    width: 100%; /* Ocupa todo el ancho */
 }
 
-/* --- 4. Estadísticas (Tamaño +20%) --- */
+/* --- Estadísticas (MÓVIL) --- */
 .stats {
     display: flex;
     justify-content: center;
-    gap: 3rem;
+    gap: 1.5rem; /* Menos espacio */
     flex-shrink: 0;
+    width: 100%;
+    /* 💡 MÓVIL: Se ajusta si no cabe */
+    flex-wrap: wrap; 
 }
 .stats div {
     text-align: center; 
+    flex: 1; /* Ocupa espacio equitativo */
+    min-width: 80px; /* Evita que se aplaste demasiado */
 }
 .stats div strong {
-    font-size: 2.16rem; 
+    /* 💡 MÓVIL: Tamaño de fuente más pequeño */
+    font-size: 1.8rem; 
     color: var(--text-light, #F0F0F0);
     display: block; 
 }
 .stats div p {
     margin: 0;
-    font-size: 1.44rem; 
+    /* 💡 MÓVIL: Tamaño de fuente más pequeño */
+    font-size: 0.9rem; 
     color: var(--text-medium, #B0B0B0);
 }
 
-/* --- 5. Botón de Editar --- */
-/* (El estilo de .btn-edit se controla en buttons.css) */
+
+/* ===============================================
+   💡 MEDIA QUERY (PANTALLAS MÁS GRANDES)
+   Si la pantalla mide 992px O MÁS...
+   restauramos tu layout de escritorio.
+   =============================================== */
+
+@media (min-width: 992px) {
+    
+    .profile-header {
+        /* 💡 ESCRITORIO: Restaura layout horizontal */
+        flex-direction: row; 
+        justify-content: flex-start; 
+        align-items: center;
+        gap: 5rem; 
+        padding: 2rem 1rem;
+    }
+
+    .profile-section {
+        /* 💡 ESCRITORIO: Restaura layout horizontal */
+        flex-direction: row; 
+        align-items: center;
+        gap: 1.5rem;
+        text-align: left; /* Texto alineado a la izquierda */
+    }
+
+    .profile-avatar {
+        /* 💡 ESCRITORIO: Restaura tamaño original */
+        width: 220px; 
+        height: 220px; 
+        border-radius: 300%; /* Tu borde original */
+    }
+
+    .username {
+        /* 💡 ESCRITORIO: Restaura tamaño original */
+        font-size: 2.88rem; 
+    }
+
+    .user-quote {
+        /* 💡 ESCRITORIO: Restaura tamaño original */
+        font-size: 1.2rem; 
+    }
+
+    .profile-right-column {
+        /* 💡 ESCRITORIO: Restaura alineación */
+        align-items: stretch; /* El botón se estira (o no, según buttons.css) */
+        width: auto;
+    }
+
+    .stats {
+        /* 💡 ESCRITORIO: Restaura gap original */
+        gap: 3rem;
+        width: auto;
+        flex-wrap: nowrap; /* No salta de línea */
+    }
+    .stats div {
+        flex: 0; /* No crece */
+        min-width: auto;
+    }
+
+    .stats div strong {
+        /* 💡 ESCRITORIO: Restaura tamaño original */
+        font-size: 2.16rem; 
+    }
+
+    .stats div p {
+        /* 💡 ESCRITORIO: Restaura tamaño original */
+        font-size: 1.44rem; 
+    }
+}
 
 
 /* ===============================================
-   💡 CÓDIGO DE LAYOUT (para las columnas "lado a lado" de reseñas)
+   💡 ESTILOS VISUALES (Columnas de reseñas)
+   La ESTRUCTURA (flex-direction, flex-basis) 
+   ahora se controla en "layout.css".
    =============================================== */
 
-.profile-main-content {
-    display: flex;
-    flex-wrap: wrap; 
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-/* 💡 ¡MODIFICADO! Estilos de fondo y padding AÑADIDOS aquí */
+/* Mantenemos los estilos visuales (background, padding, etc.) */
 .recent-reviews-section,
 .featured-reviews-section {
-    /* 1. Color claro (como en la foto ...204304.png) */
-    background: rgba(255, 255, 255, 0.05); /* Tu fondo original */
+    background: rgba(255, 255, 255, 0.05); 
     border-radius: 20px;
     padding: 1.2rem;
     box-shadow: 0 4px 15px rgba(86, 60, 255, 0.3);
-    
-    /* Layout de Columna */
-    min-width: 300px;
-}
-.recent-reviews-section {
-    flex: 3;
-    min-width: 400px;
-}
-.featured-reviews-section {
-    flex: 2;
 }
 
-/* 💡 ¡AÑADIDO! Títulos más grandes y gruesos */
+/* Mantenemos los estilos de los títulos */
 .recent-reviews-section h2,
 .featured-reviews-section h2 {
-    font-size: 1.5rem;  /* Más grande */
-    font-weight: 700;   /* Más grueso */
+    font-size: 1.5rem;
+    font-weight: 700;
     text-align: center; 
     color: var(--blanco);
     margin-bottom: 1.5rem;
     text-transform: uppercase; 
 }
 
-/* 💡 ¡AÑADIDO! Estilo para el título DENTRO del slide del carrusel */
 .section-title-carousel {
-    font-size: 1.5rem; /* (Coincide con el h2) */
+    font-size: 1.5rem; 
     font-weight: 700;
     color: var(--blanco);
     margin-bottom: 1rem;
@@ -132,28 +203,17 @@
 }
 
 
-@media (max-width: 992px) {
-    .profile-main-content {
-        flex-direction: column;
-    }
-    .recent-reviews-section,
-    .featured-reviews-section {
-        min-width: 100%;
-    }
-}
-/* --- 💡 ¡NUEVO! Bloqueo de fondo para RESEÑAS --- */
-
-/* Cuando el body está en modo edición... */
+/* --- Bloqueo de fondo para RESEÑAS --- */
+/* 💡 RECOMENDACIÓN: Esto debería moverse a "reviews.css"
+   para mantener todo ordenado, pero funciona aquí. */
 body.is-editing-something .review-card {
-    /* ...todas las tarjetas se apagan... */
     opacity: 0.5;
-    pointer-events: none; /* <-- Evita clics */
+    pointer-events: none; 
 }
 
-/* ...EXCEPTO la que se está editando. */
 body.is-editing-something .review-card.is-editing {
     opacity: 1;
     pointer-events: auto;
-    z-index: 100; /* La trae al frente */
-    box-shadow: 0 0 15px var(--morado); /* Brillo de edición */
+    z-index: 100; 
+    box-shadow: 0 0 15px var(--morado); 
 }

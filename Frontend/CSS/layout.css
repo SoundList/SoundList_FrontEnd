@@ -1,34 +1,30 @@
-/* ===============================================
-   🎨 CSS/layout.css - ESTRUCTURA DE PÁGINA
-   =============================================== */
 
-/* Contenedor principal para las dos columnas de reseñas */
 .profile-main-content {
     display: flex;
-    flex-wrap: wrap; /* Para responsive */
+    flex-direction: column; /* ¡CLAVE! Apilado por defecto */
     gap: 2rem;
     margin-top: 2rem;
 }
 
-/* Columna izquierda (reseñas recientes) */
-.recent-reviews-section {
-    flex: 3; /* Ocupa 3 partes del espacio */
-    min-width: 400px;
-}
-
-/* Columna derecha (reseñas destacadas) */
+.recent-reviews-section,
 .featured-reviews-section {
-    flex: 2; /* Ocupa 2 partes del espacio */
-    min-width: 300px;
+     width: 100%; 
 }
 
-/* Responsive: en pantallas pequeñas, las columnas se apilan */
-@media (max-width: 992px) {
+
+@media (min-width: 992px) {
     .profile-main-content {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap; 
     }
-    .recent-reviews-section,
+
+    .recent-reviews-section {
+        flex: 3 1 400px; 
+        width: auto; 
+    }
+
     .featured-reviews-section {
-        min-width: 100%;
+        flex: 2 1 300px; 
+        width: auto; 
     }
 }

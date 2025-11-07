@@ -2,19 +2,14 @@
     position: relative;
 }
 
-/* TU .notification-icon original. 
-   PERO, .header.css ya define .notification-icon.
-   Para evitar conflictos, haré este más específico.
-*/
 .notification-wrapper .notification-icon {
     font-size: 1.6rem;
     background-color: rgba(255,255,255,0.12);
     color: var(--blanco);
-    width: 45px; /* Ligeramente diferente a header.css */
+    width: 45px;
     height: 45px;
     cursor: pointer;
     transition: all 0.3s ease;
-    /* (Propiedades de .header.css que faltaban) */
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -36,28 +31,70 @@
     width: 240px;
     display: none;
     transition: all 0.3s ease;
-    z-index: 1001; /* Añadido z-index */
+    z-index: 1001; 
 }
 
 .notification-dropdown.show {
     display: block;
 }
 
-/* --- ¡NUEVO! (Añadido de la Imagen 1) --- */
 .notification-badge {
     position: absolute;
     top: 5px;
     right: 5px;
     width: 10px;
     height: 10px;
-    background-color: #007bff; /* Azul brillante */
+    background-color: #007bff;
     border-radius: 50%;
     border: 2px solid var(--azul-profundo);
 }
+
 .notification-icon.notif-unread {
-    color: var(--amarillo); /* Tu color amarillo */
+    color: var(--amarillo);
     animation: pulse 1.5s infinite;
 }
+
 .notification-dropdown li.unread-item {
     font-weight: bold;
+}
+
+@media (max-width: 992px) {
+    .notification-wrapper .notification-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.4rem;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .notification-wrapper .notification-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 1.3rem;
+    }
+
+    .notification-dropdown {
+        right: 50%;
+        transform: translateX(50%);
+        width: 90vw; 
+        max-width: 320px;
+        top: 50px;
+    }
+}
+
+
+@media (max-width: 400px) {
+    .notification-wrapper .notification-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 1.2rem;
+    }
+
+    .notification-dropdown {
+        width: 92vw;
+        max-width: none;
+        padding: 0.7rem;
+    }
 }

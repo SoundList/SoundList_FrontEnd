@@ -1,28 +1,59 @@
+/**
+ * ⚙️ JS/Handlers/commentHandler.js
+ * (ACTUALIZADO: Con guardias de bloqueo en 'like' y 'actions')
+ */
+
 window.toggleCommentEditMode = async function(commentId) {
     const card = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
     if (!card) return;
-    
-    const modalBody = card.closest('.modal-body'); // 💡 Busca el contenedor padre
+
+const modalBody = card.closest('.modal-body');
+    if (!modalBody) {
+        console.error("Error crítico: No se pudo encontrar el '.modal-body' padre.");
+        return;
+    }
+
+    // 💡 CAMBIO: La guardia ahora comprueba 'modalBody'
+    if (modalBody.classList.contains('is-editing-something')) {
+        window.showAlert("Ya estás editando otro comentario.", "Aviso");
+        return;
+    }
 
     const textElement = card.querySelector('.comment-text');
     const actionsElement = card.querySelector('.comment-action-icons');
     if (!textElement || !actionsElement) return;
 
-    // 1. Verificar si tiene reacciones (Tu lógica original)
+    // 1. Verificar si tiene reacciones (usando Mocks)
     try {
+        // (Simulación con Mocks)
         const thisComment = MOCK_COMMENTS.find(c => c.commentId == commentId);
         const count = thisComment.likes || 0;
         if (count > 0) {
-            alert("Este comentario ya tiene reacciones y no se puede editar.");
+            window.showAlert("Este comentario ya tiene reacciones y no se puede editar.", "Error");
             return;
         }
     } catch (error) {
         console.error("Error al verificar reacciones:", error);
+        window.showAlert("Error al verificar reacciones del comentario.", "Error");
         return;
     }
 
-    // 💡 ¡CAMBIO! Añade clases de bloqueo
-    if (modalBody) modalBody.classList.add('is-editing-something'); // Bloquea el modal
+    // Desactivar el cierre del modal
+    let originalModalConfig = {};
+    if (window.commentsModalInstance && window.commentsModalInstance._config) {
+        originalModalConfig = {
+            backdrop: window.commentsModalInstance._config.backdrop,
+            keyboard: window.commentsModalInstance._config.keyboard
+        };
+        window.commentsModalInstance._config.backdrop = 'static';
+        window.commentsModalInstance._config.keyboard = false;
+    }
+// 💡 CAMBIO: Clases de bloqueo aplicadas a 'modalBody'
+    modalBody.classList.add('is-editing-something'); // Bloquea todo lo demás
+    card.classList.add('is-editing');
+    // ¡AQUÍ ESTÁ LA CLAVE!
+    // Clases de bloqueo
+    document.body.classList.add('is-editing-something'); // Bloquea todo lo demás
     card.classList.add('is-editing');                   // Resalta este comentario
 
     // 2. Ocultar elementos originales
@@ -31,7 +62,6 @@ window.toggleCommentEditMode = async function(commentId) {
     actionsElement.style.display = 'none'; 
 
     // 3. Crear el contenedor de edición
-    // ... (Crear textarea, botones, etc.) ...
     const editContainer = document.createElement('div');
     editContainer.className = 'inline-edit-container';
     const textarea = document.createElement('textarea');
@@ -46,11 +76,19 @@ window.toggleCommentEditMode = async function(commentId) {
     cancelBtn.className = 'inline-edit-button cancel';
     cancelBtn.textContent = 'Cancelar';
 
-
     // 4. Lógica de los botones
     function exitEditMode() {
-        // 💡 ¡CAMBIO! Quita las clases de bloqueo
-        if (modalBody) modalBody.classList.remove('is-editing-something');
+        // Reactivar el cierre del modal
+        if (window.commentsModalInstance && window.commentsModalInstance._config) {
+            window.commentsModalInstance._config.backdrop = originalModalConfig.backdrop ?? true;
+            window.commentsModalInstance._config.keyboard = originalModalConfig.keyboard ?? true;
+        }
+// 💡 CAMBIO: Quita las clases de bloqueo de 'modalBody'
+        modalBody.classList.remove('is-editing-something');
+        card.classList.remove('is-editing');
+        // ¡AQUÍ ESTÁ LA CLAVE!
+        // Quita las clases de bloqueo
+        document.body.classList.remove('is-editing-something');
         card.classList.remove('is-editing');
         
         editContainer.remove();
@@ -64,10 +102,12 @@ window.toggleCommentEditMode = async function(commentId) {
         const newText = textarea.value.trim();
         if (newText && newText !== oldText) {
             try {
+                // (Simulación)
                 textElement.textContent = newText; 
-                alert("Comentario actualizado (simulado).");
+                window.showAlert("Comentario actualizado (simulado).", "Éxito");
             } catch (error) {
                 console.error("Error al actualizar comentario:", error);
+                window.showAlert("No se pudo actualizar el comentario.", "Error");
             }
         }
         exitEditMode();
@@ -87,11 +127,19 @@ window.toggleCommentEditMode = async function(commentId) {
  * Maneja las acciones de un comentario
  */
 window.handleCommentMenuAction = async function(event) {
-    // ... (Tu código de 'switch (action)' no cambia) ...
     event.stopPropagation();
     const button = event.currentTarget;
     const action = button.getAttribute('data-action');
     const commentId = button.getAttribute('data-comment-id');
+    const card = button.closest('.comment-item');
+
+    // 💡 ¡NUEVA GUARDIA DE BLOQUEO!
+    // Si algo se está editando Y esta *no* es la tarjeta que se está editando...
+    if (document.body.classList.contains('is-editing-something') && !card.classList.contains('is-editing')) {
+        console.warn("Acción bloqueada: Hay un comentario en modo de edición.");
+        window.showAlert("Termina de editar el otro comentario primero.", "Aviso");
+        return; // No hacer nada
+    }
 
     switch (action) {
         case 'edit-comment': 
@@ -103,9 +151,10 @@ window.handleCommentMenuAction = async function(event) {
                 try {
                     const cardToRemove = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
                     if (cardToRemove) cardToRemove.remove();
-                    alert("Comentario eliminado (simulado).");
+                    window.showAlert("Comentario eliminado (simulado).", "Eliminado");
                 } catch (error) {
                     console.error("Error al eliminar comentario:", error);
+                    window.showAlert("No se pudo eliminar el comentario.", "Error");
                 }
             }
             break;
@@ -113,7 +162,7 @@ window.handleCommentMenuAction = async function(event) {
         case 'report-comment': 
             const reason = prompt("¿Por qué quieres reportar este comentario?");
             if (reason) {
-                alert("Comentario reportado exitosamente (simulado).");
+                window.showAlert("Comentario reportado exitosamente (simulado).", "Reporte Enviado");
             }
             break;
     }
@@ -123,12 +172,19 @@ window.handleCommentMenuAction = async function(event) {
  * Maneja los "Me Gusta" de los COMENTARIOS
  */
 window.handleCommentLikeToggle = async function(event) {
-    // ... (Tu código de likes no cambia) ...
     event.stopPropagation();
     
+    // 💡 ¡NUEVA GUARDIA DE BLOQUEO!
+    // Si algo se está editando, no se puede dar like.
+    if (document.body.classList.contains('is-editing-something')) {
+        console.warn("Acción bloqueada: Hay un comentario en modo de edición.");
+        window.showAlert("Termina de editar el comentario primero.", "Aviso");
+        return; // No hacer nada
+    }
+
     const token = localStorage.getItem("authToken");
     if (!token) {
-        alert("Debes iniciar sesión para dar Me Gusta.");
+        window.showAlert("Debes iniciar sesión para dar Me Gusta.", "Acción Requerida");
         window.location.href = '../login.html'; 
         return;
     }
@@ -149,11 +205,10 @@ window.handleCommentLikeToggle = async function(event) {
             icon.style.color = "var(--magenta)";
             countEl.textContent = count + 1;
         }
-
         console.log(`Like/Unlike simulado en Comentario #${commentId}`);
-
     } catch (error) {
         console.error("Error al dar like al comentario:", error);
+        // Revertir en caso de error
         if (isLiked) {
             icon.style.color = "var(--magenta)";
             countEl.textContent = count;
@@ -169,7 +224,6 @@ window.handleCommentLikeToggle = async function(event) {
  * Prepara el formulario de "Añadir Comentario"
  */
 function setupCommentForm(reviewId) {
-    // ... (Tu código de 'setupCommentForm' no cambia) ...
     const sendBtn = document.getElementById("sendCommentBtn");
     const textArea = document.getElementById("commentTextArea");
     
@@ -179,6 +233,13 @@ function setupCommentForm(reviewId) {
     }
 
     sendBtn.onclick = async () => {
+        // 💡 ¡NUEVA GUARDIA DE BLOQUEO!
+        // No permitir enviar un *nuevo* comentario si se está editando uno.
+        if (document.body.classList.contains('is-editing-something')) {
+            window.showAlert("Termina de editar tu comentario antes de enviar uno nuevo.", "Aviso");
+            return; 
+        }
+
         const commentText = textArea.value.trim();
         if (commentText === "") return;
 
@@ -207,7 +268,7 @@ function setupCommentForm(reviewId) {
 
         } catch (error) {
             console.error("Error al enviar comentario:", error);
-            alert("No se pudo enviar tu comentario.");
+            window.showAlert("No se pudo enviar tu comentario.", "Error");
         } finally {
             sendBtn.disabled = false;
         }

@@ -1,6 +1,6 @@
 // ===============================================
 // ⚙️ JS/Handlers/reviewHandler.js
-// (VERSIÓN ORIGINAL que usa confirm() y alert())
+// (ACTUALIZADO: Menú de 3 puntos ahora "bloquea" la página)
 // ===============================================
 
 /**
@@ -18,7 +18,7 @@ window.toggleReviewEditMode = function(reviewId) {
 
     const oldText = textElement.textContent;
 
-    // 1. Añade clases de bloqueo
+    // 1. Añade clases de bloqueo (para EDICIÓN)
     document.body.classList.add('is-editing-something');
     card.classList.add('is-editing');
 
@@ -83,31 +83,50 @@ window.toggleReviewEditMode = function(reviewId) {
     textarea.focus();
 }
 
+/**
+ * Cierra TODOS los menús desplegables de reseñas.
+ */
 window.closeAllMenus = function() {
     document.querySelectorAll(".review-menu.visible").forEach(m => {
         m.classList.remove("visible");
         m.style.display = "none";
     });
+    // 💡 CAMBIO: Quitar el bloqueo del menú
+    document.body.classList.remove('menu-is-open');
 }
 
+/**
+ * Muestra/Oculta un menú desplegable específico.
+ */
 window.toggleReviewMenu = function(event, menuId) {
     event.stopPropagation();
     const menu = document.getElementById(menuId);
 
+    // Cierra todos los OTROS menús (y quita el lock por si acaso)
+    let otherMenuWasOpen = false;
     document.querySelectorAll(".review-menu.visible").forEach(m => {
         if (m !== menu) {
             m.classList.remove("visible");
             m.style.display = "none";
+            otherMenuWasOpen = true;
         }
     });
+    
+    if (otherMenuWasOpen) {
+        document.body.classList.remove('menu-is-open');
+    }
 
     const isVisible = menu.classList.contains("visible");
     if (isVisible) {
+        // El menú ESTABA visible, así que lo cerramos (al hacer clic de nuevo)
         menu.classList.remove("visible");
         menu.style.display = "none";
+        // 💡 CAMBIO: Quitar el bloqueo
+        document.body.classList.remove('menu-is-open');
         return;
     }
 
+    // El menú NO estaba visible, así que lo abrimos
     const icon = event.currentTarget;
     const rect = icon.getBoundingClientRect();
     
@@ -115,16 +134,21 @@ window.toggleReviewMenu = function(event, menuId) {
     menu.style.position = "absolute";
     menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
     menu.style.left = `${rect.right - 180}px`; 
-    menu.style.zIndex = "99999";
+    menu.style.zIndex = "99999"; // z-index alto para el menú
     menu.style.display = "block";
     menu.classList.add("visible");
+    
+    // 💡 CAMBIO: Añadir el bloqueo
+    document.body.classList.add('menu-is-open');
 };
 
-document.addEventListener("click", e => {
-    if (!e.target.closest(".review-menu") && !e.target.closest(".review-options")) {
-        closeAllMenus();
-    }
-});
+// 💡 CAMBIO IMPORTANTE:
+// Se eliminó el 'document.addEventListener("click", ...)'
+// que cerraba el menú al hacer clic fuera.
+// Ahora, solo closeAllMenus() (el botón 'X') o seleccionar
+// una acción (handleReviewMenuAction) pueden cerrar el menú.
+
+
 /**
  * Maneja acciones de una RESEÑA (Dropdown o Comentarios)
  */
@@ -134,6 +158,7 @@ window.handleReviewMenuAction = async function(event) {
     const action = button.getAttribute('data-action');
     const reviewId = button.getAttribute('data-review-id');
 
+    // Cierra el menú (y quita el 'lock') DESPUÉS de seleccionar una acción
     closeAllMenus();
     
     switch (action) {
@@ -142,13 +167,14 @@ window.handleReviewMenuAction = async function(event) {
             toggleReviewEditMode(reviewId);
             break;
             
-  case 'delete':
-            const confirmed = await window.showConfirm(
-                `¿Estás seguro de que quieres eliminar la reseña #${reviewId}? Esta acción no se puede deshacer.`,
-                "Eliminar Reseña"
-            );
+    case 'delete':
+            // 💡 CAMBIO: Volvemos al 'confirm' nativo.
+            // El 'window.showConfirm' (modal) está chocando
+            // con el overlay 'menu-is-open' (nuestro 'backdrop' manual).
+            // Usamos 'confirm()' nativo, que SÍ funciona (igual que 'prompt()').
+            if (confirm(`¿Estás seguro de que quieres eliminar la reseña #${reviewId}? Esta acción no se puede deshacer.`)) {
             
-            if (confirmed) {
+            // if (confirmed) { // Esta línea se reemplaza
                 try {
                     // await window.reviewApi.deleteReview(reviewId);
                     const cardToRemove = document.querySelector(`.review-card[data-review-id="${reviewId}"]`);
@@ -162,6 +188,7 @@ window.handleReviewMenuAction = async function(event) {
             break;
             
         case 'report':
+            // Usamos prompt nativo porque showConfirm no es para inputs
             const reason = prompt("¿Por qué quieres reportar esta RESEÑA?");
             if (reason) {
                 try {

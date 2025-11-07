@@ -1,6 +1,6 @@
 // ===============================================
 // 👍 JS/Handlers/likesHandler.js
-// (ACTUALIZADO para manejar Likes de Reviews Y Comentarios)
+// (ACTUALIZADO: Chequea si el usuario está logueado)
 // ===============================================
 
 /**
@@ -10,8 +10,16 @@
 window.handleLikeToggle = async function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
+
+    // 💡 ¡NUEVO! Chequeo de login
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId) {
+        // Si no está logueado, lo mandamos a la página de login
+        alert("Debes iniciar sesión para dar Me Gusta.");
+        window.location.href = "../login.html"; // (Ajusta esta ruta si es necesario)
+        return;
+    }
     
-    // 💡 ¡CAMBIO! Revisa qué tipo de ID tiene el botón
     const reviewId = button.getAttribute('data-review-id');
     const commentId = button.getAttribute('data-comment-id');
 
@@ -21,36 +29,32 @@ window.handleLikeToggle = async function(event) {
     }
 
     const icon = button.querySelector("i");
-    // (Ajuste: el like-count puede estar en diferentes lugares)
     const countEl = button.parentElement.querySelector(".like-count");
     let count = parseInt(countEl.textContent);
     
-    const liked = icon.style.color === 'var(--magenta)'; // (Revisa tu color 'liked')
+    const liked = icon.style.color === 'var(--magenta)'; 
 
-    // 1. Lógica optimista (actualiza el frontend primero)
+    // 1. Lógica optimista
     if (liked) {
-        icon.style.color = "var(--blanco)"; // Color no-like
+        icon.style.color = "var(--blanco)"; 
         countEl.textContent = count - 1;
     } else {
-        icon.style.color = "var(--magenta)"; // Color like
+        icon.style.color = "var(--magenta)"; 
         countEl.textContent = count + 1;
     }
 
-    // 2. 📡 Llama a la API
+    // 2. Llama a la API
     try {
         if (reviewId) {
-            // Es un like de Reseña
             await window.reviewApi.toggleLikeReview(reviewId);
         } else if (commentId) {
-            // Es un like de Comentario
-            // 💡 (Asegúrate de añadir 'toggleLikeComment' a reviewApi.js)
             await window.reviewApi.toggleLikeComment(commentId);
         }
 
     } catch (error) {
         console.error("Error al manejar el like:", error);
         
-        // 3. ❌ Revertir el cambio si la llamada al API falla
+        // 3. Revertir el cambio si falla la API
         if (liked) {
             icon.style.color = "var(--magenta)";
             countEl.textContent = count;

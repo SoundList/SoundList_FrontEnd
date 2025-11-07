@@ -1,90 +1,64 @@
 // ================================
 // ⚙️ JS/Handlers/headerHandler.js
-// (ACTUALIZADO con lógica de búsqueda)
+// MANEJA EL MENÚ DE USUARIO Y LOGOUT
 // ================================
 
-// Esta función se llama desde el script inyector en tu HTML
+// Esta función debe ser llamada por el script inyector en tu HTML
 function setupHeaderHandlers() {
     
     const userMenuButton = document.getElementById("userMenuButton");
     const userMenuDropdown = document.getElementById("userMenuDropdown");
     const logoutButton = document.getElementById("logoutButton");
 
-    // --- 💡 NUEVA LÓGICA DE BÚSQUEDA ---
-    const searchInput = document.getElementById("searchInput");
-    const searchIcon = document.getElementById("searchIcon");
-
-    if (searchIcon && searchInput) {
-        searchIcon.addEventListener("click", () => {
-            performSearch(searchInput.value);
-        });
-
-        // Opcional: que también busque al presionar "Enter"
-        searchInput.addEventListener("keypress", (e) => {
-            if (e.key === 'Enter') {
-                performSearch(searchInput.value);
-            }
-        });
-    }
-    // --- FIN DE LA NUEVA LÓGICA ---
-
-    // 1. Manejar el clic en el ícono de usuario
+    // 1. Manejar el clic en el ícono de usuario (si existe)
     if (userMenuButton) {
         userMenuButton.addEventListener("click", (e) => {
             e.stopPropagation(); // Evita el cierre global
-            userMenuDropdown.classList.toggle("visible"); // Usa 'visible' como review-menu
+            userMenuDropdown.classList.toggle("show");
         });
     }
 
-    // 2. Manejar el clic en "Cerrar Sesión"
+    // 2. Manejar el clic en "Cerrar Sesión" (si existe)
     if (logoutButton) {
         logoutButton.addEventListener("click", (e) => {
-            e.preventDefault(); 
+            e.preventDefault(); // Evita que el '#' navegue
             
+            // Limpia el localStorage
             localStorage.removeItem("authToken");
             localStorage.removeItem("userId");
             localStorage.removeItem("username");
             localStorage.removeItem("userAvatar");
             
             alert("Has cerrado sesión.");
-            window.location.href = "index.html"; 
+            
+            // Recarga la página. Al recargar,
+            // header.js verá que no hay token y mostrará "Iniciar Sesión".
+            window.location.reload(); 
         });
     }
 
-    // 3. Cierre global para el menú de usuario
+    // 3. Cierre global para ambos menús
     document.addEventListener("click", (e) => {
+        // Cierra el menú de usuario
         if (userMenuDropdown && !e.target.closest(".user-menu-wrapper")) {
-            userMenuDropdown.classList.remove("visible");
+            userMenuDropdown.classList.remove("show");
+        }
+        
+        // Cierra las notificaciones
+        const notifDropdown = document.getElementById("notificationDropdown");
+        if (notifDropdown && !e.target.closest(".notification-wrapper")) {
+            notifDropdown.classList.remove("show");
         }
     });
 }
 
-/**
- * 💡 NUEVA FUNCIÓN: Llama a la API de búsqueda
- */
-function performSearch(query) {
-    if (!query || query.trim() === "") {
-        console.log("El campo de búsqueda está vacío.");
-        return;
-    }
-
-    console.log(`Buscando: "${query}"...`);
-    
-    // Aquí es donde llamarías a tu API de búsqueda
-    // (Asegúrate de tener un 'searchApi.js' o añadirlo a 'navApi.js')
-    
-    // try {
-    //     const results = await window.searchApi.search(query);
-    //     console.log(results);
-    //     // Aquí iría la lógica para mostrar los resultados
-    // } catch (error) {
-    //     console.error("Error en la búsqueda:", error);
-    // }
-}
-
-// Se adjunta a DOMContentLoaded para que esté listo 
-// para ser llamado por el script inyector en profile.html
+// (Esta lógica se asegura de que setupHeaderHandlers esté disponible
+// para el script inyector en tu profile.html)
 document.addEventListener("DOMContentLoaded", () => {
-    // La función existe, pero se llamará desde el script
-    // inyector en profile.html
+    // Si el header se inyecta (como en profile.html), 
+    // el script inyector llamará a 'setupHeaderHandlers'.
+    if (!document.getElementById("header-placeholder")) {
+        // Si es otra página que NO inyecta el header, lo llama aquí.
+        setupHeaderHandlers();
+    }
 });

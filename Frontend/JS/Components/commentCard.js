@@ -1,25 +1,27 @@
 // ===============================================
-// 💬 JS/Components/commentCard.js (ACTUALIZADO)
-// (Menú de 3 puntos REEMPLAZADO por iconos directos)
+// 💬 JS/Components/commentCard.js
+// (ACTUALIZADO: Sin 3 puntos, con iconos directos)
 // ===============================================
 
 /**
  * Genera el HTML para una tarjeta de comentario individual.
  * @param {object} comment - El objeto comentario del backend.
- * @param {number} currentUserId - El ID del usuario logueado.
+ * @param {number} currentUserId - El ID del usuario logueado (será NaN si no está logueado).
  * @returns {string} El HTML completo de la tarjeta.
  */
 function createCommentCard(comment, currentUserId) {
     const defaultAvatar = "../../Assets/default-avatar.png";
+    
+    const isLoggedIn = !isNaN(currentUserId);
+    
     const isLiked = comment.userLiked || false; 
     const likeCount = comment.likes || 0;
-    
     const commentId = comment.commentId || comment.id; 
     
     const isOwner = comment.userId === currentUserId;
-    // 💡 Lógica de "contar" del front:
-    // Asumimos que el 'comment' que viene de la API tiene la prop 'likes'
     const canEdit = isOwner && (comment.likes || 0) === 0; 
+    
+    // 💡 CAMBIO: Se eliminó 'menuId' y la lógica del menú desplegable
 
     return `
     <div class="comment-item" data-comment-id="${commentId}">
@@ -33,42 +35,41 @@ function createCommentCard(comment, currentUserId) {
         <div class="comment-like">
             <button class="btn-like" 
                     data-comment-id="${commentId}" 
-                    onclick="handleLikeToggle(event)">
+                    onclick="handleLikeToggle(event)"
+                    ${!isLoggedIn ? 'disabled title="Inicia sesión para dar Me Gusta"' : ''}>
                 <i class="fa-solid fa-heart" style="color: ${isLiked ? 'var(--magenta)' : 'var(--blanco)'};"></i>
             </button>
             <span class="like-count">${likeCount}</span>
         </div>
         
-        <!-- 💡 ¡CAMBIO! Menú de 3 puntos reemplazado por iconos de acción -->
+        <!-- 💡 ¡AQUÍ ESTÁ EL CAMBIO! -->
+        <!-- Iconos de Acción (Sin 3 puntos, sin menú) -->
         <div class="comment-action-icons">
-            
-            ${isOwner ? `
-                <!-- Opciones SI ERES EL DUEÑO -->
-                ${canEdit ? `
-                    <!-- Lápiz (Editar) -->
-                    <i class="fa-solid fa-pen" 
-                       data-action="edit" 
+            ${isLoggedIn ? `
+                ${isOwner ? `
+                    <!-- Opciones SI ERES EL DUEÑO -->
+                    ${canEdit ? `
+                        <i class="fa-solid fa-pen" 
+                           data-action="edit-comment" 
+                           data-comment-id="${commentId}" 
+                           onclick="handleCommentMenuAction(event)"
+                           title="Editar"></i>` 
+                    : ''}
+                    <i class="fa-solid fa-trash" 
+                       data-action="delete-comment" 
                        data-comment-id="${commentId}" 
                        onclick="handleCommentMenuAction(event)"
-                       title="Editar"></i>`
-                : ''}
-                <!-- Tacho (Eliminar) -->
-                <i class="fa-solid fa-trash" 
-                   data-action="delete" 
-                   data-comment-id="${commentId}" 
-                   onclick="handleCommentMenuAction(event)"
-                   title="Eliminar"></i>
-            ` : `
-                <!-- Opciones SI NO ERES EL DUEÑO -->
-                <!-- Bandera (Reportar) -->
-                <i class="fa-solid fa-flag" 
-                   data-action="report" 
-                   data-comment-id="${commentId}" 
-                   onclick="handleCommentMenuAction(event)"
-                   title="Reportar"></i>
-            `}
-            
-        </div> <!-- Fin de comment-action-icons -->
+                       title="Eliminar"></i>
+                ` : `
+                    <!-- Opciones SI NO ERES EL DUEÑO -->
+                    <i class="fa-solid fa-flag" 
+                       data-action="report-comment" 
+                       data-comment-id="${commentId}" 
+                       onclick="handleCommentMenuAction(event)"
+                       title="Reportar"></i>
+                `}
+            ` : ''}
+        </div> <!-- Fin de .comment-action-icons -->
 
     </div>
     `;

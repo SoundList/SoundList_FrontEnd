@@ -1,22 +1,99 @@
 // ===============================================
 // ⚙️ JS/Handlers/reviewHandler.js
-// (ACTUALIZADO para lógica de Dropdown)
+// (VERSIÓN ORIGINAL que usa confirm() y alert())
 // ===============================================
 
 /**
- * 💡 ¡REVERTIDO! Vuelve a la lógica de calcular posición
+ * 💡 ¡FUNCIÓN CORREGIDA! 
+ * Se movió al ámbito global (como en commentHandler.js) 
+ * para arreglar el bug de bloqueo.
  */
+window.toggleReviewEditMode = function(reviewId) {
+    const card = document.querySelector(`.review-card[data-review-id="${reviewId}"]`);
+    if (!card) return;
+
+    const textElement = card.querySelector('.rc-body');
+    const actionsElement = card.querySelector('.rc-actions-stack');
+    if (!textElement || !actionsElement) return;
+
+    const oldText = textElement.textContent;
+
+    // 1. Añade clases de bloqueo
+    document.body.classList.add('is-editing-something');
+    card.classList.add('is-editing');
+
+    // 2. Ocultar elementos originales
+    textElement.style.display = 'none';
+    actionsElement.style.display = 'none';
+
+    // 3. Crear el contenedor de edición
+    const editContainer = document.createElement('div');
+    editContainer.className = 'inline-edit-container';
+    
+    const textarea = document.createElement('textarea');
+    textarea.className = 'inline-edit-textarea';
+    textarea.value = oldText;
+    
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'inline-edit-buttons';
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'inline-edit-button';
+    confirmBtn.textContent = 'Confirmar';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'inline-edit-button cancel';
+    cancelBtn.textContent = 'Cancelar';
+
+    // 4. Lógica de los botones
+    function exitEditMode() {
+        document.body.classList.remove('is-editing-something');
+        card.classList.remove('is-editing');
+        editContainer.remove();
+        textElement.style.display = 'block';
+        actionsElement.style.display = 'flex'; 
+    }
+
+    cancelBtn.onclick = exitEditMode;
+
+    confirmBtn.onclick = async () => {
+        const newText = textarea.value.trim();
+        if (newText && newText !== oldText) {
+            try {
+                // (Llamada a la API...)
+                textElement.textContent = newText; 
+                
+                // (Usando la versión del modal que te di)
+                window.showAlert("Reseña actualizada (simulado).", "Éxito");
+
+            } catch (error) {
+                console.error("Error al actualizar reseña:", error);
+            }
+        }
+        exitEditMode(); // Llama a la función de salida
+    };
+    
+    // 5. Ensamblar
+    buttonsContainer.appendChild(cancelBtn);
+    buttonsContainer.appendChild(confirmBtn);
+    editContainer.appendChild(textarea);
+    editContainer.appendChild(buttonsContainer);
+
+    textElement.after(editContainer);
+    textarea.focus();
+}
+
 window.closeAllMenus = function() {
     document.querySelectorAll(".review-menu.visible").forEach(m => {
         m.classList.remove("visible");
         m.style.display = "none";
     });
 }
+
 window.toggleReviewMenu = function(event, menuId) {
     event.stopPropagation();
     const menu = document.getElementById(menuId);
 
-    // Cierra otros menús abiertos
     document.querySelectorAll(".review-menu.visible").forEach(m => {
         if (m !== menu) {
             m.classList.remove("visible");
@@ -31,154 +108,109 @@ window.toggleReviewMenu = function(event, menuId) {
         return;
     }
 
-    // Lógica de visualización y posicionamiento
     const icon = event.currentTarget;
     const rect = icon.getBoundingClientRect();
     
-    // (Ya no usamos el overlay)
     document.body.appendChild(menu); 
     menu.style.position = "absolute";
     menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
-    menu.style.left = `${rect.right - 160}px`; // Ajusta la posición
+    menu.style.left = `${rect.right - 180}px`; 
     menu.style.zIndex = "99999";
     menu.style.display = "block";
     menu.classList.add("visible");
 };
 
-const MOCK_COMMENTS = [
-    {
-        commentId: 1,
-        userId: 1, // El dueño (asumiendo que el usuario logueado es '1')
-        username: "TuUsuarioDePrueba",
-        avatar: "../../Assets/default-avatar.png",
-        text: "Este es mi propio comentario. Tiene 0 likes, así que SÍ puedo editarlo.",
-        likes: 0, // 👈 0 LIKES = EDITABLE
-        userLiked: false
-    },
-    {
-        commentId: 2,
-        userId: 99, // Otro usuario
-        username: "MusicFan88",
-        avatar: "https://placehold.co/40x40/634F94/F0F0F0?text=M",
-        text: "Mmm, no estoy tan seguro. Creo que el álbum anterior fue mejor.",
-        likes: 12,
-        userLiked: false
-    },
-    {
-        commentId: 3,
-        userId: 1, // El dueño
-        username: "TuUsuarioDePrueba",
-        avatar: "../../Assets/default-avatar.png",
-        text: "Aunque pensándolo bien... Este comentario tiene likes, así que NO puedo editarlo, solo borrarlo.",
-        likes: 2, // 👈 >0 LIKES = NO EDITABLE
-        userLiked: true
-    },
-    {
-        commentId: 4,
-        userId: 98, // Otro usuario
-        username: "SaraTune",
-        avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S",
-        text: "¡Gran reseña! 10/10.",
-        likes: 1,
-        userLiked: false
-    },
-        {
-        commentId: 4,
-        userId: 98, // Otro usuario
-        username: "SaraTune",
-        avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S",
-        text: "¡Gran reseña! 10/10.",
-        likes: 1,
-        userLiked: false
-    },
-        {
-        commentId: 3,
-        userId: 1, // El dueño
-        username: "TuUsuarioDePrueba",
-        avatar: "../../Assets/default-avatar.png",
-        text: "Aunque pensándolo bien... Este comentario tiene likes, así que NO puedo editarlo, solo borrarlo.",
-        likes: 2, // 👈 >0 LIKES = NO EDITABLE
-        userLiked: true
+document.addEventListener("click", e => {
+    if (!e.target.closest(".review-menu") && !e.target.closest(".review-options")) {
+        closeAllMenus();
     }
-];
-
-// Función que maneja las acciones del menú
-window.handleMenuAction = async function(event) {
+});
+/**
+ * Maneja acciones de una RESEÑA (Dropdown o Comentarios)
+ */
+window.handleReviewMenuAction = async function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
     const action = button.getAttribute('data-action');
     const reviewId = button.getAttribute('data-review-id');
 
-    // Cierra el menú (la cajita)
-    const menu = button.closest('.review-menu');
-    if (menu) {
-        menu.classList.remove("visible");
-        menu.style.display = "none";
-    }
-
+    closeAllMenus();
+    
     switch (action) {
         case 'edit':
-            alert(`Acción: Editar reseña #${reviewId}`);
+            // 💡 ¡CAMBIO! Llama a la nueva función global
+            toggleReviewEditMode(reviewId);
             break;
             
-        case 'delete':
-            if (confirm(`¿Confirma eliminar la reseña #${reviewId}?`)) {
+  case 'delete':
+            const confirmed = await window.showConfirm(
+                `¿Estás seguro de que quieres eliminar la reseña #${reviewId}? Esta acción no se puede deshacer.`,
+                "Eliminar Reseña"
+            );
+            
+            if (confirmed) {
                 try {
-                    await window.reviewApi.deleteReview(reviewId);
+                    // await window.reviewApi.deleteReview(reviewId);
                     const cardToRemove = document.querySelector(`.review-card[data-review-id="${reviewId}"]`);
                     if (cardToRemove) cardToRemove.remove();
-                    alert(`Reseña #${reviewId} eliminada.`);
+                    window.showAlert(`Reseña #${reviewId} eliminada (simulado).`, "Eliminada");
                 } catch (error) {
                     console.error("Error al eliminar:", error);
-                    alert("No se pudo eliminar la reseña.");
+                    window.showAlert("No se pudo eliminar la reseña.", "Error");
                 }
             }
             break;
             
         case 'report':
-            const reason = prompt("¿Por qué quieres reportar esta reseña?");
+            const reason = prompt("¿Por qué quieres reportar esta RESEÑA?");
             if (reason) {
                 try {
-                    await window.reviewApi.reportReview(reviewId, reason);
-                    alert("Reseña reportada exitosamente.");
+                    // await window.reviewApi.reportReview(reviewId, reason);
+                    window.showAlert("Reseña reportada exitosamente (simulado).", "Reporte Enviado");
                 } catch (error) {
                     console.error("Error al reportar:", error);
-                    alert("Error: No se pudo enviar el reporte.");
+                    window.showAlert("Error: No se pudo enviar el reporte.", "Error");
                 }
             }
             break;
             
-  case 'comments':
+        // 💡 ¡LÓGICA RESTAURADA!
+        case 'comments':
             const modalList = document.getElementById("modalCommentsList");
             if (!modalList || !commentsModalInstance) {
                 console.error("El modal de comentarios no está inicializado.");
                 return;
             }
 
+            commentsModalInstance.show(); 
             modalList.innerHTML = "<p>Cargando comentarios...</p>";
-            commentsModalInstance.show();
 
             try {
-               // const comments = await window.commentsApi.getCommentsForReview(reviewId);
                 console.warn("Usando MOCK DATA para comentarios.");
-                const comments = MOCK_COMMENTS;
-                // 💡 ¡CAMBIO! Necesitamos el ID del usuario logueado
-                const currentUserId = 1;//parseInt(localStorage.getItem("userId"), 10);
+                const comments = MOCK_COMMENTS; // Usa los mocks de abajo
+                const currentUserId = parseInt(localStorage.getItem("userId"), 10);
+                const isLoggedIn = !isNaN(currentUserId);
 
                 if (comments && comments.length > 0) {
                     modalList.innerHTML = "";
                     comments.forEach(comment => {
-                        // 💡 ¡CAMBIO! Pasamos el ID para la lógica de "dueño"
+                        // Llama a la función de 'commentCard.js'
                         modalList.innerHTML += createCommentCard(comment, currentUserId);
                     });
                 } else {
                     modalList.innerHTML = "<p class='no-reviews'>No hay comentarios en esta reseña.</p>";
                 }
-
-                if (typeof setupCommentForm === 'function') {
-                    setupCommentForm(reviewId);
+                
+                // Muestra/Oculta el formulario de escribir
+                const commentForm = document.getElementById('commentFormContainer');
+                if (commentForm) {
+                    commentForm.style.display = isLoggedIn ? 'flex' : 'none';
                 }
 
+                // Prepara el formulario (si existe y estás logueado)
+                if (isLoggedIn && typeof setupCommentForm === 'function') {
+                    setupCommentForm(reviewId); // Llama a 'commentHandler.js'
+                }
             } catch (error) {
                 console.error("Error al cargar comentarios:", error);
                 modalList.innerHTML = "<p class='text-danger'>Error al cargar los comentarios.</p>";
@@ -186,3 +218,11 @@ window.handleMenuAction = async function(event) {
             break;
     }
 };
+
+// 💡 ¡MOCKS RESTAURADOS!
+const MOCK_COMMENTS = [
+    { commentId: 1, userId: 1, username: "TuUsuarioDePrueba", avatar: "../../Assets/default-avatar.png", text: "Este es mi propio comentario. Tiene 0 likes, así que SÍ puedo editarlo.", likes: 0, userLiked: false },
+    { commentId: 2, userId: 99, username: "MusicFan88", avatar: "https://placehold.co/40x40/634F94/F0F0F0?text=M", text: "Mmm, no estoy tan seguro. Creo que el álbum anterior fue mejor.", likes: 12, userLiked: false },
+    { commentId: 3, userId: 1, username: "TuUsuarioDePrueba", avatar: "../../Assets/default-avatar.png", text: "Este comentario tiene likes, así que NO puedo editarlo, solo borrarlo.", likes: 2, userLiked: true },
+    { commentId: 4, userId: 98, username: "SaraTune", avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S", text: "¡Gran reseña! 10/10.", likes: 1, userLiked: false }
+];

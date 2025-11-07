@@ -1,141 +1,175 @@
-// ===============================================
-// 💬 JS/Handlers/commentHandler.js (¡ESTE ES EL ARCHIVO QUE FALTABA!)
-// (Define las funciones para los iconos)
-// ===============================================
+window.toggleCommentEditMode = async function(commentId) {
+    const card = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+    if (!card) return;
+    
+    const modalBody = card.closest('.modal-body'); // 💡 Busca el contenedor padre
 
-/**
- * 💡 Cierra TODOS los menús de comentarios abiertos
- */
-window.closeAllCommentMenus = function() {
-    document.querySelectorAll(".comment-menu.visible").forEach(m => {
-        m.classList.remove("visible");
-        m.style.display = "none";
-    });
-}
+    const textElement = card.querySelector('.comment-text');
+    const actionsElement = card.querySelector('.comment-action-icons');
+    if (!textElement || !actionsElement) return;
 
-/**
- * 💡 Abre/Cierra el menú de un comentario (Dropdown)
- */
-window.toggleCommentMenu = function(event, menuId) {
-    event.stopPropagation();
-    const menu = document.getElementById(menuId);
-
-    // Cierra otros menús de comentarios
-    document.querySelectorAll(".comment-menu.visible").forEach(m => {
-        if (m !== menu) {
-            m.classList.remove("visible");
-            m.style.display = "none";
+    // 1. Verificar si tiene reacciones (Tu lógica original)
+    try {
+        const thisComment = MOCK_COMMENTS.find(c => c.commentId == commentId);
+        const count = thisComment.likes || 0;
+        if (count > 0) {
+            alert("Este comentario ya tiene reacciones y no se puede editar.");
+            return;
         }
-    });
-
-    const isVisible = menu.classList.contains("visible");
-    if (isVisible) {
-        menu.classList.remove("visible");
-        menu.style.display = "none";
+    } catch (error) {
+        console.error("Error al verificar reacciones:", error);
         return;
     }
 
-    // Lógica de visualización y posicionamiento
-    const icon = event.currentTarget;
-    const rect = icon.getBoundingClientRect();
-    
-    document.body.appendChild(menu); 
-    menu.style.position = "absolute";
-    menu.style.top = `${rect.top + window.scrollY - menu.offsetHeight - 5}px`; 
-    menu.style.left = `${rect.right - 160}px`; 
-    menu.style.zIndex = "999999";
-    menu.style.display = "block";
-    menu.classList.add("visible");
-};
+    // 💡 ¡CAMBIO! Añade clases de bloqueo
+    if (modalBody) modalBody.classList.add('is-editing-something'); // Bloquea el modal
+    card.classList.add('is-editing');                   // Resalta este comentario
 
-/**
- * 💡 Cierre global (si se hace clic fuera)
- */
-document.addEventListener("click", e => {
-    if (!e.target.closest(".comment-menu") && !e.target.closest(".comment-menu-options")) {
-        closeAllCommentMenus();
+    // 2. Ocultar elementos originales
+    const oldText = textElement.textContent;
+    textElement.style.display = 'none';
+    actionsElement.style.display = 'none'; 
+
+    // 3. Crear el contenedor de edición
+    // ... (Crear textarea, botones, etc.) ...
+    const editContainer = document.createElement('div');
+    editContainer.className = 'inline-edit-container';
+    const textarea = document.createElement('textarea');
+    textarea.className = 'inline-edit-textarea';
+    textarea.value = oldText;
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'inline-edit-buttons';
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'inline-edit-button';
+    confirmBtn.textContent = 'Confirmar';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'inline-edit-button cancel';
+    cancelBtn.textContent = 'Cancelar';
+
+
+    // 4. Lógica de los botones
+    function exitEditMode() {
+        // 💡 ¡CAMBIO! Quita las clases de bloqueo
+        if (modalBody) modalBody.classList.remove('is-editing-something');
+        card.classList.remove('is-editing');
+        
+        editContainer.remove();
+        textElement.style.display = 'block';
+        actionsElement.style.display = 'flex';
     }
-});
 
+    cancelBtn.onclick = exitEditMode;
+
+    confirmBtn.onclick = async () => {
+        const newText = textarea.value.trim();
+        if (newText && newText !== oldText) {
+            try {
+                textElement.textContent = newText; 
+                alert("Comentario actualizado (simulado).");
+            } catch (error) {
+                console.error("Error al actualizar comentario:", error);
+            }
+        }
+        exitEditMode();
+    };
+
+    // 5. Ensamblar e Insertar
+    buttonsContainer.appendChild(cancelBtn);
+    buttonsContainer.appendChild(confirmBtn);
+    editContainer.appendChild(textarea);
+    editContainer.appendChild(buttonsContainer);
+
+    textElement.after(editContainer);
+    textarea.focus(); 
+}
 
 /**
- * 💡 ¡ESTA ES LA FUNCIÓN QUE HACE CLICKABLES LOS ICONOS!
- * Maneja las acciones de Editar/Borrar/Reportar un comentario
+ * Maneja las acciones de un comentario
  */
 window.handleCommentMenuAction = async function(event) {
+    // ... (Tu código de 'switch (action)' no cambia) ...
     event.stopPropagation();
     const button = event.currentTarget;
     const action = button.getAttribute('data-action');
     const commentId = button.getAttribute('data-comment-id');
 
-    closeAllCommentMenus(); // Cierra los menús (si es que hay)
-
     switch (action) {
-        case 'edit':
-            // 💡 1. Verifica si tiene reacciones
-            try {
-                // (Asumiendo que 'getCommentReactionCount' existe en 'reviewApi.js')
-                const reactionData = await window.reviewApi.getCommentReactionCount(commentId);
-                const count = reactionData.count || (typeof reactionData === 'number' ? reactionData : 0);
-
-                if (count > 0) {
-                    alert("Este comentario ya tiene reacciones y no se puede editar.");
-                    return;
-                }
-                
-                // 2. Si no tiene reacciones, permite editar
-                const card = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
-                const textElement = card.querySelector('.comment-text');
-                const oldText = textElement.textContent;
-                
-                const newText = prompt("Edita tu comentario:", oldText);
-                
-                if (newText && newText !== oldText) {
-                    // (Llama a 'commentsApi.js' para actualizar)
-                    await window.commentsApi.updateComment(commentId, newText);
-                    textElement.textContent = newText; // Actualización optimista
-                    alert("Comentario actualizado.");
-                }
-
-            } catch (error) {
-                console.error("Error al verificar/editar:", error);
-                alert("Error al intentar editar el comentario.");
-            }
+        case 'edit-comment': 
+            toggleCommentEditMode(commentId);
             break;
             
-        case 'delete':
+        case 'delete-comment': 
             if (confirm(`¿Confirma eliminar este comentario?`)) {
                 try {
-                    await window.commentsApi.deleteComment(commentId);
                     const cardToRemove = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
                     if (cardToRemove) cardToRemove.remove();
+                    alert("Comentario eliminado (simulado).");
                 } catch (error) {
                     console.error("Error al eliminar comentario:", error);
-                    alert("No se pudo eliminar el comentario.");
                 }
             }
             break;
             
-        case 'report':
+        case 'report-comment': 
             const reason = prompt("¿Por qué quieres reportar este comentario?");
             if (reason) {
-                try {
-                    await window.commentsApi.reportComment(commentId, reason);
-                    alert("Comentario reportado exitosamente.");
-                } catch (error) {
-                    console.error("Error al reportar comentario:", error);
-                    alert("Error: No se pudo enviar el reporte.");
-                }
+                alert("Comentario reportado exitosamente (simulado).");
             }
             break;
     }
 };
 
+/**
+ * Maneja los "Me Gusta" de los COMENTARIOS
+ */
+window.handleCommentLikeToggle = async function(event) {
+    // ... (Tu código de likes no cambia) ...
+    event.stopPropagation();
+    
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+        alert("Debes iniciar sesión para dar Me Gusta.");
+        window.location.href = '../login.html'; 
+        return;
+    }
+    
+    const button = event.currentTarget;
+    const commentId = button.getAttribute('data-comment-id');
+    const icon = button.querySelector("i");
+    const countEl = button.parentElement.querySelector(".like-count");
+    let count = parseInt(countEl.textContent);
+    
+    const isLiked = icon.style.color === "var(--magenta)";
+
+    try {
+        if (isLiked) {
+            icon.style.color = "var(--blanco)";
+            countEl.textContent = count - 1;
+        } else {
+            icon.style.color = "var(--magenta)";
+            countEl.textContent = count + 1;
+        }
+
+        console.log(`Like/Unlike simulado en Comentario #${commentId}`);
+
+    } catch (error) {
+        console.error("Error al dar like al comentario:", error);
+        if (isLiked) {
+            icon.style.color = "var(--magenta)";
+            countEl.textContent = count;
+        } else {
+            icon.style.color = "var(--blanco)";
+            countEl.textContent = count;
+        }
+    }
+};
+
 
 /**
- * Prepara el formulario de "Añadir Comentario" dentro del modal.
+ * Prepara el formulario de "Añadir Comentario"
  */
 function setupCommentForm(reviewId) {
+    // ... (Tu código de 'setupCommentForm' no cambia) ...
     const sendBtn = document.getElementById("sendCommentBtn");
     const textArea = document.getElementById("commentTextArea");
     
@@ -151,18 +185,24 @@ function setupCommentForm(reviewId) {
         sendBtn.disabled = true;
 
         try {
-            const newComment = await window.commentsApi.createComment(reviewId, commentText);
-            textArea.value = "";
-
-            const modalList = document.getElementById("modalCommentsList");
+            console.warn("Usando MOCK DATA para crear comentario.");
+            const newComment = { 
+                commentId: Math.floor(Math.random() * 1000), 
+                userId: 1, 
+                username: "TuUsuarioDePrueba", 
+                avatar: "../../Assets/default-avatar.png", 
+                text: commentText, 
+                likes: 0, 
+                userLiked: false 
+            };
             
-            if (modalList.querySelector(".no-reviews") || modalList.querySelector(".text-danger")) {
-                modalList.innerHTML = "";
-            }
+            textArea.value = "";
+            const modalList = document.getElementById("modalCommentsList");
+            const noReviews = modalList.querySelector(".no-reviews");
+            if (noReviews) noReviews.remove();
             
             const currentUserId = parseInt(localStorage.getItem("userId"), 10);
             modalList.innerHTML += createCommentCard(newComment, currentUserId);
-            
             modalList.scrollTop = modalList.scrollHeight;
 
         } catch (error) {

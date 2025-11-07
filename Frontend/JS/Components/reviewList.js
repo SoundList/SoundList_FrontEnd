@@ -1,6 +1,6 @@
 // ===============================================
 // 📋 JS/Components/reviewList.js
-// (ACTUALIZADO con renderMultiItemCarousel)
+// (CORREGIDO: Arreglado el typo 'class.=' en el carrusel)
 // ===============================================
 
 /**
@@ -37,16 +37,9 @@ function renderReviewList(containerId, reviews) {
 
 
 /**
- * 🚀 ¡NUEVO! Renderizador de Carrusel Multi-Ítem 🚀
- * Agrupa varios items (reseñas) dentro de un solo slide (.carousel-item).
- *
- * @param {string} containerId - El ID del elemento ".carousel-inner".
- * @param {Array<object>} items - El array de datos (ej: reseñas).
- * @param {Function} itemRenderer - La FUNCIÓN que sabe cómo dibujar un item (ej: createReviewCard).
- * @param {number} [itemsPerSlide=3] - Cuántos items mostrar por slide.
- * @param {string} [emptyMessage="No hay items."] - Mensaje si el array está vacío.
+ * 🚀 Renderizador de Carrusel GENÉRICO 🚀
  */
-function renderMultiItemCarousel(containerId, items, itemRenderer, itemsPerSlide = 3, emptyMessage = "No hay items disponibles.") {
+function renderGenericCarousel(containerId, items, itemRenderer, emptyMessage = "No hay items disponibles.") {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Error: Contenedor de carrusel #${containerId} no encontrado.`);
@@ -62,35 +55,24 @@ function renderMultiItemCarousel(containerId, items, itemRenderer, itemsPerSlide
         return;
     }
 
-    const currentUserId = parseInt(localStorage.getItem("userId"), 10);
     let carouselHtml = "";
+    const currentUserId = parseInt(localStorage.getItem("userId"), 10); 
 
-    // Agrupa los items de N en N (ej: de 3 en 3)
-    for (let i = 0; i < items.length; i += itemsPerSlide) {
-        const chunk = items.slice(i, i + itemsPerSlide);
-        
-        const activeClass = (i === 0) ? 'active' : '';
+    items.forEach((item, index) => {
+        const activeClass = (index === 0) ? 'active' : '';
 
+        // Llama a la función "dibujadora" (itemRenderer)
+        const itemHtml = itemRenderer(item, currentUserId); 
+
+        // 💡 ¡CORREGIDO! 'class.=' ahora es 'class='
         carouselHtml += `
             <div class="carousel-item ${activeClass}">
-                <!-- Contenedor Flex para los items lado a lado -->
-                <div class="multi-carousel-slide">
-        `;
-
-        // Dibuja cada item dentro del slide
-        chunk.forEach(item => {
-            carouselHtml += `
-                <div class="multi-carousel-item">
-                    ${itemRenderer(item, currentUserId)}
-                </div>
-            `;
-        });
-
-        carouselHtml += `
+                <div class="p-2"> 
+                    ${itemHtml}
                 </div>
             </div>
         `;
-    }
+    });
     
     container.innerHTML = carouselHtml;
 }

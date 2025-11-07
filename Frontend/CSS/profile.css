@@ -28,7 +28,7 @@
 .profile-avatar {
     width: 220px; 
     height: 220px; 
-    border-radius: 50%;
+    border-radius: 300%;
     border: 3px solid var(--white, #fff); 
     object-fit: cover;
     padding: 0;
@@ -140,4 +140,20 @@
     .featured-reviews-section {
         min-width: 100%;
     }
+}
+/* --- 💡 ¡NUEVO! Bloqueo de fondo para RESEÑAS --- */
+
+/* Cuando el body está en modo edición... */
+body.is-editing-something .review-card {
+    /* ...todas las tarjetas se apagan... */
+    opacity: 0.5;
+    pointer-events: none; /* <-- Evita clics */
+}
+
+/* ...EXCEPTO la que se está editando. */
+body.is-editing-something .review-card.is-editing {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 100; /* La trae al frente */
+    box-shadow: 0 0 15px var(--morado); /* Brillo de edición */
 }

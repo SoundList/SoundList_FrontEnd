@@ -1,12 +1,6 @@
-// ===============================================
-// 💬 JS/Components/reviewCard.js
-// (ACTUALIZADO: Revertido a Dropdown + Botón "X")
-// ===============================================
-
 function createReviewCard(review, currentUserId) {
     const menuId = `menu-${review.id || Math.random().toString(36).substr(2, 9)}`;
 
-    // LÓGICA DE PERMISOS
     const isLoggedIn = !isNaN(currentUserId);
     const isOwner = review.userId === currentUserId;
     const isLiked = review.userLiked || false;

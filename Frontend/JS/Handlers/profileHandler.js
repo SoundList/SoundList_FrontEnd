@@ -1,19 +1,7 @@
-// ================================
-// ⚙️ JS/Handlers/profileHandler.js
-// (ACTUALIZADO: Con mock de 'user' y API real comentada)
-// ================================
 
-/**
- * Función principal para cargar el HEADER del perfil y las RESEÑAS RECIENTES.
- * (El carrusel de destacadas se carga por separado en profile.js).
- */
 async function loadUserProfile() {
     console.log("👤 Cargando perfil...");
-
-    // IDs de los contenedores
     const recentContainerId = "recent-reviews"; 
-    
-    // IDs de los elementos del perfil
     const userAvatarEl = document.querySelector(".profile-avatar");
     const userNameEl = document.querySelector(".username");
     const userQuoteEl = document.querySelector(".user-quote");
@@ -22,30 +10,22 @@ async function loadUserProfile() {
     const followerCountEl = document.getElementById("user-followers");
     const defaultAvatar ="../../Assets/default-avatar.png";
 
-    // Poner "Cargando..." en la sección de reseñas recientes
     const recentContainer = document.getElementById(recentContainerId);
     if (recentContainer) recentContainer.innerHTML = "<p class='text-muted'>Cargando reseñas...</p>";
 
     try {
-        // --- 1. Cargar Datos del Usuario (Header y Stats) ---
-        
-        // 1. (Línea real COMENTADA para cuando la API /profile esté lista)
-        // const user = await window.userApi.getUserProfile(); 
-        
-        // 2. (Líneas de SIMULACIÓN (Mock) activas)
+
         console.warn("Usando datos de 'user' simulados. La API /profile aún no está conectada.");
         const user = { id: 1, username: "TuUsuarioDePrueba", image: null, quote: "Esta es una bio de prueba." };
         
         const userId = user.id; 
 
-        // (Líneas de SIMULACIÓN (Mock) activas para Follows)
         console.warn("Usando datos de 'Follows' simulados. La API devuelve 400.");
-        const followersData = { count: 12 }; // <- Dato de prueba
-        const followingData = { count: 5 }; // <- Dato de prueba
+        const followersData = { count: 12 }; 
+        const followingData = { count: 5 }; 
         
         console.log("✅ Perfil (simulado), seguidores y seguidos cargados.");
 
-        // Poblar el header del perfil
         if (userAvatarEl) userAvatarEl.src = user.image || defaultAvatar;
         if (userNameEl) userNameEl.textContent = user.username || "Usuario";
         if (userQuoteEl) userQuoteEl.textContent = user.quote || "Sin frase personal";
@@ -54,12 +34,7 @@ async function loadUserProfile() {
         if (followerCountEl) followerCountEl.textContent = followersData.count ?? followersData;
         if (followingCountEl) followingCountEl.textContent = followingData.count ?? followingData;
 
-        // --- 2. Cargar Reseñas (Recientes) ---
-        
-        // (Línea real COMENTADA)
-        // const recentReviews = await window.reviewApi.getMyReviews(); 
 
-        // (Línea de SIMULACIÓN (Mock) añadida con 7 reseñas)
         console.warn("Usando MOCK DATA para 'Reseñas Recientes'.");
         const recentReviews = [
             { id: 101, userId: 1, username: "TuUsuarioDePrueba", avatar: "../../Assets/default-avatar.png", title: "Currents - Tame Impala", text: "Reseña 1 (Editable)", stars: 5, likes: 0, userLiked: false },

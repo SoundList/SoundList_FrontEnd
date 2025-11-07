@@ -1,6 +1,4 @@
-// ================================
-// 🌐 JS/APIs/commentsApi.js (CORREGIDO)
-// ================================
+
 (function() {
 
     const API_BASE = "http://localhost:32768/api/Comments";
@@ -13,9 +11,6 @@
         };
     }
 
-    /**
-     * 🔹 Obtener comentarios de una reseña específica
-     */
     async function getCommentsForReview(reviewId) {
         try {
             const response = await fetch(`${API_BASE}/review/${reviewId}`, {
@@ -30,13 +25,9 @@
         }
     }
 
-    /**
-     * 🔹 Crea un nuevo comentario
-     */
     async function createComment(reviewId, commentText) {
         const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // ID de prueba
 
-        // 💡 ¡CAMBIO! Payload simplificado para la API de Comments
         const payload = {
             reviewId: reviewId,
             userId: userId,
@@ -61,9 +52,6 @@
         }
     }
 
-    /**
-     * 🔹 Actualiza un comentario
-     */
     async function updateComment(commentId, newText) {
          try {
             const payload = {
@@ -82,10 +70,6 @@
         }
     }
 
-
-    /**
-     * 🔹 Elimina un comentario
-     */
     async function deleteComment(commentId) {
         try {
             const response = await fetch(`${API_BASE}/${commentId}`, {
@@ -100,9 +84,6 @@
         }
     }
 
-    /**
-     * 🔹 Reporta un comentario (Simulado)
-     */
     async function reportComment(commentId, reason) {
         console.warn(`API: Reportar comentario no implementado. Reporte simulado para ${commentId} (Razón: ${reason})`);
         return { success: true, message: "Reporte simulado" };

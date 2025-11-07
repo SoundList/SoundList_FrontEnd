@@ -1,6 +1,4 @@
-// ================================
-// 🌐 JS/APIs/reviewApi.js (CORREGIDO)
-// ================================
+
 (function() {
 
     const API_BASE = "http://localhost:32768/Review";
@@ -40,8 +38,7 @@
             throw error;
         }
     }
-    
-    // 💡 ¡FUNCIÓN AÑADIDA! (Faltaba en mi código anterior)
+
     async function getReviewsByUser(userId) { 
         console.warn("API: /ReviewsByUser no existe, usando GET /Review como fallback.");
         return getAllReviews(); 
@@ -81,7 +78,7 @@
     }
 
     async function toggleLikeReview(reviewId) {
-        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // ID de prueba
+        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; 
         if (!userId) throw new Error("Usuario no logueado");
 
         const payload = {
@@ -105,7 +102,7 @@
     }
     
     async function toggleLikeComment(commentId) {
-        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // ID de prueba
+        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; 
         if (!userId) throw new Error("Usuario no logueado");
 
         const payload = {
@@ -144,12 +141,11 @@
         }
     }
 
-    // Exponemos las funciones
     window.reviewApi = {
         createReview,
         getAllReviews,
         getMyReviews,
-        getReviewsByUser, // 👈 AHORA SÍ ESTÁ DEFINIDA
+        getReviewsByUser, 
         getBestReviews,
         getLessCommentedReviews,
         getRecentReviews,

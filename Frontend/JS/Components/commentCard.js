@@ -1,7 +1,3 @@
-// ===============================================
-// 💬 JS/Components/commentCard.js
-// (ACTUALIZADO: Sin 3 puntos, con iconos directos)
-// ===============================================
 
 /**
  * Genera el HTML para una tarjeta de comentario individual.
@@ -21,7 +17,6 @@ function createCommentCard(comment, currentUserId) {
     const isOwner = comment.userId === currentUserId;
     const canEdit = isOwner && (comment.likes || 0) === 0; 
     
-    // 💡 CAMBIO: Se eliminó 'menuId' y la lógica del menú desplegable
 
     return `
     <div class="comment-item" data-comment-id="${commentId}">

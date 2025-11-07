@@ -1,11 +1,4 @@
-// ================================
-// 💬 JS/Components/header.js
-// (ACTUALIZADO: Con la ESTRUCTURA HTML del nuevo buscador)
-// ================================
 
-/**
- * Crea el HTML del header.
- */
 window.createHeader = function() {
     
     const token = localStorage.getItem("authToken");

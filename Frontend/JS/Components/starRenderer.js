@@ -1,7 +1,3 @@
-// ===============================================
-// ⭐️ JS/Components/starRenderer.js
-// (Versión 100% limpia)
-// ===============================================
 
 /**
  * Genera el HTML de la calificación usando caracteres Unicode para las estrellas.
@@ -9,10 +5,8 @@
  * @returns {string} HTML de los iconos de estrellas.
  */
 function renderStars(rating) {
-    // Asegura que el rating esté entre 0 y 5
     const safeRating = Math.max(0, Math.min(5, rating || 0)); 
-    
-    // Calcula cuántas estrellas llenas, medias y vacías se necesitan
+
     const fullStars = Math.floor(safeRating);
     const hasHalfStar = (safeRating % 1) >= 0.5;
     

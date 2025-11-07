@@ -94,7 +94,6 @@
         
     </main>
 
-    <!-- 3. MODAL DE COMENTARIOS (Bootstrap) -->
     <div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content review-modal-content">
@@ -103,7 +102,6 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="modalCommentsList">
-                    <!-- 'reviewHandler.js' llenará esto -->
                 </div>
                 <div class="comment-form-container" id="commentFormContainer" style="display: none;">
                     <textarea id="commentTextArea" placeholder="Escribe tu comentario..."></textarea>
@@ -147,8 +145,6 @@
                 setupNavButtons();
             }
             
-            // 💡 SOLUCIÓN: Inicializar el modal de Bootstrap una vez que el DOM esté listo
-            // Y almacenarlo en la variable global que usan los handlers.
             const commentsModalEl = document.getElementById('commentsModal');
             if (commentsModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                 window.commentsModalInstance = new bootstrap.Modal(commentsModalEl);

@@ -1,6 +1,6 @@
 // ===============================================
 // ⚙️ JS/Handlers/reviewHandler.js
-// (ACTUALIZADO: Menú de 3 puntos ahora "bloquea" la página)
+// (ACTUALIZADO: Inicialización defensiva de commentsModalInstance)
 // ===============================================
 
 /**
@@ -167,7 +167,7 @@ window.handleReviewMenuAction = async function(event) {
             toggleReviewEditMode(reviewId);
             break;
             
-    case 'delete':
+        case 'delete':
             // 💡 CAMBIO: Volvemos al 'confirm' nativo.
             // El 'window.showConfirm' (modal) está chocando
             // con el overlay 'menu-is-open' (nuestro 'backdrop' manual).
@@ -201,20 +201,33 @@ window.handleReviewMenuAction = async function(event) {
             }
             break;
             
-        // 💡 ¡LÓGICA RESTAURADA!
+        // 💡 ¡LÓGICA CORREGIDA!
         case 'comments':
+            const commentsModalEl = document.getElementById('commentsModal');
+            
+            // 💡 SOLUCIÓN: Si la instancia del modal no existe (por si acaso), la inicializamos aquí.
+            if (!window.commentsModalInstance && commentsModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                 window.commentsModalInstance = new bootstrap.Modal(commentsModalEl);
+            }
+            
             const modalList = document.getElementById("modalCommentsList");
-            if (!modalList || !commentsModalInstance) {
-                console.error("El modal de comentarios no está inicializado.");
-                return;
+            
+            // Verificamos si la instancia y la lista existen
+            if (!modalList || !window.commentsModalInstance) {
+                 console.error("Error crítico: El modal de comentarios o su instancia no están disponibles.");
+                 window.showAlert("Error al abrir comentarios. Recarga la página.", "Error");
+                 return;
             }
 
-            commentsModalInstance.show(); 
+            window.commentsModalInstance.show(); 
             modalList.innerHTML = "<p>Cargando comentarios...</p>";
 
             try {
                 console.warn("Usando MOCK DATA para comentarios.");
                 const comments = MOCK_COMMENTS; // Usa los mocks de abajo
+                // 💡 Nota: Esto carga los mismos mocks para TODAS las reseñas.
+                // Una implementación real debería filtrar por reviewId.
+                
                 const currentUserId = parseInt(localStorage.getItem("userId"), 10);
                 const isLoggedIn = !isNaN(currentUserId);
 

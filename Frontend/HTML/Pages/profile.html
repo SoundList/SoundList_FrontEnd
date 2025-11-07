@@ -60,11 +60,11 @@
                 <h2 class="mb-3">Reseñas Destacadas</h2>
                 <div class="carousel-controls mb-2">
                     <button class="btn-nav active" id="btnShowBest" 
-                            data-bs-target="#featured-reviews-carousel" data-bs-slide-to="0">
+                                data-bs-target="#featured-reviews-carousel" data-bs-slide-to="0">
                         Mejores Reseñas
                     </button>
                     <button class="btn-nav" id="btnShowLessRated"
-                            data-bs-target="#featured-reviews-carousel" data-bs-slide-to="1">
+                                data-bs-target="#featured-reviews-carousel" data-bs-slide-to="1">
                         Menos Puntuadas
                     </button>
                 </div>
@@ -90,13 +90,14 @@
                 
             </section>
         
-        </div> 
+        </div>  
         
     </main>
 
+    <!-- 3. MODAL DE COMENTARIOS (Bootstrap) -->
     <div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content review-modal-content"> <!-- ⬅️ 
+            <div class="modal-content review-modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Comentarios</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -142,8 +143,18 @@
             if (typeof setupHeaderHandlers === 'function') {
                 setupHeaderHandlers();
             }
-             if (typeof setupNavButtons === 'function') {
-                 setupNavButtons();
+            if (typeof setupNavButtons === 'function') {
+                setupNavButtons();
+            }
+            
+            // 💡 SOLUCIÓN: Inicializar el modal de Bootstrap una vez que el DOM esté listo
+            // Y almacenarlo en la variable global que usan los handlers.
+            const commentsModalEl = document.getElementById('commentsModal');
+            if (commentsModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                window.commentsModalInstance = new bootstrap.Modal(commentsModalEl);
+                console.log("✅ Modal de comentarios inicializado.");
+            } else {
+                console.error("❌ Bootstrap o el elemento del modal no están disponibles.");
             }
         });
     </script>

@@ -1672,7 +1672,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Navigation buttons
-    function initializeNavigation() {
+function initializeNavigation() {
         const navButtons = document.querySelectorAll('.nav-btn');
         const mobileNavButtons = document.querySelectorAll('.mobile-nav-btn');
         const mobileMenuToggle = document.getElementById('mobileMenuToggle');
@@ -1752,17 +1752,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Force reflow to ensure CSS is applied
             void clickedBtn.offsetWidth;
                 
+                // --- ¡CAMBIO AQUÍ! ---
+                // Se modificó el switch para la navegación
                 switch(page) {
                     case 'inicio':
-                        // Already on home page
+                        // Ya estamos en la página de inicio
+                        // (Si estás en otra página, esto debería ser: window.location.href = 'home.html';)
                         break;
                     case 'rankings':
-                        showAlert('Vista de Rankings en desarrollo', 'info');
-                        // TODO: Navigate to rankings page when ready
+                        // Redirigimos a rankings.html
+                        window.location.href = 'rankings.html';
                         break;
-                case 'amigos':
-                    showAlert('Vista de Amigos en desarrollo', 'info');
-                    // TODO: Navigate to friends page when ready
+                    case 'amigos':
+                        showAlert('Vista de Amigos en desarrollo', 'info');
+                        // TODO: Navigate to friends page when ready
                         break;
                 }
         }

@@ -1,92 +1,133 @@
+// ===============================================
+// ⚙️ JS/APIs/userApi.js
+// (LISTO: Compatible con Gateway y microservicios)
+// ===============================================
 
 (function() {
-    
-    const API_BASE = "http://localhost:32768/api/user"; 
-    const FOLLOW_API_BASE = "http://localhost:32768/api/Follows"; 
 
+    // URL base del Gateway (Frontend)
+    const GATEWAY_BASE = "http://localhost:5000/api/gateway"; 
+    
+    // Rutas públicas del Gateway
+    const USER_GATEWAY_ROUTE = `${GATEWAY_BASE}/users`; 
+    const FOLLOW_GATEWAY_ROUTE = `${GATEWAY_BASE}/follows`; 
+
+    /**
+     * Obtiene las cabeceras de autenticación para Axios.
+     */
     function getAuthHeaders() {
         const token = localStorage.getItem("authToken");
-        return {
-            "Content-Type": "application/json",
-            ...(token && { "Authorization": `Bearer ${token}` })
-        };
+        if (!token) return {};
+        return { headers: { 'Authorization': `Bearer ${token}` } };
     }
 
-    async function updateUserProfile(profileData) {
+    // --- PERFIL DE USUARIO ---
+    async function updateUserProfile(userId, profileData) {
         try {
-            const response = await fetch(`${API_BASE}/profile`, {
-                method: "PUT",
-                headers: getAuthHeaders(),
-                body: JSON.stringify(profileData)
-            });
-            if (!response.ok) throw new Error("Error al actualizar el perfil");
-            const data = await response.json();
-            console.log("✅ Perfil actualizado:", data);
-            return data;
+            const response = await axios.patch(`${USER_GATEWAY_ROUTE}/${userId}`, profileData, getAuthHeaders());
+            console.log("✅ Perfil actualizado:", response.data);
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en updateUserProfile:", error);
-            throw error; // Lanza el error para que el handler lo atrape
-        }
-    }
-
-    async function getUserProfile() {
-        try {
-            const response = await fetch(`${API_BASE}/profile`, { 
-                method: "GET", headers: getAuthHeaders() 
-            });
-            if (!response.ok) throw new Error("Error al obtener perfil");
-            return await response.json();
-        } catch (error) {
-            console.error("❌ Error en getUserProfile:", error);
+            console.error("❌ Error en updateUserProfile:", error.response?.data || error.message);
             throw error;
         }
     }
 
-  async function getFollowerList() {
+    async function getUserProfile(userId) {
         try {
-            const response = await fetch(`${FOLLOW_API_BASE}/followers`, { 
-                method: "GET", headers: getAuthHeaders() 
-            });
-            if (!response.ok) throw new Error("Error al obtener seguidores");
-            return await response.json();
+            const response = await axios.get(`${USER_GATEWAY_ROUTE}/${userId}`, getAuthHeaders());
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en getFollowerList:", error);
+            console.error("❌ Error en getUserProfile:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    // --- FOLLOWS ---
+    async function getFollowerList() {
+        try {
+            const response = await axios.get(`${FOLLOW_GATEWAY_ROUTE}/followers`, getAuthHeaders());
+            return response.data;
+        } catch (error) {
+            console.error("❌ Error en getFollowerList:", error.response?.data || error.message);
             return [];
         }
     }
 
     async function getFollowerCount(userId) {
         try {
-            const response = await fetch(`${FOLLOW_API_BASE}/${userId}/followers/count`, {
-                method: "GET", headers: getAuthHeaders()
-            });
-            if (!response.ok) throw new Error("Error al obtener conteo de seguidores");
-            return await response.json();
+            const response = await axios.get(`${FOLLOW_GATEWAY_ROUTE}/${userId}/followers/count`, getAuthHeaders());
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en getFollowerCount:", error);
+            console.error("❌ Error en getFollowerCount:", error.response?.data || error.message);
             return 0;
         }
     }
 
     async function getFollowingCount(userId) {
         try {
-            const response = await fetch(`${FOLLOW_API_BASE}/${userId}/followings/count`, {
-                method: "GET", headers: getAuthHeaders()
-            });
-            if (!response.ok) throw new Error("Error al obtener conteo de seguidos");
-            return await response.json(); 
+            const response = await axios.get(`${FOLLOW_GATEWAY_ROUTE}/${userId}/followings/count`, getAuthHeaders());
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en getFollowingCount:", error);
+            console.error("❌ Error en getFollowingCount:", error.response?.data || error.message);
             return 0;
         }
     }
 
+    async function followUser(userIdToFollow) {
+        const currentUserId = localStorage.getItem("userId");
+        if (!currentUserId) throw new Error("Usuario no logueado");
+
+        const payload = { followerId: currentUserId, followingId: userIdToFollow };
+
+        try {
+            const response = await axios.post(FOLLOW_GATEWAY_ROUTE, payload, getAuthHeaders());
+            return response.data;
+        } catch (error) {
+            console.error("❌ Error en followUser:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    async function unfollowUser(userIdToUnfollow) {
+        const currentUserId = localStorage.getItem("userId");
+        if (!currentUserId) throw new Error("Usuario no logueado");
+
+        try {
+            await axios.delete(`${FOLLOW_GATEWAY_ROUTE}/${currentUserId}/${userIdToUnfollow}`, getAuthHeaders());
+            return true;
+        } catch (error) {
+            console.error("❌ Error en unfollowUser:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    async function checkFollowStatus(userIdToCheck) {
+        const currentUserId = localStorage.getItem("userId");
+        if (!currentUserId) return false;
+
+        try {
+            const response = await axios.get(`${FOLLOW_GATEWAY_ROUTE}/status`, {
+                ...getAuthHeaders(),
+                params: { followerId: currentUserId, followingId: userIdToCheck }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("❌ Error en checkFollowStatus:", error.response?.data || error.message);
+            return false;
+        }
+    }
+
+    // Exponemos todas las funciones
     window.userApi = {
         updateUserProfile,
         getUserProfile,
         getFollowerList,
         getFollowerCount,
-        getFollowingCount
+        getFollowingCount,
+        followUser,
+        unfollowUser,
+        checkFollowStatus
     };
 
 })();

@@ -44,7 +44,7 @@ function createReviewCard(review, currentUserId) {
                 </button>
             </div>
             
-            <!-- 💡 CAMBIO: Vuelve a la lógica del Dropdown -->
+
             <div class="rc-menu">
                 ${isLoggedIn ? `
                     <i class="fa-solid fa-ellipsis-vertical review-options" 

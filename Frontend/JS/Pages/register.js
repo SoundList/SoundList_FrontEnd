@@ -39,28 +39,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const submitButton = registerForm.querySelector('button[type="submit"]');
         setButtonLoading(submitButton, true);
         showAlert('Creando cuenta...', 'info');
-
-        const API_BASE_URL = 'https://localhost:32769';
-        axios.post(`${API_BASE_URL}/api/User`, {
-            username: username,
-            email: email,
-            password: password
-        })
-        .then(response => {
-            showAlert('¡Cuenta creada exitosamente!', 'success');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1200);
-        })
-        .catch(error => {
-            const message = (error.response && error.response.data && (error.response.data.message || error.response.data.error))
-                ? error.response.data.message || error.response.data.error
-                : 'No se pudo crear la cuenta';
-            showAlert(message, 'danger');
-        })
-        .finally(() => {
-            setButtonLoading(submitButton, false);
-        });
+        
+        // Intentar primero el backend directo, luego el gateway como fallback
+        const PORTS = [
+            { url: 'http://localhost:8003', isGateway: false },
+            { url: 'http://localhost:5000', isGateway: true }
+        ];
+        attemptRegisterWithPorts(username, email, password, PORTS, 0, submitButton);
     });
 
     // Alternative registration method
@@ -149,6 +134,35 @@ document.addEventListener('DOMContentLoaded', function() {
         passwordInput.parentElement.appendChild(indicator);
     }
 
+    // Función para limpiar errores técnicos y mostrar mensajes amigables
+    function sanitizeErrorMessage(errorMessage) {
+        if (!errorMessage || typeof errorMessage !== 'string') {
+            return 'Ocurrió un error. Por favor, intenta nuevamente.';
+        }
+
+        // Si el mensaje es muy largo o contiene stack traces, reemplazarlo
+        if (errorMessage.length > 200 || 
+            errorMessage.includes('System.') || 
+            errorMessage.includes('Exception') ||
+            errorMessage.includes('Stack Trace') ||
+            errorMessage.includes('at ') ||
+            errorMessage.includes('Npgsql') ||
+            errorMessage.includes('SocketException') ||
+            errorMessage.includes('InvalidOperationException')) {
+            return 'Error del servidor. Por favor, intenta nuevamente más tarde.';
+        }
+
+        // Si es un mensaje de base de datos, mostrar mensaje genérico
+        if (errorMessage.includes('Failed to connect') || 
+            errorMessage.includes('database') ||
+            errorMessage.includes('connection')) {
+            return 'Error de conexión con el servidor. Por favor, intenta nuevamente.';
+        }
+
+        // Devolver el mensaje original si es corto y legible
+        return errorMessage;
+    }
+
     // Show alert function
     function showAlert(message, type) {
         // Remove existing alerts
@@ -212,6 +226,115 @@ document.addEventListener('DOMContentLoaded', function() {
             button.disabled = false;
             button.innerHTML = 'Continuar';
         }
+    }
+
+    function attemptRegisterWithPorts(username, email, password, ports, portIndex, submitButton) {
+        if (portIndex >= ports.length) {
+            // Todos los puertos fallaron
+            showAlert('No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.', 'danger');
+            setButtonLoading(submitButton, false);
+            return;
+        }
+
+        const currentPort = ports[portIndex];
+        const API_BASE_URL = currentPort.url;
+        
+        // El gateway no tiene ruta para registro, solo usar backend directo
+        const registerEndpoint = `${API_BASE_URL}/api/User`;
+        
+        axios.post(registerEndpoint, {
+            Username: username,
+            Email: email,
+            Password: password
+        })
+        .then(response => {
+            showAlert('¡Cuenta creada! Se te envió un código de verificación a tu correo electrónico. Revisa tu bandeja o spam.', 'info');
+            setButtonLoading(submitButton, false);
+            setTimeout(() => {
+                window.location.href = 'verify.html';
+            }, 2000);
+        })
+        .catch(error => {
+            // Si es un error de conexión y hay más puertos para intentar, probar el siguiente
+            const isConnectionError = !error.response || 
+                error.code === 'ECONNREFUSED' || 
+                error.code === 'ERR_NETWORK' ||
+                error.code === 'ERR_FAILED' ||
+                error.message?.includes('Network Error') ||
+                error.message?.includes('Failed to fetch') ||
+                error.message?.includes('ERR_CONNECTION_CLOSED') ||
+                error.message?.includes('CORS');
+
+            if (isConnectionError && portIndex < ports.length - 1) {
+                // Intentar con el siguiente puerto
+                attemptRegisterWithPorts(username, email, password, ports, portIndex + 1, submitButton);
+            } else {
+                // Si es un error de validación o no hay más puertos, mostrar el error
+                let message = 'Error al crear la cuenta. Por favor, intenta nuevamente.';
+                
+                if (error.response) {
+                    const status = error.response.status;
+                    const errorData = error.response.data;
+                    
+                    // Error 500 - Internal Server Error
+                    if (status === 500) {
+                        message = 'Error del servidor (500). Posibles causas: problema con el servicio de email, base de datos o configuración. Revisa los logs del backend.';
+                        
+                        // Intentar extraer el mensaje de error del servidor
+                        if (errorData) {
+                            if (typeof errorData === 'string') {
+                                message = `Error del servidor: ${sanitizeErrorMessage(errorData)}`;
+                            } else if (errorData.message) {
+                                message = `Error del servidor: ${sanitizeErrorMessage(errorData.message)}`;
+                            } else if (errorData.title) {
+                                message = `Error del servidor: ${errorData.title}`;
+                            } else if (errorData.error) {
+                                message = `Error del servidor: ${sanitizeErrorMessage(errorData.error)}`;
+                            }
+                        }
+                    }
+                    // Error 400 - Bad Request (validación)
+                    else if (status === 400) {
+                        if (typeof errorData === 'string') {
+                            message = sanitizeErrorMessage(errorData);
+                        } else if (errorData.message) {
+                            message = sanitizeErrorMessage(errorData.message);
+                        } else if (errorData.errors) {
+                            // FluentValidation devuelve errores en formato { errors: { campo: [mensajes] } }
+                            const errors = errorData.errors;
+                            const errorMessages = Object.keys(errors).map(key => 
+                                `${key}: ${errors[key].join(', ')}`
+                            ).join(' | ');
+                            message = errorMessages;
+                        } else if (errorData.error) {
+                            message = sanitizeErrorMessage(errorData.error);
+                        }
+                    }
+                    // Otros errores
+                    else {
+                        if (typeof errorData === 'string') {
+                            message = sanitizeErrorMessage(errorData);
+                        } else if (errorData.message) {
+                            message = sanitizeErrorMessage(errorData.message);
+                        } else if (errorData.error) {
+                            message = sanitizeErrorMessage(errorData.error);
+                        }
+                    }
+                } else if (!error.response && portIndex >= ports.length - 1) {
+                    message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.';
+                }
+                
+                // Log detallado del error para debugging
+                console.error('Error completo del registro:', error);
+                console.error('Status:', error.response?.status);
+                console.error('Status Text:', error.response?.statusText);
+                console.error('Response Data:', error.response?.data);
+                console.error('Response Headers:', error.response?.headers);
+                
+                showAlert(message, 'danger');
+                setButtonLoading(submitButton, false);
+            }
+        });
     }
 });
 

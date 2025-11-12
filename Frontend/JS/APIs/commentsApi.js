@@ -1,32 +1,57 @@
+// ===============================================
+// ⚙️ JS/APIs/commentsApi.js
+// (ACTUALIZADO: Con las rutas públicas del Gateway /api/gateway/...)
+// ===============================================
 
 (function() {
 
-    const API_BASE = "http://localhost:32768/api/Comments";
+    // 1. URL DEL GATEWAY (Unificada con login.js)
+    const GATEWAY_BASE_URL = "http://localhost:5000/api/gateway";
+    
+    // 💡 ¡CORREGIDO! Esta es la ruta PÚBLICA para comentarios
+    const API_BASE = `${GATEWAY_BASE_URL}/comments`; 
 
+    /**
+     * Obtiene las cabeceras de autenticación para Axios.
+     */
     function getAuthHeaders() {
         const token = localStorage.getItem("authToken");
-        return {
-            "Content-Type": "application/json",
-            ...(token && { "Authorization": `Bearer ${token}` })
+        if (!token) {
+            console.warn("No se encontró authToken para la petición API.");
+            return {};
+        }
+        return { 
+            headers: { 
+                'Authorization': `Bearer ${token}` 
+            } 
         };
     }
 
+    /**
+     * Obtiene los comentarios para una reseña específica.
+     * (Gateway: GET /api/gateway/comments/review/{reviewId})
+     */
     async function getCommentsForReview(reviewId) {
         try {
-            const response = await fetch(`${API_BASE}/review/${reviewId}`, {
-                method: "GET",
-                headers: getAuthHeaders()
-            });
-            if (!response.ok) throw new Error("Error al obtener los comentarios");
-            return await response.json();
+            // Llama a: GET .../api/gateway/comments/review/{reviewId}
+            const response = await axios.get(`${API_BASE}/review/${reviewId}`, getAuthHeaders());
+            return response.data; 
         } catch (error) {
-            console.error("❌ Error en getCommentsForReview:", error);
+            console.error("❌ Error en getCommentsForReview:", error.response?.data || error.message);
             throw error;
         }
     }
 
+    /**
+     * Crea un nuevo comentario.
+     * (Gateway: POST /api/gateway/comments)
+     */
     async function createComment(reviewId, commentText) {
-        const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // ID de prueba
+        const userId = localStorage.getItem("userId"); 
+        if (!userId) {
+             console.error("❌ Error en createComment: No se encontró userId en localStorage.");
+             throw new Error("Usuario no identificado. No se puede comentar.");
+        }
 
         const payload = {
             reviewId: reviewId,
@@ -35,61 +60,57 @@
         };
 
         try {
-            const response = await fetch(API_BASE, {
-                method: "POST",
-                headers: getAuthHeaders(),
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) {
-                const errorBody = await response.text();
-                console.error("Error del backend (createComment):", errorBody);
-                throw new Error("Error al crear el comentario");
-            }
-            return await response.json();
+            // Llama a: POST .../api/gateway/comments
+            const response = await axios.post(API_BASE, payload, getAuthHeaders());
+            return response.data; 
         } catch (error) {
-            console.error("❌ Error en createComment:", error);
+            console.error("❌ Error en createComment:", error.response?.data || error.message);
             throw error;
         }
     }
 
+    /**
+     * Actualiza un comentario existente.
+     * (Gateway: PUT /api/gateway/comments/{id})
+     */
     async function updateComment(commentId, newText) {
          try {
             const payload = {
                 text: newText 
             };
-            const response = await fetch(`${API_BASE}/${commentId}`, {
-                method: "PUT",
-                headers: getAuthHeaders(),
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error("Error al actualizar el comentario");
-            return await response.json();
+            // Llama a: PUT .../api/gateway/comments/{id}
+            const response = await axios.put(`${API_BASE}/${commentId}`, payload, getAuthHeaders());
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en updateComment:", error);
+            console.error("❌ Error en updateComment:", error.response?.data || error.message);
             throw error;
         }
     }
 
+    /**
+     * Elimina un comentario.
+     * (Gateway: DELETE /api/gateway/comments/{id})
+     */
     async function deleteComment(commentId) {
         try {
-            const response = await fetch(`${API_BASE}/${commentId}`, {
-                method: "DELETE",
-                headers: getAuthHeaders()
-            });
-            if (!response.ok) throw new Error("Error al eliminar el comentario");
+            // Llama a: DELETE .../api/gateway/comments/{id}
+            await axios.delete(`${API_BASE}/${commentId}`, getAuthHeaders());
             return true; 
         } catch (error) {
-            console.error("❌ Error en deleteComment:", error);
+            console.error("❌ Error en deleteComment:", error.response?.data || error.message);
             throw error;
         }
     }
 
+    /**
+     * Reporta un comentario (Mantenemos la simulación)
+     */
     async function reportComment(commentId, reason) {
         console.warn(`API: Reportar comentario no implementado. Reporte simulado para ${commentId} (Razón: ${reason})`);
-        return { success: true, message: "Reporte simulado" };
+        return Promise.resolve({ success: true, message: "Reporte simulado" });
     }
 
-
+    // Exponemos las funciones en 'window'
     window.commentsApi = {
         getCommentsForReview,
         createComment,

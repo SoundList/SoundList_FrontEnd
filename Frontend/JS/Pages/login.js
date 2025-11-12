@@ -1,5 +1,20 @@
-// Login Page JavaScript
+// ===============================================
+// ⚙️ JS/login.js (CORREGIDO)
+// ===============================================
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si ya hay una sesión activa (token guardado)
+    const authToken = localStorage.getItem('authToken');
+    const loggedInUserId = localStorage.getItem('userId'); // 💡 LEER TAMBIÉN EL ID
+
+    if (authToken && loggedInUserId) { // 💡 CORRECCIÓN AQUÍ (Asegurarse que ambos existan)
+        // Si ya hay token Y ID, redirigir al perfil DE ESE ID
+        window.location.href = `./Pages/profile.html?userId=${loggedInUserId}`; // 💡 CORRECCIÓN AQUÍ
+        return;
+    } else if (authToken && !loggedInUserId) {
+        // Si hay token pero no ID (estado corrupto), limpiar
+        localStorage.clear();
+    }
+
     const loginForm = document.getElementById('loginForm');
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
@@ -20,65 +35,75 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Iniciando sesión...', 'info');
 
-        // --- 💡 INICIO DE LA SIMULACIÓN (MOCK) ---
-        // Si usas "mock" / "mock", te loguea como el Dueño (ID 1)
-        if (username === "mock" && password === "mock") {
+        // --- 💡 INICIO DEL MODO DE PRUEBA (MOCK) ---
+        if (username === "mock@user.com" && password === "password") {
             console.warn("--- MODO DE PRUEBA (MOCK) ACTIVADO ---");
             
-            // Simula una respuesta exitosa
             setTimeout(() => {
                 showAlert('¡Inicio de sesión SIMULADO exitoso!', 'success');
                 
-                // Guarda los datos de prueba del "dueño" (para TuUsuarioDePrueba)
-                localStorage.setItem('authToken', 'mock_token_123456789');
-                localStorage.setItem('userId', '1'); // 💡 ID del dueño (coincide con los mocks)
-                localStorage.setItem('username', 'TuUsuarioDePrueba');
-                localStorage.setItem('userAvatar', '../../Assets/default-avatar.png');
+                const mockUserId = '11111111-1111-1111-1111-111111111111';
+                
+                localStorage.setItem('authToken', 'mock-token-123456789');
+                localStorage.setItem('userId', mockUserId); 
+                localStorage.setItem('username', 'Usuario de Prueba');
+                localStorage.setItem('userAvatar', 'https://placehold.co/150x150/EBF8FF/1A202C?text=Mock');
 
                 setButtonLoading(submitButton, false);
                 
-                // Redirige a la página de perfil
-                // (Asumiendo que login.html está en /HTML/ y profile.html está en /HTML/Pages/)
-                window.location.href = './Pages/profile.html'; 
-            }, 1000); // Simula 1 segundo de carga
-
-        } else {
-            // --- INICIO DEL CÓDIGO ORIGINAL (API REAL) ---
-            // (Si no es "mock", intenta conectar con el backend real)
-            const API_BASE_URL = 'https://localhost:32769';
-            axios.post(`${API_BASE_URL}/api/User/Login`, {
-                Usuario: username,
-                Password: password
-            })
-            .then(response => {
-                const token = response.data.token || response.data.Token;
-                const userId = response.data.userId || response.data.UserId;
-                const usernameResp = response.data.username || response.data.Username;
-                // 💡 ¡AÑADIDO! Guarda el avatar si la API lo envía
-                const avatarResp = response.data.avatar || response.data.Avatar;
-
-
-                if (token) localStorage.setItem('authToken', token);
-                if (userId) localStorage.setItem('userId', userId);
-                if (usernameResp) localStorage.setItem('username', usernameResp);
-                if (avatarResp) localStorage.setItem('userAvatar', avatarResp); // 💡 Añadido
-
-                showAlert('¡Inicio de sesión exitoso!', 'success');
-                
-                // 💡 Redirección corregida
-                window.location.href = './Pages/profile.html';
-            })
-            .catch(error => {
-                const message = (error.response && error.response.data && (error.response.data.message || error.response.data.error))
-                    ? error.response.data.message || error.response.data.error
-                    : 'Usuario o contraseña inválidos';
-                showAlert(message, 'danger');
-            })
-            .finally(() => {
-                setButtonLoading(submitButton, false);
-            });
-            // --- FIN DEL CÓDIGO ORIGINAL (API REAL) ---
+                // Redirige a la página de perfil (AÑADIENDO EL ID)
+                window.location.href = `./Pages/profile.html?userId=${mockUserId}`; // 💡 CORRECCIÓN AQUÍ
+            }, 1000); 
+            return; 
         }
+        // --- FIN DEL MODO DE PRUEBA ---
+
+
+        // --- INICIO DE LA CONEXIÓN REAL AL GATEWAY ---
+        const API_BASE_URL = 'http://localhost:5000'; 
+        const LOGIN_PATH = '/api/gateway/users/login';
+
+        axios.post(`${API_BASE_URL}${LOGIN_PATH}`, {
+            Usuario: username, 
+            Password: password
+        })
+        .then(response => {
+            const token = response.data.token || response.data.Token;
+            const userId = response.data.userId || response.data.UserId;
+            const usernameResp = response.data.username || response.data.Username;
+            const avatarResp = response.data.avatar || response.data.Avatar || response.data.imgProfile;
+
+            if (token) localStorage.setItem('authToken', token);
+            if (userId) localStorage.setItem('userId', userId);
+            if (usernameResp) localStorage.setItem('username', usernameResp);
+            if (avatarResp) localStorage.setItem('userAvatar', avatarResp);
+
+            showAlert('¡Inicio de sesión exitoso!', 'success');
+            
+            // Redirigir a la página de perfil (AÑADIENDO EL ID)
+            if (userId) {
+                window.location.href = `./Pages/profile.html?userId=${userId}`; // 💡 CORRECCIÓN AQUÍ
+            } else {
+                showAlert('Error: No se recibió un ID de usuario del servidor.', 'danger');
+                setButtonLoading(submitButton, false);
+            }
+        })
+        .catch(error => {
+            let message = 'Usuario o contraseña inválidos';
+            if (error.code === 'ERR_NETWORK' || !error.response) {
+                message = 'No se pudo conectar al servidor. ¿Está el Gateway corriendo en el puerto 5000?';
+            } else if (error.response && error.response.data) {
+                message = error.response.data.message || error.response.data.error || message;
+            }
+            showAlert(message, 'danger');
+        })
+        .finally(() => {
+            // Solo desactivar si no hubo redirección exitosa
+            if (!window.location.href.includes('profile.html')) {
+                 setButtonLoading(submitButton, false);
+            }
+        });
+        // --- FIN DE LA CONEXIÓN REAL ---
     });
 
     const googleButton = document.querySelector('.btn-alternative');

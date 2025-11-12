@@ -1,28 +1,11 @@
-// ================================
+// ===============================================
 // 📜 JS/Pages/profile.js
-// (CORREGIDO: Vuelve a usar la lógica del Carrusel)
-// ================================
-
-// (Mock data para la sección de destacadas)
-const MOCK_REVIEWS_FEATURED_BEST = [
-    { id: 102, userId: 99, username: "MusicFan88", avatar: "https://placehold.co/40x40/634F94/F0F0F0?text=M", title: "Random Access Memories", text: "Un clásico moderno.", stars: 5, likes: 22, userLiked: true },
-    { id: 103, userId: 98, username: "SaraTune", avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S", title: "After Hours", text: "Oscuro, cinematográfico.", stars: 4.5, likes: 15, userLiked: false },
-    { id: 106, userId: 96, username: "LofiLover", avatar: "https://placehold.co/40x40/FFD85E/2A1A45?text=L", title: "Modal Soul", text: "Perfecto para relajarse.", stars: 5, likes: 19, userLiked: true }
-];
-
-// 💡 ¡NUEVO! Mock data para las reseñas menos puntuadas
-const MOCK_REVIEWS_FEATURED_LESS = [
-    { id: 201, userId: 80, username: "CriticoMusical", avatar: "https://placehold.co/40x40/E84A5F/F0F0F0?text=C", title: "Inaudible", text: "No pude pasar de la segunda canción.", stars: 1, likes: 2, userLiked: false },
-    { id: 202, userId: 81, username: "PopEnjoyer", avatar: "https://placehold.co/40x40/2A1A45/F0F0F0?text=P", title: "Decepción", text: "Esperaba más de este artista, muy genérico.", stars: 2, likes: 5, userLiked: false }
-];
-
-// Instancias globales para los modales
-var commentsModalInstance = null;
+// (ACTUALIZADO: Lee el ID de la URL y conecta la API)
+// ===============================================
 
 /**
- * 💡 ¡NUEVA FUNCIÓN! 
- * Carga AMBAS listas (mejor y peor) en sus contenedores 
- * del carrusel al iniciar la página.
+ * Carga las listas de reseñas destacadas (Carrusel).
+ * Ahora llama a la reviewApi real.
  */
 async function loadAllFeaturedLists() {
     const containerBestId = "featured-reviews-list-best";
@@ -39,12 +22,9 @@ async function loadAllFeaturedLists() {
     // 1. Cargar "Mejores Reseñas"
     try {
         containerBest.innerHTML = "<p class='text-muted p-4 text-center'>Cargando...</p>";
-        // (Línea real COMENTADA)
-        // const bestReviews = await window.reviewApi.getBestReviews();
-        const bestReviews = MOCK_REVIEWS_FEATURED_BEST;
-        console.warn("Usando MOCK DATA para 'Mejores Reseñas'");
+        // 🚀 Llama a la API real
+        const bestReviews = await window.reviewApi.getBestReviews();
         
-        // Usamos la función de reviewList.js para renderizar
         renderReviewList(containerBestId, bestReviews);
     
     } catch (error) {
@@ -52,45 +32,38 @@ async function loadAllFeaturedLists() {
         containerBest.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
     }
 
-    // 2. Cargar "Menos Puntuadas"
-    try {
-        containerLess.innerHTML = "<p class='text-muted p-4 text-center'>Cargando...</p>";
-        // (Línea real COMENTADA)
-        // const lessReviews = await window.reviewApi.getLessCommentedReviews();
-        const lessReviews = MOCK_REVIEWS_FEATURED_LESS;
-        console.warn("Usando MOCK DATA para 'Menos Puntuadas'");
-        
-        // Usamos la función de reviewList.js para renderizar
-        renderReviewList(containerLessId, lessReviews);
-    
-    } catch (error) {
-        console.error("Error al cargar 'Menos Puntuadas':", error);
-        containerLess.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
-    }
-}
-
-
 // --- PUNTO DE ENTRADA PRINCIPAL ---
 document.addEventListener("DOMContentLoaded", () => {
     
-    // 1. Inicializa el Modal de Comentarios
-    const commentsModalEl = document.getElementById('commentsModal');
-    if (commentsModalEl) {
-        commentsModalInstance = new bootstrap.Modal(commentsModalEl); 
+    // 1. Determinar qué perfil cargar
+    const urlParams = new URLSearchParams(window.location.search);
+    let userIdToLoad = urlParams.get('userId'); // Lee el ID de la URL
+
+    // Si no hay ID en la URL, asumimos que quiere ver su propio perfil (si está logueado)
+    if (!userIdToLoad) {
+        userIdToLoad = localStorage.getItem('userId');
     }
 
-    // 2. Llama al handler principal para cargar el perfil
+    if (!userIdToLoad) {
+        console.warn("⚠️ No hay ID de perfil para cargar. Redirigiendo a Login.");
+        window.location.href = '../login.html'; 
+        return;
+    }
+
+    // 2. Cargar datos del perfil (llama a profileHandler.js)
     if (typeof loadUserProfile === 'function') {
-        loadUserProfile();
-    } else {
-        console.error("Error: profileHandler.js no se cargó correctamente.");
+        loadUserProfile(userIdToLoad);
+    }
+    
+    // 3. Configurar el botón de edición (llama a editProfileHandler.js)
+    if (typeof setupEditProfileButton === 'function') {
+        setupEditProfileButton();
     }
 
-    // 3. 💡 ¡CAMBIO! Carga AMBAS listas del carrusel al inicio
+    // 4. Carga las listas del carrusel al inicio
     loadAllFeaturedLists();
 
-    // 4. Asigna la lógica de clases a los botones de filtro
-    // (El HTML ya maneja el slide, esto es solo para el estilo 'active')
+    // 5. Asigna la lógica de clases a los botones de filtro (UI)
     const btnBest = document.getElementById("btnShowBest");
     const btnLessRated = document.getElementById("btnShowLessRated");
 
@@ -108,3 +81,4 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+}

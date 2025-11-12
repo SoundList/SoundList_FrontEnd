@@ -1,4 +1,7 @@
-
+/**
+ * Configura el botón "Editar Perfil" en la página de perfil.
+ * 💡 (ACTUALIZADO: El enlace ahora apunta a edit_profile.html)
+ */
 function setupEditProfileButton() {
     const editBtn = document.querySelector(".btn-edit"); 
 
@@ -6,28 +9,38 @@ function setupEditProfileButton() {
         return; 
     }
 
-    editBtn.addEventListener("click", () => {
-        console.log("🟣 Botón 'Editar Perfil' clickeado");
-        const token = localStorage.getItem("authToken");
+    // --- LÓGICA DE VISIBILIDAD (Solo el Dueño ve el botón) ---
 
-        if (!token) {
+    // 1. ¿De quién es este perfil? (Leído de la URL: ?userId=123)
+    const urlParams = new URLSearchParams(window.location.search);
+    const profileOwnerId = urlParams.get('userId'); 
 
-            console.log("Usuario no logueado. Redirigiendo a login...");
+    // 2. ¿Quién está viendo la página? (Leído de localStorage)
+    const loggedInUserId = localStorage.getItem("userId"); 
 
-            if (typeof window.showAlert === 'function') {
-                window.showAlert("Debes iniciar sesión para editar tu perfil.", "Acción Requerida");
-            } else {
-                alert("Debes iniciar sesión para editar tu perfil.");
-            }
+    // 3. Comparamos: Si estoy logueado Y mi ID coincide con el ID del perfil de la URL.
+    if (loggedInUserId && profileOwnerId && loggedInUserId === profileOwnerId) {
+        
+        // --- CASO 1: SÍ soy el dueño ---
+        console.log("Visitante es el dueño del perfil. Mostrando botón 'Editar Perfil'.");
+        
+        editBtn.style.display = 'block'; 
 
-            window.location.href = '../login.html'; 
+        editBtn.addEventListener("click", () => {
+            console.log("Redirigiendo a página de edición...");
+            
+            // 💡 ¡CAMBIO IMPORTANTE!
+            // Apuntamos a la nueva página de edición que creamos.
+            window.location.href = 'editProfile.html'; 
+        });
 
-        } else {
-
-            console.log("Usuario logueado. Redirigiendo a página de edición...");
-            window.location.href = '../local.html'; 
-        }
-    });
+    } else {
+        
+        // --- CASO 2: Usuario no logueado O usuario logueado pero no es dueño ---
+        console.log("Visitante NO es el dueño. Ocultando botón 'Editar Perfil'.");
+        
+        editBtn.style.display = 'none';
+    }
 }
 
 document.addEventListener("DOMContentLoaded", setupEditProfileButton);

@@ -6,7 +6,7 @@
 (function() {
 
     // 1. URL DEL GATEWAY (Unificada con login.js)
-    const GATEWAY_BASE_URL = "http://localhost:5/api/gateway";
+    const GATEWAY_BASE_URL = "://localhost:5000/api/gateway";
     
     // 💡 ¡CORREGIDO! Esta es la ruta PÚBLICA para reseñas
     const API_BASE = `${GATEWAY_BASE_URL}/reviews`; 

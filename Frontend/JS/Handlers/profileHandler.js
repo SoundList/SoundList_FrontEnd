@@ -1,6 +1,16 @@
+// ===============================================
+// ⚙️ JS/Handlers/profileHandler.js
+// (ACTUALIZADO: Conectado a APIs reales y usa el ID de la URL)
+// ===============================================
 
-async function loadUserProfile() {
-    console.log("👤 Cargando perfil...");
+/**
+ * Carga el perfil completo de un usuario dado su ID, conectando a la API.
+ * @param {string} userIdToLoad - El ID del usuario cuyo perfil se va a mostrar.
+ */
+async function loadUserProfile(userIdToLoad) {
+    console.log(`👤 Cargando perfil para ID: ${userIdToLoad}...`);
+    
+    // Referencias a elementos del DOM
     const recentContainerId = "recent-reviews"; 
     const userAvatarEl = document.querySelector(".profile-avatar");
     const userNameEl = document.querySelector(".username");
@@ -11,60 +21,53 @@ async function loadUserProfile() {
     const defaultAvatar ="../../Assets/default-avatar.png";
 
     const recentContainer = document.getElementById(recentContainerId);
-    if (recentContainer) recentContainer.innerHTML = "<p class='text-muted'>Cargando reseñas...</p>";
+    if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>Cargando reseñas...</p>";
 
     try {
-
-        console.warn("Usando datos de 'user' simulados. La API /profile aún no está conectada.");
-        const user = { id: 1, username: "TuUsuarioDePrueba", image: null, quote: "Esta es una bio de prueba." };
+        // --- 1. Cargar Datos del Perfil y Contadores ---
         
-        const userId = user.id; 
-
-        console.warn("Usando datos de 'Follows' simulados. La API devuelve 400.");
-        const followersData = { count: 12 }; 
-        const followingData = { count: 5 }; 
+        // 🚀 Llama a la API para obtener el perfil del usuario (userApi.js)
+        // NOTA: Asumimos que getUserProfile fue modificado para aceptar un ID
+        const user = await window.userApi.getUserProfile(userIdToLoad); 
         
-        console.log("✅ Perfil (simulado), seguidores y seguidos cargados.");
+        // 🚀 Llama a las APIs para obtener los conteos de follows (userApi.js)
+        const followerCount = await window.userApi.getFollowerCount(userIdToLoad);
+        const followingCount = await window.userApi.getFollowingCount(userIdToLoad);
+        
+        console.log("✅ Perfil, seguidores y seguidos cargados de la API.");
 
+        // Poblar Header de Perfil
         if (userAvatarEl) userAvatarEl.src = user.image || defaultAvatar;
         if (userNameEl) userNameEl.textContent = user.username || "Usuario";
         if (userQuoteEl) userQuoteEl.textContent = user.quote || "Sin frase personal";
-
-        // Poblar stats
-        if (followerCountEl) followerCountEl.textContent = followersData.count ?? followersData;
-        if (followingCountEl) followingCountEl.textContent = followingData.count ?? followingData;
+        if (followerCountEl) followerCountEl.textContent = followerCount;
+        if (followingCountEl) followingCountEl.textContent = followingCount;
 
 
-        console.warn("Usando MOCK DATA para 'Reseñas Recientes'.");
-        const recentReviews = [
-            { id: 101, userId: 1, username: "TuUsuarioDePrueba", avatar: "../../Assets/default-avatar.png", title: "Currents - Tame Impala", text: "Reseña 1 (Editable)", stars: 5, likes: 0, userLiked: false },
-            { id: 102, userId: 99, username: "MusicFan88", avatar: "https://placehold.co/40x40/634F94/F0F0F0?text=M", title: "Random Access Memories", text: "Reseña 2 (No editable)", stars: 4.5, likes: 22, userLiked: true },
-            { id: 103, userId: 98, username: "SaraTune", avatar: "https://placehold.co/40x40/9A7BFF/F0F0F0?text=S", title: "After Hours - The Weeknd", text: "Reseña 3", stars: 4, likes: 15, userLiked: false },
-            { id: 104, userId: 1, username: "TuUsuarioDePrueba", avatar: "../../Assets/default-avatar.png", title: "The Dark Side of the Moon", text: "Reseña 4 (No editable)", stars: 5, likes: 8, userLiked: false },
-            { id: 105, userId: 97, username: "GrooveMaster", avatar: "https://placehold.co/40x40/FF4757/F0F0F0?text=G", title: "Vulfpeck - The Beautiful Game", text: "Reseña 5", stars: 4.5, likes: 3, userLiked: false },
-            { id: 106, userId: 96, username: "LofiLover", avatar: "https://placehold.co/40x40/FFD85E/2A1A45?text=L", title: "Modal Soul - Nujabes", text: "Reseña 6", stars: 5, likes: 19, userLiked: true },
-            { id: 107, userId: 1, username: "TuUsuarioDePrueba", avatar: "../../Assets/default-avatar.png", title: "OK Computer - Radiohead", text: "Reseña 7", stars: 5, likes: 2, userLiked: false }
-        ];
+        // --- 2. Cargar Reseñas Recientes (User-Specific) ---
+
+        // 🚀 Llama a la API para obtener reseñas (reviewApi.js)
+        const recentReviews = await window.reviewApi.getReviewsByUser(userIdToLoad); 
         
         if (recentContainer) {
             if (Array.isArray(recentReviews) && recentReviews.length > 0) {
-                // (Esta función 'renderReviewList' debe estar en reviewList.js)
+                // La función renderReviewList está en reviewList.js
                 renderReviewList(recentContainerId, recentReviews);
             } else {
-                recentContainer.innerHTML = "<p class='text-muted'>No hay reseñas recientes.</p>";
+                recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas recientes de este usuario.</p>";
             }
         }
         if (reviewCountEl) reviewCountEl.textContent = recentReviews.length || 0;
         
-        // --- 3. (Sección del carrusel ELIMINADA de aquí) ---
-        // 'profile.js' se encarga del carrusel por separado.
-        // Esto arregla el error "renderReviewCarousel is not defined".
-
     } catch (error) {
         console.error("❌ Error al cargar el perfil completo:", error);
         
         if (userAvatarEl) userAvatarEl.src = defaultAvatar;
         if (userNameEl) userNameEl.textContent = "Error al cargar";
-        if (recentContainer) recentContainer.innerHTML = "<p class='text-danger'>Error al cargar reseñas.</p>";
+        if (userQuoteEl) userQuoteEl.textContent = "No disponible";
+        if (recentContainer) recentContainer.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
+        if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
+             window.showAlert("Sesión caducada o perfil privado.", "Error");
+        }
     }
 }

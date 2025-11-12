@@ -1,23 +1,13 @@
-// ===============================================
-// ⚙️ JS/Handlers/reviewHandler.js
-// (ACTUALIZADO: Conectado 100% a 'reviewApi.js' y 'commentsApi.js')
-// ===============================================
 
-/**
- * Entra en modo edición para una RESEÑA
- */
 window.toggleReviewEditMode = function(reviewId) {
     const card = document.querySelector(`.review-card[data-review-id="${reviewId}"]`);
     if (!card) return;
 
-    // (Tu lógica de UI para 'is-editing-something' es correcta)
     const textElement = card.querySelector('.rc-body');
     const actionsElement = card.querySelector('.rc-actions-stack');
     if (!textElement || !actionsElement) return;
 
-    // (Verificación de 'Likes' desde el DOM - Tu lógica original)
-    // 💡 NOTA: Esto no es 100% seguro si el conteo de likes
-    // 💡 se actualizó pero la tarjeta no se recargó.
+
     const likeCountEl = card.querySelector(".rc-likes .like-count");
     if (likeCountEl && parseInt(likeCountEl.textContent, 10) > 0) {
         window.showAlert("Esta reseña ya tiene reacciones y no se puede editar.", "Error");
@@ -26,15 +16,15 @@ window.toggleReviewEditMode = function(reviewId) {
 
     const oldText = textElement.textContent;
 
-    // 1. Añade clases de bloqueo (para EDICIÓN)
+
     document.body.classList.add('is-editing-something');
     card.classList.add('is-editing');
 
-    // 2. Ocultar elementos originales
+ 
     textElement.style.display = 'none';
     actionsElement.style.display = 'none';
 
-    // 3. Crear el contenedor de edición (TextArea, botones, etc.)
+ 
     const editContainer = document.createElement('div');
     editContainer.className = 'inline-edit-container';
     const textarea = document.createElement('textarea');
@@ -49,7 +39,7 @@ window.toggleReviewEditMode = function(reviewId) {
     cancelBtn.className = 'inline-edit-button cancel';
     cancelBtn.textContent = 'Cancelar';
 
-    // 4. Lógica de los botones
+
     function exitEditMode() {
         document.body.classList.remove('is-editing-something');
         card.classList.remove('is-editing');
@@ -64,7 +54,7 @@ window.toggleReviewEditMode = function(reviewId) {
         const newText = textarea.value.trim();
         if (newText && newText !== oldText) {
             try {
-                // 🚀 ¡Llamada a tu API real! (reviewApi.js)
+
                 await window.reviewApi.updateReview(reviewId, newText);
                 
                 textElement.textContent = newText; 
@@ -73,13 +63,13 @@ window.toggleReviewEditMode = function(reviewId) {
             } catch (error) {
                 console.error("Error al actualizar reseña:", error);
                 window.showAlert("No se pudo actualizar la reseña.", "Error");
-                return; // No salimos si falla
+                return; 
             }
         }
         exitEditMode(); 
     };
     
-    // 5. Ensamblar
+
     buttonsContainer.appendChild(cancelBtn);
     buttonsContainer.appendChild(confirmBtn);
     editContainer.appendChild(textarea);
@@ -89,9 +79,7 @@ window.toggleReviewEditMode = function(reviewId) {
     textarea.focus();
 }
 
-/**
- * Cierra TODOS los menús desplegables de reseñas.
- */
+
 window.closeAllMenus = function() {
     document.querySelectorAll(".review-menu.visible").forEach(m => {
         m.classList.remove("visible");
@@ -100,13 +88,9 @@ window.closeAllMenus = function() {
     document.body.classList.remove('menu-is-open');
 }
 
-/**
- * Muestra/Oculta un menú desplegable específico.
- */
+
 window.toggleReviewMenu = function(event, menuId) {
-    // (Tu lógica de UI para mostrar/ocultar el menú es correcta)
-    // ... (La omito por brevedad, pero la copio tal cual)
-    // ...
+
     event.stopPropagation();
     const menu = document.getElementById(menuId);
 
@@ -146,21 +130,16 @@ window.toggleReviewMenu = function(event, menuId) {
 };
 
 
-/**
- * Maneja acciones de una RESEÑA (Dropdown o Comentarios)
- */
 window.handleReviewMenuAction = async function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
     const action = button.getAttribute('data-action');
     const reviewId = button.getAttribute('data-review-id');
 
-    // Cierra el menú (y quita el 'lock') DESPUÉS de seleccionar una acción
     closeAllMenus();
     
     switch (action) {
         case 'edit':
-            // Llama a la función de edición (ahora real)
             toggleReviewEditMode(reviewId);
             break;
             
@@ -168,7 +147,6 @@ window.handleReviewMenuAction = async function(event) {
             if (confirm(`¿Estás seguro de que quieres eliminar la reseña #${reviewId}? Esta acción no se puede deshacer.`)) {
                 
                 try {
-                    // 🚀 ¡Llamada a tu API real! (reviewApi.js)
                     await window.reviewApi.deleteReview(reviewId);
                     
                     const cardToRemove = document.querySelector(`.review-card[data-review-id="${reviewId}"]`);
@@ -186,12 +164,8 @@ window.handleReviewMenuAction = async function(event) {
             const reason = prompt("¿Por qué quieres reportar esta RESEÑA?");
             if (reason) {
                 try {
-                    // 💡 ¡COMENTARIO CORREGIDO!
-                    // Llamamos a la función 'reportReview' (que está en reviewApi.js).
-                    // Esta función es una SIMULACIÓN (como tú la definiste).
                     await window.reviewApi.reportReview(reviewId, reason);
-                    
-                    // Mostramos el mensaje de éxito de la simulación
+
                     window.showAlert("Reseña reportada exitosamente (simulado).", "Reporte Enviado");
 
                 } catch (error) {
@@ -200,12 +174,10 @@ window.handleReviewMenuAction = async function(event) {
                 }
             }
             break;
-            
-        // 💡 ¡LÓGICA DE COMENTARIOS AHORA ES REAL!
+
         case 'comments':
             const commentsModalEl = document.getElementById('commentsModal');
-            
-            // Inicialización defensiva
+
             if (!window.commentsModalInstance && commentsModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                  window.commentsModalInstance = new bootstrap.Modal(commentsModalEl);
             }
@@ -218,34 +190,31 @@ window.handleReviewMenuAction = async function(event) {
                  return;
             }
 
-            // Mostramos el modal y el 'Cargando...'
+
             window.commentsModalInstance.show(); 
             modalList.innerHTML = "<p class='text-center p-4'>Cargando comentarios...</p>";
 
             try {
-                // 🚀 ¡Llamada a tu API real! (commentsApi.js)
+
                 const comments = await window.commentsApi.getCommentsForReview(reviewId);
                 
                 const currentUserId = parseInt(localStorage.getItem("userId"), 10);
                 const isLoggedIn = !isNaN(currentUserId);
 
                 if (comments && comments.length > 0) {
-                    modalList.innerHTML = ""; // Limpiamos el 'Cargando...'
+                    modalList.innerHTML = ""; 
                     comments.forEach(comment => {
-                        // Llama a la función de 'commentCard.js'
                         modalList.innerHTML += createCommentCard(comment, currentUserId);
                     });
                 } else {
                     modalList.innerHTML = "<p class='no-reviews p-4 text-center text-muted'>Sé el primero en comentar.</p>";
                 }
-                
-                // Muestra/Oculta el formulario de escribir
+
                 const commentForm = document.getElementById('commentFormContainer');
                 if (commentForm) {
                     commentForm.style.display = isLoggedIn ? 'flex' : 'none';
                 }
 
-                // Prepara el formulario (Llama a 'commentHandler.js')
                 if (isLoggedIn && typeof setupCommentForm === 'function') {
                     setupCommentForm(reviewId);
                 }

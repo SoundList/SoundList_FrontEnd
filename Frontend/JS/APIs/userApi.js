@@ -1,20 +1,12 @@
-// ===============================================
-// ⚙️ JS/APIs/userApi.js
-// (LISTO: Compatible con Gateway y microservicios)
-// ===============================================
 
 (function() {
 
-    // URL base del Gateway (Frontend)
     const GATEWAY_BASE = "http://localhost:5000/api/gateway"; 
-    
-    // Rutas públicas del Gateway
+
     const USER_GATEWAY_ROUTE = `${GATEWAY_BASE}/users`; 
     const FOLLOW_GATEWAY_ROUTE = `${GATEWAY_BASE}/follows`; 
 
-    /**
-     * Obtiene las cabeceras de autenticación para Axios.
-     */
+
     function getAuthHeaders() {
         const token = localStorage.getItem("authToken");
         if (!token) return {};
@@ -118,7 +110,6 @@
         }
     }
 
-    // Exponemos todas las funciones
     window.userApi = {
         updateUserProfile,
         getUserProfile,

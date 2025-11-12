@@ -1,9 +1,4 @@
-// ===============================================
-// ⚙️ JS/Pages/editProfile.js
-// (ACTUALIZADO: Con bloque 'finally' para resetear el botón)
-// ===============================================
 
-// Referencia al archivo de imagen seleccionado por el usuario
 let selectedAvatarFile = null;
 
 /**
@@ -11,18 +6,16 @@ let selectedAvatarFile = null;
  * @param {string} sectionId - 'description', 'image', 'email', 'password'
  */
 function showSection(sectionId) {
-// ... (código existente... omitido por brevedad) ...
-    // Ocultar todas las secciones
+
     document.querySelectorAll('.setting-section').forEach(section => {
         section.classList.add('hidden');
     });
-    // Mostrar la sección requerida
+
     const targetSection = document.getElementById(`section-${sectionId}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
     }
 
-    // Actualizar el estado 'active' del menú
     document.querySelectorAll('.sidebar button').forEach(button => {
         button.classList.remove('active');
     });
@@ -32,11 +25,7 @@ function showSection(sectionId) {
     }
 }
 
-/**
- * Carga los datos actuales del perfil desde el backend y los muestra en la UI.
- */
 async function loadCurrentProfileData() {
-// ... (código existente... omitido por brevedad) ...
     try {
         const currentUserId = localStorage.getItem('userId');
         if (!currentUserId) {
@@ -62,16 +51,11 @@ async function loadCurrentProfileData() {
         
     } catch (error) {
         console.error("Error al cargar datos del perfil:", error);
-        // Usamos alert() como fallback si showAlert no existe
         (window.showAlert || alert)("Error al cargar datos actuales. Por favor, verifica tu sesión.", "danger");
     }
 }
 
-/**
- * Maneja el envío del formulario de Edición de Descripción.
- */
 async function handleDescriptionSubmit(e) {
-// ... (código existente... omitido por brevedad) ...
     e.preventDefault();
     const form = e.target;
     const newDescriptionInput = document.getElementById('new-description');
@@ -91,42 +75,35 @@ async function handleDescriptionSubmit(e) {
     const confirmBtn = form.querySelector('button[type="submit"]');
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
-    
-    // 💡 Bandera para saber si tuvimos éxito
+
     let isSuccess = false; 
 
     try {
         const updateData = { userQuote: newQuote };
         await window.userApi.updateUserProfile(currentUserId, updateData);
 
-        // --- 💡 ¡LÓGICA DE FEEDBACK VISUAL! ---
         (window.showAlert || alert)("Descripción actualizada exitosamente.", "success");
-        newDescriptionInput.value = ''; // 1. Limpiar el input
+        newDescriptionInput.value = ''; 
 
-        // 2. Cambiar estado del botón
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback'); 
-        isSuccess = true; // 💡 Marcamos como éxito
+        isSuccess = true; 
 
-        // 3. ¡Recargar los datos del servidor!
         await loadCurrentProfileData(); 
-        
-        // 4. Volver al estado normal después de 2 segundos
+
         setTimeout(() => {
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = 'Confirmar';
             confirmBtn.classList.remove('btn-success-feedback');
         }, 2000);
-        // --- Fin del Feedback ---
+
 
     } catch (error) {
         console.error("Error al guardar la descripción:", error);
         (window.showAlert || alert)("Error al actualizar la descripción.", "danger");
     
     } finally {
-        // 💡 ¡NUEVO BLOQUE FINALLY!
-        // Si la operación NO fue exitosa (isSuccess es false),
-        // reseteamos el botón inmediatamente.
+
         if (!isSuccess) {
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = 'Confirmar';
@@ -134,11 +111,7 @@ async function handleDescriptionSubmit(e) {
     }
 }
 
-/**
- * Maneja el envío del formulario de Edición de Imagen.
- */
 async function handleImageSubmit(e) {
-// ... (código existente... omitido por brevedad) ...
     e.preventDefault();
     
     if (!selectedAvatarFile) {
@@ -156,7 +129,6 @@ async function handleImageSubmit(e) {
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Subiendo...';
 
-    // 💡 Bandera para saber si tuvimos éxito
     let isSuccess = false;
 
     try {
@@ -172,7 +144,6 @@ async function handleImageSubmit(e) {
         
         await window.userApi.updateUserProfile(currentUserId, updateData);
         
-        // --- 💡 ¡LÓGICA DE FEEDBACK VISUAL! ---
         document.getElementById('avatar-preview').src = base64Image;
         document.getElementById('image-upload-preview').src = base64Image;
         localStorage.setItem('userAvatar', base64Image); 
@@ -181,21 +152,20 @@ async function handleImageSubmit(e) {
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback');
         (window.showAlert || alert)("Imagen de perfil actualizada.", "success");
-        isSuccess = true; // 💡 Marcamos como éxito
+        isSuccess = true; 
         
         setTimeout(() => {
             confirmBtn.disabled = true; 
             confirmBtn.innerHTML = 'Confirmar Cambio de Imagen';
             confirmBtn.classList.remove('btn-success-feedback');
         }, 2000);
-        // --- Fin del Feedback ---
+
 
     } catch (error) {
         console.error("Error al subir la imagen:", error);
         (window.showAlert || alert)("Error al actualizar la imagen.", "danger");
 
     } finally {
-        // 💡 ¡NUEVO BLOQUE FINALLY!
         if (!isSuccess) {
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = 'Confirmar Cambio de Imagen';
@@ -203,14 +173,12 @@ async function handleImageSubmit(e) {
     }
 }
 
-// --- Setup inicial ---
+
 document.addEventListener("DOMContentLoaded", () => {
-// ... (código existente... omitido por brevedad) ...
-    
-    // 1. Cargar datos actuales
+
+
     loadCurrentProfileData();
-    
-    // 2. Configurar listeners del menú lateral
+
     document.querySelectorAll('.sidebar button').forEach(button => {
         button.addEventListener('click', () => {
             const section = button.getAttribute('data-section');
@@ -220,13 +188,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // 3. Configurar formulario de Descripción
     const descForm = document.getElementById('form-edit-description');
     if (descForm) {
         descForm.addEventListener('submit', handleDescriptionSubmit);
     }
-    
-    // 4. Configurar formulario de Imagen
+
     const imageForm = document.getElementById('form-edit-image');
     const avatarInput = document.getElementById('avatar-input');
     const confirmImageBtn = document.getElementById('confirm-image-btn');
@@ -251,7 +217,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (imageForm) {
         imageForm.addEventListener('submit', handleImageSubmit);
     }
-    
-    // (Omitimos las simulaciones de email/contraseña que tenías)
     
 });

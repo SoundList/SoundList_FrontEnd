@@ -1,11 +1,4 @@
-// ===============================================
-// ⚙️ JS/Handlers/commentHandler.js
-// (Limpio: Sin lógica de 'Like'. Llama a 'commentsApi.js')
-// ===============================================
 
-/**
- * Entra en modo edición para un COMENTARIO
- */
 window.toggleCommentEditMode = async function(commentId) {
     const card = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
     if (!card) return;
@@ -16,7 +9,6 @@ window.toggleCommentEditMode = async function(commentId) {
         return;
     }
 
-    // Guardia de bloqueo
     if (modalBody.classList.contains('is-editing-something')) {
         window.showAlert("Ya estás editando otro comentario.", "Aviso");
         return;
@@ -26,7 +18,6 @@ window.toggleCommentEditMode = async function(commentId) {
     const actionsElement = card.querySelector('.comment-action-icons');
     if (!textElement || !actionsElement) return;
 
-    // 1. Verificar si tiene reacciones (Leído desde el DOM)
     try {
         const likeCountEl = card.querySelector(".like-count");
         const count = parseInt(likeCountEl.textContent, 10) || 0;
@@ -41,7 +32,6 @@ window.toggleCommentEditMode = async function(commentId) {
         return;
     }
 
-    // Desactivar el cierre del modal (Backdrop)
     let originalModalConfig = {};
     if (window.commentsModalInstance && window.commentsModalInstance._config) {
         originalModalConfig = {
@@ -55,12 +45,11 @@ window.toggleCommentEditMode = async function(commentId) {
     modalBody.classList.add('is-editing-something');
     card.classList.add('is-editing');
 
-    // 2. Ocultar elementos originales
+
     const oldText = textElement.textContent;
     textElement.style.display = 'none';
     actionsElement.style.display = 'none'; 
 
-    // 3. Crear el contenedor de edición (TextArea, botones, etc.)
     const editContainer = document.createElement('div');
     editContainer.className = 'inline-edit-container';
     const textarea = document.createElement('textarea');
@@ -75,9 +64,8 @@ window.toggleCommentEditMode = async function(commentId) {
     cancelBtn.className = 'inline-edit-button cancel';
     cancelBtn.textContent = 'Cancelar';
 
-    // 4. Lógica de los botones
     function exitEditMode() {
-        // Reactivar el cierre del modal
+
         if (window.commentsModalInstance && window.commentsModalInstance._config) {
             window.commentsModalInstance._config.backdrop = originalModalConfig.backdrop ?? true;
             window.commentsModalInstance._config.keyboard = originalModalConfig.keyboard ?? true;
@@ -97,7 +85,7 @@ window.toggleCommentEditMode = async function(commentId) {
         if (newText && newText !== oldText) {
             
             try {
-                // 🚀 ¡Llamada a tu API (commentsApi.js)!
+
                 await window.commentsApi.updateComment(commentId, newText);
                 
                 textElement.textContent = newText; 
@@ -106,13 +94,12 @@ window.toggleCommentEditMode = async function(commentId) {
             } catch (error) {
                 console.error("Error al actualizar comentario:", error);
                 window.showAlert("No se pudo actualizar el comentario.", "Error");
-                return; // No salimos del modo edición si falla
+                return; 
             }
         }
         exitEditMode();
     };
 
-    // 5. Ensamblar e Insertar
     buttonsContainer.appendChild(cancelBtn);
     buttonsContainer.appendChild(confirmBtn);
     editContainer.appendChild(textarea);
@@ -122,9 +109,6 @@ window.toggleCommentEditMode = async function(commentId) {
     textarea.focus(); 
 }
 
-/**
- * Maneja las acciones de un comentario (Eliminar, Reportar)
- */
 window.handleCommentMenuAction = async function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
@@ -132,7 +116,7 @@ window.handleCommentMenuAction = async function(event) {
     const commentId = button.getAttribute('data-comment-id');
     const card = button.closest('.comment-item');
 
-    // Guardia de bloqueo
+
     if (document.body.classList.contains('is-editing-something') && !card.classList.contains('is-editing')) {
         console.warn("Acción bloqueada: Hay un comentario en modo de edición.");
         window.showAlert("Termina de editar el otro comentario primero.", "Aviso");
@@ -147,7 +131,7 @@ window.handleCommentMenuAction = async function(event) {
         case 'delete-comment': 
             if (confirm(`¿Confirma eliminar este comentario?`)) {
                 try {
-                    // 🚀 ¡Llamada a tu API (commentsApi.js)!
+
                     await window.commentsApi.deleteComment(commentId);
 
                     const cardToRemove = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
@@ -165,7 +149,7 @@ window.handleCommentMenuAction = async function(event) {
             const reason = prompt("¿Por qué quieres reportar este comentario?");
             if (reason) {
                  try {
-                    // 🚀 ¡Llamada a tu API (commentsApi.js)!
+
                     await window.commentsApi.reportComment(commentId, reason);
                     window.showAlert("Comentario reportado exitosamente (simulado).", "Reporte Enviado");
                 } catch (error) {
@@ -177,13 +161,6 @@ window.handleCommentMenuAction = async function(event) {
     }
 };
 
-/* * 💡 NOTA: La lógica de 'Likes' de comentarios fue 
- * movida a 'likesHandler.js' para centralizarla.
- */
-
-/**
- * Prepara el formulario de "Añadir Comentario"
- */
 function setupCommentForm(reviewId) {
     const sendBtn = document.getElementById("sendCommentBtn");
     const textArea = document.getElementById("commentTextArea");
@@ -193,11 +170,9 @@ function setupCommentForm(reviewId) {
         return;
     }
 
-    // Evita múltiples listeners si se llama varias veces
     sendBtn.onclick = null; 
 
     sendBtn.onclick = async () => {
-        // Guardia de bloqueo
         if (document.body.classList.contains('is-editing-something')) {
             window.showAlert("Termina de editar tu comentario antes de enviar uno nuevo.", "Aviso");
             return; 
@@ -209,7 +184,7 @@ function setupCommentForm(reviewId) {
         sendBtn.disabled = true;
 
         try {
-            // 🚀 ¡Llamada a tu API (commentsApi.js) para CREAR un comentario!
+
             const newComment = await window.commentsApi.createComment(reviewId, commentText);
             
             textArea.value = "";
@@ -219,7 +194,7 @@ function setupCommentForm(reviewId) {
             
             const currentUserId = parseInt(localStorage.getItem("userId"), 10);
             
-            // Completamos datos del usuario local si la API no los devuelve
+
             if (!newComment.username) newComment.username = localStorage.getItem("username") || "Usuario";
             if (!newComment.avatar) newComment.avatar = localStorage.getItem("userAvatar") || "../../Assets/default-avatar.png";
             if (!newComment.userId) newComment.userId = currentUserId;
@@ -228,7 +203,7 @@ function setupCommentForm(reviewId) {
 
 
             modalList.innerHTML += createCommentCard(newComment, currentUserId);
-            modalList.scrollTop = modalList.scrollHeight; // Scroll al final
+            modalList.scrollTop = modalList.scrollHeight; 
 
         } catch (error) {
             console.error("Error al enviar comentario:", error);

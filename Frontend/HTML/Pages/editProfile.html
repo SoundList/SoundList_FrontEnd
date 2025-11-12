@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Perfil - Soundlist</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -16,14 +15,12 @@
     <link rel="stylesheet" href="../../CSS/header.css">
     <link rel="stylesheet" href="../../CSS/notifications.css">     
     <link rel="stylesheet" href="../../CSS/profile.css"> 
-    <!-- 💡 ¡NOMBRE CORREGIDO! -->
     <link rel="stylesheet" href="../../CSS/editProfile.css"> 
 </head>
 <body>
     <div id="header-placeholder"></div>
 
     <div class="settings-container">
-        <!-- Sidebar (Menú de Ajustes) -->
         <div class="sidebar">
             <div class="profile-section-edit">
                 <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit">
@@ -36,13 +33,10 @@
             <button id="btn-edit-image" data-section="image">
                 <i class="fa-solid fa-image me-2"></i> Editar Imagen
             </button>
-            <!-- (Aquí irían los botones de email y contraseña si los quieres) -->
         </div>
 
-        <!-- Contenido Principal -->
         <div class="main-content">
 
-            <!-- Sección: Editar Descripción (user-quote) -->
             <div id="section-description" class="setting-section">
                 <div class="setting-box">
                     <h3>Editar Descripción </h3>
@@ -62,7 +56,6 @@
                 </div>
             </div>
 
-            <!-- Sección: Editar Imagen -->
             <div id="section-image" class="setting-section hidden">
                 <div class="setting-box">
                     <h3>Cambiar Imagen de Perfil</h3>
@@ -91,15 +84,9 @@
     <script src="../../JS/APIs/userApi.js"></script>
     <script src="../../JS/Components/header.js"></script>
     <script src="../../JS/Handlers/headerHandler.js"></script>
-    
-    <!-- 💡 ¡SCRIPT INCORRECTO ELIMINADO! (No cargamos editProfileHandler.js aquí) -->
-
-    <!-- Lógica de la página -->
-    <!-- 💡 ¡NOMBRE CORREGIDO! -->
     <script src="../../JS/Pages/editProfile.js"></script>
 
     <script>
-        // Inicialización del Header (debe estar en el HTML)
         document.addEventListener("DOMContentLoaded", () => {
             const headerHTML = window.createHeader();
             document.getElementById("header-placeholder").innerHTML = headerHTML;

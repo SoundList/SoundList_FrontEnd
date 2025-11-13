@@ -1,159 +1,276 @@
-/* ===============================================
-   🎨 CSS/reviews.css (ACTUALIZADO: Revertido a Dropdown)
-   =============================================== */
-
-/* --- 1. Contenedores de Reseñas --- */
-.reviews-container,
-.best-reviews-container {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 20px;
-    padding: 1.2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 15px rgba(86, 60, 255, 0.3);
-    position: relative;
-    overflow: visible !important; 
-    z-index: 10;
+/* Register Page Styles */
+body {
+    font-family: 'Arimo', sans-serif;
+    opacity: 0;
+    animation: gentleFadeIn 0.8s ease-out forwards;
+    background: #1c1f4a;
+    margin: 0;
+    padding: 0;
 }
 
-/* --- 2. Scroll --- */
-.reviews-scroll {
-    max-height: 450px; 
-    overflow-y: auto;
-    padding-right: 6px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
-}
-.reviews-scroll::-webkit-scrollbar { width: 8px; }
-.reviews-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
-.reviews-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
-
-
-/* --- 3. Tarjeta de Reseña Estándar (CSS Grid) --- */
-.review-card-grid {
-    background: linear-gradient(70deg, #001c9a, #7b008e); 
-    border-radius: 20px;
-    padding: 1.2rem 1.44rem;
-    margin-bottom: 1rem;
-    color: #fff;
-    position: relative;
-    z-index: 20;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto 1fr;
-    grid-template-areas: 
-        "avatar title   title"   
-        "avatar body    actions"; 
-    gap: 5px 15px;
-    align-items: start; 
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.review-card-grid:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35);
-}
-.rc-avatar { grid-area: avatar; padding-top: 5px; }
-.rc-title { grid-area: title; min-width: 0; align-self: center; } 
-.rc-body { grid-area: body; min-width: 0; align-self: center; } 
-
-.rc-actions-stack {
-    grid-area: actions;
-    display: flex;
-    flex-direction: row; 
-    align-items: center; 
-    justify-content: flex-end;
-    gap: 1rem;
-    align-self: center;
-}
-.review-avatar { width: 40px; height: 40px; border-radius: 50%; }
-.rc-title { font-size: 1rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rc-body { font-size: 0.9rem; color: var(--blanco); opacity: 0.8; margin: 0; padding-top: 5px; overflow: hidden; text-overflow: ellipsis; }
-.review-stars { font-size: 1.155em; }
-.review-stars .star { display: inline-block; line-height: 1; overflow: hidden; }
-.review-stars .full-star { color: var(--amarillo, #FFD85E); }
-.review-stars .empty-star { color: #ccc; }
-.review-stars .half-star { position: relative; width: 0.5em; color: var(--amarillo, #FFD85E); }
-.review-stars .half-star::before { content: '\2605'; position: absolute; top: 0; left: 0; width: 1em; overflow: hidden; }
-.rc-likes { display: flex; align-items: center; gap: 5px; color: var(--blanco); font-weight: 600; }
-.rc-likes .fa-heart { font-size: 1rem; }
-.review-card .btn-like { background: none; border: none; padding: 0; margin: 0; line-height: 1; color: inherit; }
-.review-card .btn-like i { transition: all 0.2s ease; }
-.rc-view-comments button { background: none; border: none; color: var(--blanco); opacity: 0.7; cursor: pointer; font-size: 1.155rem; transition: all 0.2s ease; padding: 0; }
-.rc-view-comments button:hover { opacity: 1; color: var(--morado); }
-.rc-menu { position: relative; }
-
-/* --- 5. Menú de 3 Puntos (Ícono) --- */
-.review-options {
-    font-size: 1.4rem;
-    color: rgba(255,255,255,0.7);
-    cursor: pointer;
-    transition: color 0.15s ease;
-}
-.review-options:hover { color: #fff; }
-
-
-/* --- 💡 ¡RESTAURADO! Estilos del Dropdown --- */
-.review-menu {
-    position: absolute; /* El JS lo posicionará */
-    background: rgba(4, 13, 177, 0.95); 
-    border-radius: 16px;
-    padding: 0.5rem 0;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
-    min-width: 180px;
-    backdrop-filter: blur(8px);
-    display: none;
-    z-index: 999999 !important;
-    pointer-events: auto;
-}
-.review-menu.visible {
-    display: block;
-}
-.review-menu button {
-    background: none; border: none;
-    color: rgba(255,255,255,0.9);
-    width: 100%; 
-    padding: 10px 16px;
-    text-align: left; 
-    font-size: 0.95rem;
-    cursor: pointer; 
-    display: flex;
-    align-items: center; 
-    gap: 8px;
-    white-space: nowrap;
-}
-.review-menu button:hover {
-    background: rgba(255,255,255,0.15);
-    color:#fff;
+@keyframes gentleFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
-/* 💡 ¡NUEVO! Botón "X" para cerrar el dropdown */
-.btn-close-review-menu {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    width: 1em;
-    height: 1em;
-    padding: 0.25em;
-    color: #fff;
+.register-container {
+    background: linear-gradient(to bottom, #8d31f3 0%, #1c1f4a 100%);
+    min-height: 100vh;
+}
+
+.register-form-container {
     background: transparent;
-    border: 0;
-    border-radius: 0.375rem;
-    opacity: 0.7;
-    cursor: pointer;
-    font-size: 1.2rem;
-    line-height: 1;
+    border-radius: 20px;
+    padding: 3rem;
+    max-width: 600px;
+    width: 100%;
 }
-.btn-close-review-menu:hover {
+
+.logo-container {
+    margin-bottom: 0.5rem;
+}
+
+.robot-logo {
+    margin-bottom: 0.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-image {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    transition: transform 0.3s ease;
+}
+
+.logo-image:hover {
+    transform: scale(1.05);
+}
+
+.logo-text {
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.form-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 600;
+    margin-top: -1.3rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    line-height: 1.1;
+    white-space: nowrap;
+    display: block;
+    width: 100%;
+    transform: translateX(-70px);
+}
+
+.form-label {
+    color: #fff;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.form-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.btn-continue {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%);
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.btn-continue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    color: #fff;
+}
+
+.btn-alternative {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 25px;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-alternative:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.text-decoration-none {
+    color: #fff;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.text-decoration-none:hover {
+    opacity: 1;
+    color: #fff;
+}
+
+.login-link {
+    color: #fff;
+    text-decoration: none;
+    border-bottom: 1px solid #fff;
+    padding-bottom: 1px;
+    transition: all 0.3s ease;
+}
+
+.login-link:hover {
+    color: #fff;
+    border-bottom-color: rgba(255, 255, 255, 0.7);
+    opacity: 0.8;
+}
+
+/* Custom Alert Styles */
+.custom-alert {
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    padding: 0;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.3s ease-out;
+}
+
+.custom-alert-warning {
+    background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+    border-left: 4px solid #ff4757;
+}
+
+.custom-alert-info {
+    background: linear-gradient(135deg, #4ecdc4, #6dd5ed);
+    border-left: 4px solid #26d0ce;
+}
+
+.custom-alert-success {
+    background: linear-gradient(135deg, #51cf66, #69db7c);
+    border-left: 4px solid #40c057;
+}
+
+.alert-content {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+.alert-icon {
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.custom-alert-warning .alert-icon::before {
+    content: "⚠️";
+}
+
+.custom-alert-info .alert-icon::before {
+    content: "ℹ️";
+}
+
+.custom-alert-success .alert-icon::before {
+    content: "✅";
+}
+
+.alert-message {
+    flex: 1;
+    font-size: 0.95rem;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.75rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.alert-close:hover {
     opacity: 1;
 }
-/* (Ajuste para que los botones no se pongan debajo de la X) */
-.review-menu button[data-action] {
-    padding-top: 10px;
-    padding-bottom: 10px;
-}
-.review-menu button[data-action]:first-of-type {
-    margin-top: 25px; /* Espacio para la X */
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
+/* Field Error Styles */
+.form-control.is-invalid {
+    border-color: #ff4757;
+    box-shadow: 0 0 0 0.2rem rgba(255, 71, 87, 0.25);
+}
+
+.field-error {
+    color: #ff4757;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.field-error::before {
+    content: "⚠️";
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+}
 
 
 /* ============================================
@@ -413,36 +530,3 @@
         font-size: 0.8rem;
     }
 }
-.modal-header {
-    border-bottom: 1px solid rgba(255,255,255,0.2); 
-    justify-content: center;
-    position: relative;
-}
-.review-modal-content .modal-title { width: 100%; text-align: center; font-weight: 700; padding-left: 1.5rem; }
-.review-modal-content .modal-header .btn-close { position: absolute; right: 1.5rem; top: 1.5rem; }
-.modal-body { max-height: 60vh; overflow-y: auto; padding-bottom: 0; scrollbar-width: thin; scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08); }
-.modal-body::-webkit-scrollbar { width: 8px; }
-.modal-body::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
-.modal-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
-.modal-body .text-danger, .modal-body .no-reviews { color: var(--blanco) !important; opacity: 0.8; text-align: center; padding: 2rem 0; }
-.comment-item { background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; grid-template-areas: "avatar username like" "avatar text     icons"; gap: 0px 10px; align-items: start; transition: background-color 0.2s ease; }
-.comment-item:hover { background: rgba(0,0,0,0.3); }
-.comment-item .comment-avatar { grid-area: avatar; width: 35px; height: 35px; border-radius: 50%; margin-top: 5px; }
-.comment-item .comment-username { grid-area: username; color: var(--amarillo); font-size: 0.95rem; font-weight: 600; align-self: center; }
-.comment-item .comment-text { grid-area: text; margin: 0; font-size: 0.9rem; color: var(--blanco); opacity: 0.9; padding-top: 4px; }
-.comment-item .comment-like { grid-area: like; justify-self: end; display: flex; align-items: center; gap: 5px; }
-.comment-item .btn-like { font-size: 1rem; color: var(--blanco); opacity: 0.7; }
-.comment-item .btn-like i { transition: all 0.2s ease; }
-.comment-action-icons { grid-area: icons; justify-self: end; align-self: end; display: flex; gap: 12px; font-size: 0.9rem; padding-top: 5px; }
-.comment-action-icons i { color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.2s ease; }
-.comment-action-icons i:hover { color: var(--morado); transform: scale(1.1); }
-.comment-action-icons i:active { transform: scale(0.9); color: var(--magenta); }
-.comment-action-icons .fa-trash:hover { color: var(--magenta); }
-
-/* --- 8. Formulario de Añadir Comentario --- */
-.comment-form-container { display: flex; padding: 1rem; gap: 10px; border-top: 1px solid rgba(255,255,255,0.2); }
-.comment-form-container textarea { flex-grow: 1; background: transparent; border: none; border-bottom: 2px solid rgba(255,255,255,0.3); border-radius: 0; padding: 10px 5px; color: var(--blanco); resize: none; font-size: 0.9rem; height: 45px; transition: border-color 0.2s ease; }
-.comment-form-container textarea:focus { outline: none; border-bottom-color: var(--morado); }
-.comment-form-container textarea::placeholder { color: rgba(255,255,255,0.5); }
-.btn-send-comment { background: transparent; border: none; border-radius: 8px; color: var(--blanco); font-size: 1.2rem; padding: 0 12px; cursor: pointer; transition: all 0.2s ease; opacity: 0.7; }
-.btn-send-comment:hover, .btn-send-comment:active { background: var(--morado); opacity: 1; }

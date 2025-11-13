@@ -1,0 +1,610 @@
+
+/* --- 1. Contenedores de Reseñas --- */
+.reviews-container,
+.best-reviews-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 1.2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(86, 60, 255, 0.3);
+    position: relative;
+    overflow: visible !important; 
+    z-index: 10;
+}
+
+/* --- 2. Scroll --- */
+.reviews-scroll {
+    max-height: 450px; 
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+.reviews-scroll::-webkit-scrollbar { width: 8px; }
+.reviews-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
+.reviews-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+.carousel-list-scroll {
+    height: 450px; 
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+.carousel-list-scroll::-webkit-scrollbar { width: 8px; }
+.carousel-list-scroll::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
+.carousel-list-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+
+#featured-reviews-carousel .carousel-control-prev,
+#featured-reviews-carousel .carousel-control-next {
+    display: none;
+}
+
+#featured-reviews-carousel .carousel-item {
+    transition-duration: 0.3s;
+}
+
+
+.review-card-grid {
+    background: linear-gradient(70deg, #001c9a, #7b008e); 
+    border-radius: 20px;
+    padding: 1.2rem 1.44rem;
+    margin-bottom: 1rem;
+    color: #fff;
+    position: relative;
+    z-index: 20;
+    display: grid;
+    
+
+    grid-template-columns: auto 1fr auto; 
+    grid-template-rows: auto 1fr;   
+    grid-template-areas: 
+        "avatar title   title"   
+        "avatar body    actions"; 
+        
+    gap: 5px 15px;
+    align-items: start; 
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.review-card-grid:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(86, 60, 255, 0.35);
+}
+
+.rc-avatar { grid-area: avatar; padding-top: 5px; }
+.rc-title { grid-area: title; min-width: 0; align-self: center; } 
+.rc-body { grid-area: body; min-width: 0; align-self: center; } 
+
+.rc-actions-stack {
+    grid-area: actions;
+    display: flex;
+    flex-direction: row;    
+    align-items: center;    
+    justify-content: flex-end; 
+    gap: 1rem;          
+    align-self: center;     
+}
+
+.review-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+.rc-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rc-body {
+    font-size: 0.9rem;
+    color: var(--blanco);
+    opacity: 0.8;
+    margin: 0;
+    padding-top: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.review-stars {
+    font-size: 1.155em; 
+}
+.review-stars .star { display: inline-block; line-height: 1; overflow: hidden; }
+.review-stars .full-star { color: var(--amarillo, #FFD85E); }
+.review-stars .empty-star { color: #ccc; }
+.review-stars .half-star { position: relative; width: 0.5em; color: var(--amarillo, #FFD85E); }
+.review-stars .half-star::before { content: '\2605'; position: absolute; top: 0; left: 0; width: 1em; overflow: hidden; }
+
+.rc-likes {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--blanco);
+    font-weight: 600;
+}
+.rc-likes .fa-heart {
+    font-size: 1rem;
+}
+.review-card .btn-like {
+    background: none; border: none; padding: 0; margin: 0;
+    line-height: 1; color: inherit;
+}
+.review-card .btn-like i {
+    transition: all 0.2s ease;
+}
+
+.rc-view-comments button {
+    background: none;
+    border: none;
+    color: var(--blanco);
+    opacity: 0.7;
+    cursor: pointer;
+    font-size: 1.155rem; 
+    transition: all 0.2s ease;
+    padding: 0;
+}
+.rc-view-comments button:hover {
+    opacity: 1;
+    color: var(--morado);
+}
+.rc-menu {
+    position: relative;
+}
+
+.review-options {
+    font-size: 1.4rem;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.review-options:hover { color: #fff; }
+
+.review-menu {
+    position: absolute; 
+    background: rgba(4, 13, 177, 0.95); 
+    border-radius: 16px;
+    padding: 0.5rem 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+    min-width: 180px;
+    backdrop-filter: blur(8px);
+    display: none;
+    z-index: 999999 !important;
+    pointer-events: auto;
+}
+.review-menu.visible {
+    display: block;
+}
+.review-menu button {
+    background: none; border: none;
+    color: rgba(255,255,255,0.9);
+    width: 100%; 
+    padding: 10px 16px;
+    text-align: left; 
+    font-size: 0.95rem;
+    cursor: pointer; 
+    display: flex;
+    align-items: center; 
+    gap: 8px;
+    white-space: nowrap;
+}
+.review-menu button:hover {
+    background: rgba(255,255,255,0.15);
+    color:#fff;
+}
+
+.btn-close-review-menu {
+    position:relative; 
+    left: 140px;     
+    background: none;
+    border: none;
+    padding: 2px;
+}
+
+.btn-close-review-menu:hover {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    background: none !important; 
+}
+
+
+.review-modal-content {
+    background: rgba(4, 13, 177, 0.95);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+}
+.modal-header {
+    border-bottom: 1px solid rgba(255,255,255,0.2); 
+    justify-content: center;
+    position: relative;
+}
+.review-modal-content .modal-title {
+    width: 100%;
+    text-align: center;
+    font-weight: 700;
+    padding-left: 1.5rem;
+}
+.review-modal-content .modal-header .btn-close {
+    position: absolute;
+    right: 1.5rem;
+    top: 1.5rem;
+}
+.modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-bottom: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(130, 60, 255, 0.6); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+
+.modal-body .text-danger,
+.modal-body .no-reviews {
+    color: var(--blanco) !important;
+    opacity: 0.8;
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.comment-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto; 
+    grid-template-rows: auto auto; 
+    grid-template-areas: 
+        "avatar username .    like"
+        "avatar text     text icons";
+    gap: 0px 10px;
+    align-items: start;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.comment-action-icons {
+    grid-area: icons; 
+    justify-self: end; 
+    align-self: end;   
+    
+    display: flex;
+    gap: 12px;
+    font-size: 0.9rem;
+    padding-top: 5px; 
+}
+.comment-action-icons i {
+    color: rgba(255,255,255,0.5); 
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.comment-item:hover {
+    background: rgba(255, 0, 238, 0.454);
+    box-shadow: 0 0 15px rgba(234, 0, 255, 0.705); 
+    transform: translateY(-1px);
+}
+.comment-item .comment-avatar {
+    grid-area: avatar;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    margin-top: 5px;
+}
+.comment-item .comment-username {
+    grid-area: username;
+    color: var(--amarillo);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.comment-item .comment-text {
+    grid-area: text;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--blanco);
+    opacity: 0.9;
+}
+.comment-item .comment-like {
+    grid-area: like;
+    justify-self: end; 
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.comment-item .btn-like {
+    font-size: 1rem;
+    color: var(--blanco);
+}
+.comment-action-icons {
+    grid-area: icons; 
+    justify-self: end; 
+    align-self: end;   
+    display: flex;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+.comment-action-icons i {
+    color: rgba(255,255,255,0.5); 
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.comment-action-icons i:hover {
+    color: var(--magenta);  
+    transform: scale(1.1);
+}
+.comment-action-icons i:active {
+    transform: scale(0.9);
+    color: var(--magenta); 
+}
+.comment-action-icons .fa-trash:hover {
+    color: var(--magenta); 
+}
+
+/* --- 8. Formulario de Añadir Comentario --- */
+.comment-form-container {
+    display: flex;
+    padding: 1rem;
+    gap: 10px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+.comment-form-container textarea {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    border-radius: 0;
+    padding: 10px 5px;
+    color: var(--blanco);
+    resize: none;
+    font-size: 0.9rem;
+    height: 45px; 
+    transition: border-color 0.2s ease;
+}
+.comment-form-container textarea:focus {
+    outline: none;
+    border-bottom-color: var(--morado);
+}
+.comment-form-container textarea::placeholder {
+    color: rgba(255,255,255,0.5);
+}
+.btn-send-comment {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--blanco);
+    font-size: 1.2rem;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.btn-send-comment:hover,
+.btn-send-comment:active {
+    background: var(--morado);
+    opacity: 1;
+}
+
+.inline-edit-container {
+    grid-area: body / body / body / actions; 
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.modal-body.is-editing-something .comment-item {
+    opacity: 0.5;
+    pointer-events: none; 
+    transition: opacity 0.3s ease;
+}
+
+.modal-body.is-editing-something .comment-item.is-editing {
+    background: transparent !important; 
+    border-color: var(--morado); 
+    box-shadow: 0 0 8px var(--morado); 
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 100; 
+}
+.comment-item.is-editing {
+    background: transparent !important; 
+    border-color: var(--morado); 
+    box-shadow: 0 0 8px ; 
+}
+
+.comment-item.is-editing .comment-text,
+.comment-item.is-editing .comment-action-icons {
+    display: none;
+}
+
+.inline-edit-container {
+    display: none; 
+}
+
+.comment-item.is-editing .inline-edit-container {
+    display: flex;
+}
+
+
+.review-card-grid .inline-edit-container {
+    grid-area: body / body / body / actions; 
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+
+.comment-item .inline-edit-container {
+    grid-column: 2 / span 2; 
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.comment-item .inline-edit-container {
+
+    grid-column: 2 / span 2; 
+    grid-row: 2; 
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 5px;
+}
+.inline-edit-textarea {
+    width: 100%;
+    min-height: 80px;
+    background:  rgba(130, 60, 255, 0.6);
+    color: var(--blanco);
+    border: 1px solid  rgba(93, 0, 255, 0.6);
+    border-radius: 8px;
+    padding: 8px;
+    font-family: 'Arimo', sans-serif;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+.inline-edit-textarea:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 13, 255, 0.632);;
+}
+
+.inline-edit-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.inline-edit-button {
+    background: var(--morado);
+    color: var(--blanco);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.inline-edit-button.cancel {
+    background-color: var(--magenta);
+}
+.inline-edit-button:hover {
+    opacity: 1;
+    box-shadow: 0 0 5px rgb(255, 255, 255);
+}
+body.is-editing-something .modal#commentsModal .btn-close {
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+body.menu-is-open {
+    overflow: hidden;
+}
+
+body.menu-is-open::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 99998; 
+}
+
+.modal-is-editing .comment-item:not(.is-editing) {
+    pointer-events: none;
+    opacity: 0.5; 
+}
+
+@media (max-width: 992px) {
+    .review-card-grid {
+        grid-template-columns: auto 1fr; 
+        grid-template-areas: 
+            "avatar title"
+            "avatar body"
+            "actions actions";
+        gap: 10px 12px;
+    }
+
+    .rc-actions-stack {
+        justify-content: flex-start;
+        margin-top: 6px;
+    }
+
+    .reviews-scroll,
+    .carousel-list-scroll {
+        max-height: 380px;
+    }
+}
+
+@media (max-width: 600px) {
+    .review-card-grid {
+        grid-template-columns: 1fr; 
+        grid-template-areas: 
+            "avatar"
+            "title"
+            "body"
+            "actions";
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .rc-avatar img,
+    .review-avatar {
+        width: 55px;
+        height: 55px;
+        margin: 0 auto;
+        display: block;
+    }
+
+    .rc-title {
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    .rc-body {
+        font-size: 0.88rem;
+        text-align: center;
+        padding: 4px 0;
+    }
+
+    .rc-actions-stack {
+        justify-content: center;
+        gap: 0.8rem;
+    }
+
+    .reviews-container,
+    .best-reviews-container {
+        padding: 1rem;
+    }
+
+    .reviews-scroll,
+    .carousel-list-scroll {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 400px) {
+    .review-card-grid {
+        padding: 0.8rem;
+    }
+
+    .rc-title {
+        font-size: 0.9rem;
+    }
+
+    .rc-body {
+        font-size: 0.82rem;
+    }
+
+    .rc-actions-stack i,
+    .rc-view-comments button {
+        font-size: 1rem;
+    }
+}

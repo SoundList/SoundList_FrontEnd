@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Perfil - Soundlist</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../../CSS/base.css">
+    <link rel="stylesheet" href="../../CSS/layout.css">
+    <link rel="stylesheet" href="../../CSS/animations.css">
+    <link rel="stylesheet" href="../../CSS/buttons.css">
+    <link rel="stylesheet" href="../../CSS/header.css">
+    <link rel="stylesheet" href="../../CSS/notifications.css">     
+    <link rel="stylesheet" href="../../CSS/profile.css"> 
+    <link rel="stylesheet" href="../../CSS/editProfile.css"> 
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <div class="settings-container">
+        <div class="sidebar">
+            <div class="profile-section-edit">
+                <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit">
+                <span class="text-white">CUENTA <i class="fa-solid fa-check-circle text-success"></i></span>
+            </div>
+            
+            <button id="btn-edit-description" data-section="description" class="active">
+                <i class="fa-solid fa-file-alt me-2"></i> Editar Descripción
+            </button>
+            <button id="btn-edit-image" data-section="image">
+                <i class="fa-solid fa-image me-2"></i> Editar Imagen
+            </button>
+        </div>
+
+        <div class="main-content">
+
+            <div id="section-description" class="setting-section">
+                <div class="setting-box">
+                    <h3>Editar Descripción </h3>
+                    <form id="form-edit-description">
+                        <div class="mb-4">
+                            <label for="current-description">Descripción Actual</label>
+                            <textarea id="current-description" class="form-control" readonly disabled></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label for="new-description">Nueva Descripcion (Máx. 160 caracteres)</label>
+                            <textarea id="new-description" class="form-control" maxlength="160"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-confirm w-100">
+                            Confirmar
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="section-image" class="setting-section hidden">
+                <div class="setting-box">
+                    <h3>Cambiar Imagen de Perfil</h3>
+                    <form id="form-edit-image">
+                        <div class="mb-4 text-center">
+                            <img id="image-upload-preview" src="../../Assets/default-avatar.png" alt="Nueva Imagen" class="profile-avatar-edit large-avatar">
+                            <input type="file" id="avatar-input" accept="image/*">
+                            <label for="avatar-input" class="file-upload-label mt-3">
+                                Seleccionar Nueva Imagen
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-confirm w-100" disabled id="confirm-image-btn">
+                            Confirmar Cambio de Imagen
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <!-- Requerido por tus handlers -->
+    <script src="../../JS/APIs/userApi.js"></script>
+    <script src="../../JS/Components/header.js"></script>
+    <script src="../../JS/Handlers/headerHandler.js"></script>
+    <script src="../../JS/Pages/editProfile.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const headerHTML = window.createHeader();
+            document.getElementById("header-placeholder").innerHTML = headerHTML;
+            if (typeof setupHeaderHandlers === 'function') {
+                setupHeaderHandlers();
+            }
+            if (typeof setupNavButtons === 'function') {
+                setupNavButtons();
+            }
+        });
+    </script>
+</body>
+</html>

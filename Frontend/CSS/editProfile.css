@@ -1,0 +1,293 @@
+/* ===============================================
+ * 🎨 CSS/edit_profile.css
+ * (ACTUALIZADO: Color de botón y Responsive)
+ * =============================================== */
+
+:root {
+    /* Variables de tu tema (asumidas) */
+    --morado: #4a148c;
+    --morado-oscuro: #2c005b;
+    --magenta: #e91e63;
+    --magenta-gradient-inicio: #d81b60;
+    --blanco: #ffffff;
+    --fondo-claro: #38006b;
+    --azul-brillante: #3b82f6; 
+    --verde-exito: #10B981; 
+}
+
+.settings-container {
+    display: flex;
+    min-height: calc(100vh - 60px); 
+    background-color: var(--fondo-claro);
+    color: var(--blanco);
+}
+
+.sidebar {
+    width: 280px;
+    padding: 30px 20px;
+    background-color: var(--morado-oscuro);
+    border-right: 3px solid var(--morado);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+}
+
+.main-content {
+    flex-grow: 1;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+/* Botones de Navegación Lateral */
+.sidebar button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    background-color: var(--morado);
+    border: none;
+    border-radius: 8px;
+    color: var(--blanco);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar button:hover {
+    background-color: #6a1b9a;
+}
+
+.sidebar button.active {
+    background-color: var(--magenta);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Sección de Avatar en el Sidebar */
+.profile-section-edit {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+}
+
+.profile-avatar-edit {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid var(--magenta);
+    object-fit: cover;
+    margin-bottom: 10px;
+    transition: transform 0.3s;
+}
+
+.profile-avatar-edit:hover {
+    transform: scale(1.05);
+}
+
+/* 💡 NUEVO: Estilo para el avatar grande en el formulario */
+.profile-avatar-edit.large-avatar {
+    width: 150px;
+    height: 150px;
+}
+
+/* Cajas de Ajustes (Contenido Principal) */
+.setting-box {
+    background-color: var(--morado);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+    color: var(--blanco);
+    max-width: 600px;
+    margin: 40px auto; 
+    animation: fadeIn 0.5s ease-out;
+}
+
+.setting-box h3 {
+    margin-bottom: 25px;
+    color: var(--magenta);
+    border-bottom: 2px solid var(--magenta-gradient-inicio);
+    padding-bottom: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Formulario */
+.setting-box label {
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: block;
+    color: #bdbdbd;
+}
+
+.setting-box .form-control {
+    background-color: var(--morado-oscuro);
+    border: 1px solid var(--morado);
+    color: var(--blanco);
+    border-radius: 6px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.setting-box .form-control:focus {
+    background-color: var(--morado-oscuro);
+    border-color: var(--magenta);
+    box-shadow: 0 0 0 0.25rem rgba(233, 30, 99, 0.25);
+    color: var(--blanco);
+}
+
+/* Botón de Confirmación */
+.btn-confirm {
+    background-color: var(--magenta-gradient-inicio);
+    border: 2px solid var(--magenta-gradient-inicio);
+    color: var(--blanco);
+    font-weight: 700;
+    padding: 10px;
+    margin-top: 20px;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-confirm:hover:not(:disabled) {
+    background-color: var(--magenta);
+    border-color: var(--magenta);
+}
+
+.btn-confirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Campo de Subida de Archivos */
+.setting-box input[type="file"] {
+    display: none;
+}
+
+.setting-box .file-upload-label {
+    display: inline-block;
+    padding: 10px 20px;
+    /* 💡 ¡CAMBIO DE COLOR! Ahora coincide con el botón 'Confirmar' */
+    background-color: var(--magenta-gradient-inicio);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.setting-box .file-upload-label:hover {
+    /* 💡 ¡CAMBIO DE COLOR! Ahora usa el magenta brillante para el hover */
+    background-color: var(--magenta);
+}
+
+/* Utilidad */
+.setting-section.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 💡 --- INICIO DE ESTILOS PERSONALIZADOS --- 💡 */
+
+/* 1. Scrollbar Personalizado (para WebKit: Chrome, Safari, Edge) */
+.main-content::-webkit-scrollbar {
+    width: 12px;
+}
+.main-content::-webkit-scrollbar-track {
+    background: var(--morado-oscuro);
+    border-radius: 10px;
+}
+.main-content::-webkit-scrollbar-thumb {
+    background-color: var(--magenta);
+    border-radius: 10px;
+    border: 3px solid var(--morado-oscuro);
+    box-shadow: 0 0 10px 2px rgba(59, 130, 246, 0.6); 
+}
+.main-content::-webkit-scrollbar-thumb:hover {
+    background-color: #d81b60;
+    box-shadow: 0 0 15px 4px rgba(59, 130, 246, 0.8);
+}
+
+/* (Scrollbar para Firefox) */
+.main-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--magenta) var(--morado-oscuro);
+}
+
+
+/* 2. Animación de "Flash" (Feedback visual) */
+@keyframes flashSuccess {
+    0% {
+        box-shadow: 0 0 12px 4px rgba(59, 130, 246, 0.8);
+        border-color: var(--azul-brillante);
+    }
+    70% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        border-color: var(--magenta); 
+    }
+    100% {
+        border-color: var(--morado); 
+    }
+}
+#current-description.flash-success {
+    animation: flashSuccess 1.5s ease-out;
+}
+.profile-avatar-edit.flash-success {
+    animation: flashSuccess 1.5s ease-out;
+    border-color: var(--magenta) !important; 
+}
+
+
+/* 3. Estilo del botón "¡Guardado!" */
+.btn-confirm.btn-success-feedback {
+    background-color: var(--verde-exito) !important;
+    border-color: var(--verde-exito) !important;
+    color: var(--blanco) !important;
+}
+
+
+/* 💡 --- 4. MEJORAS RESPONSIVE --- 💡 */
+
+@media (max-width: 768px) {
+    .settings-container {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 3px solid var(--morado);
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 15px 10px;
+        flex-wrap: wrap; 
+    }
+    .sidebar button {
+        width: 48%; /* Crea una cuadrícula de 2x2 */
+        font-size: 0.85rem;
+        padding: 10px;
+        text-align: center;
+        margin: 4px 0; /* Añade espaciado vertical */
+    }
+    .profile-section-edit {
+        display: none; /* Ocultar el avatar en móvil para ahorrar espacio */
+    }
+    .main-content {
+        padding: 20px 15px; /* Reducir padding horizontal */
+    }
+    .setting-box {
+        margin: 20px auto;
+        padding: 20px; /* Reducir padding interno */
+    }
+    .setting-box h3 {
+        font-size: 1.5rem; /* Reducir H3 en móvil */
+        margin-bottom: 20px;
+    }
+    /* Hacer el avatar de previsualización más pequeño en móvil */
+    .profile-avatar-edit.large-avatar {
+        width: 120px;
+        height: 120px;
+    }
+}

@@ -1,4 +1,6 @@
-// Login Page JavaScript
+// ===============================================
+// ⚙️ JS/login.js (CORREGIDO)
+// ===============================================
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar si ya hay una sesión activa (token guardado)
     const authToken = localStorage.getItem('authToken');

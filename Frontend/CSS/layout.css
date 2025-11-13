@@ -1,0 +1,30 @@
+
+.profile-main-content {
+    display: flex;
+    flex-direction: column; /* ¡CLAVE! Apilado por defecto */
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.recent-reviews-section,
+.featured-reviews-section {
+     width: 100%; 
+}
+
+
+@media (min-width: 992px) {
+    .profile-main-content {
+        flex-direction: row;
+        flex-wrap: wrap; 
+    }
+
+    .recent-reviews-section {
+        flex: 3 1 400px; 
+        width: auto; 
+    }
+
+    .featured-reviews-section {
+        flex: 2 1 300px; 
+        width: auto; 
+    }
+}

@@ -1,0 +1,507 @@
+/* =========================================
+   ALBUM PAGE STYLES
+   ========================================= */
+
+/* Contenedor principal */
+.album-page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    color: #fff;
+}
+
+/* --- SECCIÓN SUPERIOR (HERO) --- */
+.album-hero {
+    display: flex;
+    gap: 3rem;
+    margin-bottom: 3rem;
+    align-items: flex-end; /* Alinea la info al fondo de la imagen */
+}
+
+.album-cover-container {
+    flex-shrink: 0;
+}
+
+.album-cover-img {
+    width: 300px;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Sombra pronunciada */
+}
+
+.album-info-primary {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.album-type { /* "ÁLBUM", "EP", etc. */
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+}
+
+.album-title {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 4rem; /* Título grande como en Spotify */
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.1;
+    /* Gradiente opcional para el texto si quieres un toque extra */
+    /* background: linear-gradient(to right, #fff, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; */
+}
+
+.album-artist {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Rating Container */
+.album-rating-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.rating-number {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.rating-stars {
+    color: #FFD700; /* Color dorado para estrellas */
+    font-size: 1.5rem;
+    display: flex;
+    gap: 0.2rem;
+}
+
+.rating-count {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+}
+
+/* Botón Principal */
+.btn-primary {
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    border-radius: 30px; /* Más redondeado */
+    font-family: 'Arimo', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    align-self: flex-start; /* Para que no ocupe todo el ancho */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+}
+
+/* --- SECCIÓN DE PESTAÑAS --- */
+.album-content-tabs {
+    background: rgba(13, 17, 32, 0.6); /* Fondo semitransparente */
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden; /* Para que los bordes redondeados funcionen */
+}
+
+.tabs-nav {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 1.5rem;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: 'Arimo', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative; /* Para la línea inferior activa */
+}
+
+.tab-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+    color: #fff;
+    background: linear-gradient(to top, rgba(124, 58, 237, 0.1), transparent);
+}
+
+/* Línea indicadora de pestaña activa */
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #7C3AED, #EC4899);
+}
+
+.tab-content-container {
+    padding: 2rem;
+    min-height: 300px; /* Altura mínima para que no colapse */
+}
+
+/* Ocultar pestañas inactivas */
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* --- PESTAÑA 1: LISTA DE CANCIONES --- */
+.song-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.song-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 12px;
+    transition: background 0.2s ease;
+    cursor: pointer; /* Indica que es interactivo */
+}
+
+.song-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.song-number {
+    width: 40px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.song-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.song-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.song-artist { /* Por si hay featurings */
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.song-duration {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+}
+
+/* --- PESTAÑA 2: RESEÑAS (Estilos reutilizados de tu CSS base) --- */
+/* (El HTML usará las clases .reviews-list, .review-item, etc. que ya tienes) */
+
+.ai-summary {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
+    border: 1px solid rgba(147, 51, 234, 0.3);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.ai-icon {
+    font-size: 1.5rem;
+    color: #3B82F6; /* Azul brillante para IA */
+}
+
+.ai-text {
+    margin: 0;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+}
+
+/* --- PESTAÑA 3: DETALLE --- */
+.detail-grid {
+    display: grid;
+    gap: 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2rem;
+    border-radius: 15px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.detail-value {
+    font-size: 1.2rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .album-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 2rem;
+    }
+
+    .album-cover-img {
+        width: 250px;
+        height: 250px;
+    }
+
+    .album-info-primary {
+        align-items: center;
+    }
+
+    .album-title {
+        font-size: 2.5rem;
+    }
+
+    .btn-primary {
+        align-self: center;
+    }
+    
+    .tabs-nav {
+        flex-direction: column; /* Pestañas apiladas en móvil? O scroll horizontal */
+    }
+    /* Alternativa para pestañas en móvil: scroll horizontal */
+    /* .tabs-nav { overflow-x: auto; white-space: nowrap; display: block; }
+       .tab-btn { display: inline-block; width: auto; padding: 1rem 1.5rem; } */
+}
+/* --- Modal de Crear Reseña --- */
+.review-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro semitransparente */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050; /* Por encima de otros elementos */
+    backdrop-filter: blur(5px); /* Efecto de desenfoque */
+}
+
+.review-modal {
+    background-color: #1a0f2b; /* Fondo oscuro del modal, similar al de tu app */
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 500px;
+    padding: 2.5rem;
+    color: #e0e0e0;
+    position: relative;
+    box-sizing: border-box; /* Asegura que padding no aumente el tamaño total */
+}
+
+.review-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.review-modal-title {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.review-modal-close {
+    background: none;
+    border: none;
+    font-size: 2.5rem;
+    color: #7c3aed; /* Color del botón de cerrar */
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+.review-modal-close:hover {
+    color: #9a6aff;
+}
+
+.review-song-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.review-song-cover {
+    width: 90px;
+    height: 90px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-right: 1.2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.review-song-text {
+    flex-grow: 1;
+}
+
+.review-song-title {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+}
+
+.review-song-artist {
+    font-family: 'Arimo', sans-serif;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+.review-rating-input .form-label {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 500;
+    color: #e0e0e0;
+    margin-bottom: 0.8rem;
+    display: block;
+    font-size: 1rem;
+}
+
+.stars-input {
+    display: flex;
+    margin-bottom: 1.5rem;
+}
+
+.stars-input i {
+    font-size: 1.8rem;
+    color: #5a5a5a; /* Color de estrella vacía */
+    cursor: pointer;
+    margin-right: 5px;
+    transition: color 0.2s ease;
+}
+
+.stars-input i.fas { /* Estrellas llenas */
+    color: #FFD700; /* Dorado */
+}
+
+/* Para el hover: colorea las estrellas hasta la que se está sobrevolando */
+.stars-input i:hover ~ i.far {
+    color: #5a5a5a !important; /* Asegura que las estrellas posteriores se mantengan vacías */
+}
+.stars-input i:hover,
+.stars-input i:hover ~ i.fas,
+.stars-input i.fas {
+    color: #FFD700;
+}
+
+
+.review-modal-content .form-label {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 500;
+    color: #e0e0e0;
+    margin-bottom: 0.5rem;
+}
+
+.review-modal-content .form-control {
+    background-color: #2b1f3f; /* Fondo de inputs y textareas */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e0e0e0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'Arimo', sans-serif;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-modal-content .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.review-modal-content .form-control:focus {
+    background-color: #3b2a51;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 0.25rem rgba(124, 58, 237, 0.25);
+    color: #e0e0e0;
+}
+
+.review-modal-content .btn-primary {
+    background-color: #7c3aed; /* Color del botón SUBIR */
+    border-color: #7c3aed;
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-weight: 700;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+}
+
+.review-modal-content .btn-primary:hover {
+    background-color: #9a6aff;
+    border-color: #9a6aff;
+    transform: translateY(-1px);
+}
+
+.review-modal-content .btn-primary:active {
+    background-color: #6a2ccf;
+    border-color: #6a2ccf;
+    transform: translateY(0);
+}

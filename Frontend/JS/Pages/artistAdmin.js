@@ -1,0 +1,118 @@
+// --- IMPORTACIONES ---
+import {
+    getArtistByApiId,
+    getArtistTopTracksByApiId,
+    getArtistAlbumsByApiId
+} from './../APIs/contentApi.js';
+// (Las importaciones de reseñas se eliminaron)
+
+import { createSongListItem, createStarRating, createAlbumListItem } from './../Components/renderContent.js'; // (Asegúrate de que 'renderContent.js' exista y exporte estas funciones)
+import { initializeTabNavigation } from './../Handlers/albumHandler.js'; // (albumHandler.js puede renombrarse a 'tabHandler.js')
+import { showAlert } from '../Handlers/headerHandler.js'; // Importamos la alerta
+
+// --- 3. PUNTO DE ENTRADA (LLAMADO POR MAIN.JS) ---
+export function initializeArtistPage() {
+    // Le decimos al script que ESPERE a que el HTML esté listo
+
+        console.log("DOM de Artista cargado. Inicializando lógica...");
+
+        // Ahora que el DOM está listo, podemos llamar a las funciones
+        initializeTabNavigation();
+
+        // Deshabilitar el botón de reseña
+        const btnAgregar = document.getElementById('btnAgregarResena');
+        if (btnAgregar) {
+            btnAgregar.disabled = true;
+            btnAgregar.style.opacity = '0.5';
+            btnAgregar.style.cursor = 'not-allowed';
+            btnAgregar.title = 'No se pueden crear reseñas de artistas';
+        }
+
+        // ¡Empezar a cargar los datos!
+        loadPageData();
+
+}
+
+// --- FUNCIONES PRINCIPALES ---
+
+async function loadPageData() {
+    const loadingEl = document.getElementById('loadingSpinner');
+    const contentEl = document.getElementById('artistContent');
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const apiArtistId = params.get('id');
+        if (!apiArtistId) throw new Error("No se proporcionó un ID de artista.");
+
+        console.log(`Buscando artista con ID: ${apiArtistId}`);
+        contentEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+
+        // 1. Obtener datos principales
+        const artistData = await getArtistByApiId(apiArtistId);
+        console.log("Datos del artista:", artistData);
+
+        // 2. Renderizar header
+        renderArtistHeader(artistData);
+
+        // 3. Obtener el resto en paralelo
+        const [topTracks, albums] = await Promise.all([
+            getArtistTopTracksByApiId(apiArtistId),
+            getArtistAlbumsByApiId(apiArtistId)
+        ]);
+        console.log("Canciones:", topTracks);
+        console.log("Álbumes:", albums);
+
+        // 4. Renderizar listas y tabs
+        renderTopTracks(topTracks);
+        renderAlbums(albums);
+        renderArtistDetails(artistData);
+
+        contentEl.style.display = 'block';
+    } catch (error) {
+        console.error("Error fatal al cargar página de artista:", error);
+        showAlert(`Error al cargar el artista: ${error.message}`, 'danger');
+        contentEl.innerHTML = `<h2 style="color: white; text-align: center; padding: 4rem;">Error al cargar el artista: ${error.message}</h2>`;
+        contentEl.style.display = 'block';
+    } finally {
+        loadingEl.style.display = 'none';
+    }
+}
+
+// --- FUNCIONES DE RENDERIZADO ---
+
+function renderArtistHeader(artist) {
+    document.getElementById('artistCover').src = artist.imagen || './../Assets/default-avatar.png';
+    document.getElementById('artistName').textContent = artist.name;
+    
+    // TODO: El API de Artista no devuelve rating, lo dejamos en 0.
+    const rating = artist.averageRating || 0; 
+    const reviewCount = artist.reviewCount || 0;
+    document.getElementById('ratingNumber').textContent = rating.toFixed(1);
+    document.getElementById('ratingStars').innerHTML = createStarRating(rating, true);
+    document.getElementById('ratingCount').textContent = `(${reviewCount} reviews)`;
+}
+
+function renderTopTracks(tracks) {
+    const listEl = document.getElementById('songList');
+    if (!listEl) return;
+    listEl.innerHTML = tracks.map((track, index) => createSongListItem({
+        ...track, 
+        artistName: "" // Ocultamos el artista ya que estamos en su página
+    }, index)).join('');
+}
+
+function renderAlbums(albums) {
+    const listEl = document.getElementById('albumList');
+    if (!listEl) return;
+    // Usamos el renderAlbumListItem (necesitas crearlo en renderContent.js)
+    listEl.innerHTML = albums.map((album, index) => createAlbumListItem(album, index)).join('');
+}
+
+function renderArtistDetails(artist) {
+    // TODO: El API de Artista no devuelve estos datos.
+    document.getElementById('detailRealName').textContent = artist.realName || '-';
+    document.getElementById('detailStageName').textContent = artist.name || '-';
+    document.getElementById('detailGenre').textContent = artist.genre || '-';
+    document.getElementById('detailBirthDate').textContent = artist.birthDate || '-';
+}

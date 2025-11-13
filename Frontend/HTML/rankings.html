@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundList - Rankings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../CSS/rankings.css"> 
+</head>
+<body>
+    <div class="home-container">
+        <header class="top-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar canción, artista, álbum">
+                        <button class="search-clear" id="searchClear" style="display:none;"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display:none;"></div>
+                </div>
+
+                <div class="header-center">
+                    <button class="nav-btn" data-page="inicio">INICIO</button>
+                    <button class="nav-btn active" data-page="rankings">RANKINGS</button>
+                    <button class="nav-btn" data-page="explorar">EXPLORAR</button>
+                </div>
+
+                <div class="header-right">
+                    <button class="icon-btn" id="notificationsBtn"><i class="fas fa-bell"></i></button>
+                    <div class="profile-dropdown-container">
+                        <button class="icon-btn profile-btn" id="profileBtn">
+                            <img src="../Assets/logo_perfil.png" class="profile-icon" alt="Perfil">
+                        </button>
+                        <div class="profile-dropdown" id="profileDropdown" style="display:none;">
+                            <div class="profile-dropdown-header">
+                                <img src="../Assets/logo_perfil.png" class="profile-icon-small">
+                                <span id="usernameDisplay">Usuario</span>
+                            </div>
+                            <button class="profile-dropdown-item" id="verPerfilBtn"><i class="fas fa-user"></i> Perfil</button>
+                            <button class="profile-dropdown-item" id="ajustesBtn"><i class="fas fa-cog"></i> Ajustes</button>
+                            <button class="profile-dropdown-item" id="cerrarSesionBtn"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            
+            <div class="ranking-search-bar">
+                <span class="search-bar-label">BUSCADOR POR</span>
+                <div class="search-bar-filters">
+                    
+                    <div class="filter-dropdown-container">
+                        <button class="filter-btn" id="anoFilterBtn" data-filter="ano">
+                            AÑO <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="filter-dropdown" id="anoFilterDropdown">
+                            </div>
+                    </div>
+                    
+                    <div class="filter-dropdown-container">
+                        <button class="filter-btn" id="tipoFilterBtn" data-filter="tipo">
+                            CANCIONES <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="filter-dropdown" id="tipoFilterDropdown">
+                            <a href="#" class="filter-dropdown-item" data-value="canciones">Canciones</a>
+                            <a href="#" class="filter-dropdown-item" data-value="albumes">Álbumes</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="rankings-body-container">
+                
+                <aside class="rankings-filter-sidebar">
+                    <h3 class="filters-active-title">FILTROS:</h3>
+                    <p class="filters-active-tags">2025 – CANCIONES</p>
+
+                    <div class="filter-category-list">
+                        <button class="filter-category-btn active">MAS RATING</button>
+                        <button class="filter-category-btn">MENOS RATING</button>
+                        <button class="filter-category-btn">MAS RESEÑADOS</button>
+                    </div>
+                </aside>
+
+                <section class="rankings-content">
+                    <h2 class="rankings-content-title">MEJORES CANCIONES CLASIFICADAS</h2>
+                    
+                    <div class="ranking-list-container" id="rankingList">
+                        </div>
+                </section>
+
+            </div>
+        </main>
+
+    </div> <div class="logout-modal-overlay" id="logoutModalOverlay" style="display:none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="../Assets/logo_perfil.png" class="logout-logo-img" alt="Logo">
+                </div>
+                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <script type="module" src="../JS/Pages/rankings.js"></script>
+    
+    </body>
+</html>

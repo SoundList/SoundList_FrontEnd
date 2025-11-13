@@ -1,74 +1,32 @@
-/* ===============================================
- * 🎨 CSS/edit_profile.css
- * (ACTUALIZADO: Color de botón y Responsive)
- * =============================================== */
-
-:root {
-    /* Variables de tu tema (asumidas) */
-    --morado: #4a148c;
-    --morado-oscuro: #2c005b;
-    --magenta: #e91e63;
-    --magenta-gradient-inicio: #d81b60;
-    --blanco: #ffffff;
-    --fondo-claro: #38006b;
-    --azul-brillante: #3b82f6; 
-    --verde-exito: #10B981; 
-}
-
 .settings-container {
     display: flex;
-    min-height: calc(100vh - 60px); 
-    background-color: var(--fondo-claro);
     color: var(--blanco);
+    padding: 2rem; 
+    gap: 2rem; 
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
+/* --- 1. Barra Lateral (Sidebar) --- */
 .sidebar {
     width: 280px;
-    padding: 30px 20px;
-    background-color: var(--morado-oscuro);
-    border-right: 3px solid var(--morado);
+    flex-shrink: 0;
+    padding: 1.5rem;
+    background: rgba(13, 17, 32, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px; 
     display: flex;
     flex-direction: column;
     align-items: center;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+    height: fit-content; 
 }
 
-.main-content {
-    flex-grow: 1;
-    padding: 40px;
-    overflow-y: auto;
-}
 
-/* Botones de Navegación Lateral */
-.sidebar button {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    background-color: var(--morado);
-    border: none;
-    border-radius: 8px;
-    color: var(--blanco);
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.sidebar button:hover {
-    background-color: #6a1b9a;
-}
-
-.sidebar button.active {
-    background-color: var(--magenta);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-/* Sección de Avatar en el Sidebar */
 .profile-section-edit {
     text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 15px;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     width: 100%;
 }
@@ -87,100 +45,159 @@
     transform: scale(1.05);
 }
 
-/* 💡 NUEVO: Estilo para el avatar grande en el formulario */
 .profile-avatar-edit.large-avatar {
     width: 150px;
     height: 150px;
 }
 
-/* Cajas de Ajustes (Contenido Principal) */
-.setting-box {
-    background-color: var(--morado);
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+
+.sidebar button {
+    width: 100%;
+    padding: 0.875rem 1.25rem; /* 14px 20px */
+    margin: 0.5rem 0; 
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
     color: var(--blanco);
-    max-width: 600px;
-    margin: 40px auto; 
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.sidebar button:hover {
+
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar button.active {
+
+    background: linear-gradient(135deg, var(--morado, #7C3AED) 0%, var(--magenta, #EC4899) 100%);
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    transform: translateY(-1px);
+}
+
+
+
+.settings-content {
+    flex-grow: 1;
+    overflow-y: auto; 
+    padding: 0; 
+}
+
+
+.setting-box {
+
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(13, 17, 32, 0.3) 100%);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    color: var(--blanco);
+    margin: 0 auto; 
     animation: fadeIn 0.5s ease-out;
 }
 
 .setting-box h3 {
-    margin-bottom: 25px;
-    color: var(--magenta);
-    border-bottom: 2px solid var(--magenta-gradient-inicio);
-    padding-bottom: 10px;
+
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.75rem;
     font-weight: 700;
-    text-align: center;
+    margin-bottom: 25px;
+    color: var(--blanco);
+    border-bottom: 1px solid var(--morado);
+    padding-bottom: 10px;
+    text-align: left; 
 }
 
-/* Formulario */
+/* --- 3. Formulario --- */
 .setting-box label {
     font-weight: 500;
     margin-bottom: 8px;
     display: block;
-    color: #bdbdbd;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .setting-box .form-control {
-    background-color: var(--morado-oscuro);
-    border: 1px solid var(--morado);
+
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px; 
+    padding: 0.75rem 1.25rem;
     color: var(--blanco);
-    border-radius: 6px;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
 }
 
 .setting-box .form-control:focus {
-    background-color: var(--morado-oscuro);
-    border-color: var(--magenta);
-    box-shadow: 0 0 0 0.25rem rgba(233, 30, 99, 0.25);
+
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--morado);
+    box-shadow: 0 0 0 0.2rem rgba(124, 58, 237, 0.25);
     color: var(--blanco);
+    outline: none;
 }
 
-/* Botón de Confirmación */
+
 .btn-confirm {
-    background-color: var(--magenta-gradient-inicio);
-    border: 2px solid var(--magenta-gradient-inicio);
+
+    background: linear-gradient(135deg, var(--morado) 0%, var(--magenta) 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem 3.5rem;
     color: var(--blanco);
-    font-weight: 700;
-    padding: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-family: 'Arimo', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
     margin-top: 20px;
-    transition: background-color 0.2s, border-color 0.2s;
 }
 
 .btn-confirm:hover:not(:disabled) {
-    background-color: var(--magenta);
-    border-color: var(--magenta);
+
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
 }
 
 .btn-confirm:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
-/* Campo de Subida de Archivos */
+/* Botón para Subir Archivos */
 .setting-box input[type="file"] {
     display: none;
 }
 
 .setting-box .file-upload-label {
+
     display: inline-block;
-    padding: 10px 20px;
-    /* 💡 ¡CAMBIO DE COLOR! Ahora coincide con el botón 'Confirmar' */
-    background-color: var(--magenta-gradient-inicio);
-    border-radius: 6px;
-    cursor: pointer;
+    background: linear-gradient(135deg, var(--morado) 0%, var(--magenta) 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem; 
+    color: var(--blanco);
     font-weight: 600;
-    transition: background-color 0.2s;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
 }
 
 .setting-box .file-upload-label:hover {
-    /* 💡 ¡CAMBIO DE COLOR! Ahora usa el magenta brillante para el hover */
-    background-color: var(--magenta);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
 }
 
-/* Utilidad */
+/* --- 4. Utilidades y Animaciones --- */
+
 .setting-section.hidden {
     display: none;
 }
@@ -190,49 +207,42 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* 💡 --- INICIO DE ESTILOS PERSONALIZADOS --- 💡 */
-
-/* 1. Scrollbar Personalizado (para WebKit: Chrome, Safari, Edge) */
-.main-content::-webkit-scrollbar {
+.settings::-webkit-scrollbar {
     width: 12px;
 }
-.main-content::-webkit-scrollbar-track {
-    background: var(--morado-oscuro);
+.settings::-webkit-scrollbar-track {
+    background: rgba(13, 17, 32, 0.8); 
     border-radius: 10px;
 }
-.main-content::-webkit-scrollbar-thumb {
-    background-color: var(--magenta);
+.settings::-webkit-scrollbar-thumb {
+    background-color: var(--morado); 
     border-radius: 10px;
-    border: 3px solid var(--morado-oscuro);
-    box-shadow: 0 0 10px 2px rgba(59, 130, 246, 0.6); 
+    border: 3px solid rgba(13, 17, 32, 0.8);
 }
-.main-content::-webkit-scrollbar-thumb:hover {
-    background-color: #d81b60;
-    box-shadow: 0 0 15px 4px rgba(59, 130, 246, 0.8);
+.settings::-webkit-scrollbar-thumb:hover {
+    background-color: var(--magenta); 
 }
-
-/* (Scrollbar para Firefox) */
-.main-content {
+.settings {
     scrollbar-width: thin;
-    scrollbar-color: var(--magenta) var(--morado-oscuro);
+    scrollbar-color: var(--morado) rgba(13, 17, 32, 0.8);
 }
 
-
-/* 2. Animación de "Flash" (Feedback visual) */
+/* Animación de Feedback (Flash) */
 @keyframes flashSuccess {
     0% {
-        box-shadow: 0 0 12px 4px rgba(59, 130, 246, 0.8);
-        border-color: var(--azul-brillante);
+        box-shadow: 0 0 12px 4px rgba(124, 58, 237, 0.8);
+        border-color: var(--morado);
     }
     70% {
-        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
         border-color: var(--magenta); 
     }
     100% {
-        border-color: var(--morado); 
+
+        border-color: rgba(255, 255, 255, 0.2); 
     }
 }
-#current-description.flash-success {
+.form-control.flash-success { 
     animation: flashSuccess 1.5s ease-out;
 }
 .profile-avatar-edit.flash-success {
@@ -240,54 +250,69 @@
     border-color: var(--magenta) !important; 
 }
 
-
-/* 3. Estilo del botón "¡Guardado!" */
+/* Estilo del botón "¡Guardado!" */
 .btn-confirm.btn-success-feedback {
-    background-color: var(--verde-exito) !important;
-    border-color: var(--verde-exito) !important;
+    background: var(--verde-exito, #10B981) !important; 
+    border-color: var(--verde-exito, #10B981) !important;
     color: var(--blanco) !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
 }
 
 
-/* 💡 --- 4. MEJORAS RESPONSIVE --- 💡 */
-
-@media (max-width: 768px) {
+/* --- 5. Diseño Responsivo --- */
+@media (max-width: 992px) { 
     .settings-container {
         flex-direction: column;
+        padding: 1.5rem;
+        gap: 1.5rem;
     }
     .sidebar {
         width: 100%;
         border-right: none;
-        border-bottom: 3px solid var(--morado);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         flex-direction: row;
-        justify-content: space-around;
-        padding: 15px 10px;
+        justify-content: center;
+        padding: 1rem;
         flex-wrap: wrap; 
+        gap: 0.5rem;
     }
     .sidebar button {
-        width: 48%; /* Crea una cuadrícula de 2x2 */
-        font-size: 0.85rem;
-        padding: 10px;
+        width: auto; 
+        flex-grow: 1; 
         text-align: center;
-        margin: 4px 0; /* Añade espaciado vertical */
+        margin: 4px;
     }
     .profile-section-edit {
-        display: none; /* Ocultar el avatar en móvil para ahorrar espacio */
+        display: none; 
     }
-    .main-content {
-        padding: 20px 15px; /* Reducir padding horizontal */
+    .settings-content {
+        padding: 0;
     }
     .setting-box {
-        margin: 20px auto;
-        padding: 20px; /* Reducir padding interno */
+        margin: 0 auto;
+        padding: 20px;
     }
     .setting-box h3 {
-        font-size: 1.5rem; /* Reducir H3 en móvil */
+        font-size: 1.5rem;
         margin-bottom: 20px;
     }
-    /* Hacer el avatar de previsualización más pequeño en móvil */
     .profile-avatar-edit.large-avatar {
         width: 120px;
         height: 120px;
+    }
+}
+
+@media (max-width: 576px) {
+    .settings-container {
+        padding: 1rem;
+        gap: 1rem;
+    }
+    .sidebar button {
+        width: 100%; 
+        text-align: center;
+    }
+    .btn-confirm {
+        width: 100%;
+        padding: 0.75rem 1.5rem;
     }
 }

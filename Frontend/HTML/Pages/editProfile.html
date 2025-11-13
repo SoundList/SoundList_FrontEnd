@@ -4,99 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Perfil - Soundlist</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
     
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../../CSS/base.css">
-    <link rel="stylesheet" href="../../CSS/layout.css">
-    <link rel="stylesheet" href="../../CSS/animations.css">
-    <link rel="stylesheet" href="../../CSS/buttons.css">
-    <link rel="stylesheet" href="../../CSS/header.css">
-    <link rel="stylesheet" href="../../CSS/notifications.css">     
-    <link rel="stylesheet" href="../../CSS/profile.css"> 
+    <!-- CSS (Igual que home.html) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../../CSS/home.css"> 
     <link rel="stylesheet" href="../../CSS/editProfile.css"> 
+    
 </head>
-<body>
-    <div id="header-placeholder"></div>
+<body class="edit-profile-body">
 
-    <div class="settings-container">
-        <div class="sidebar">
-            <div class="profile-section-edit">
-                <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit">
-                <span class="text-white">CUENTA <i class="fa-solid fa-check-circle text-success"></i></span>
-            </div>
-            
-            <button id="btn-edit-description" data-section="description" class="active">
-                <i class="fa-solid fa-file-alt me-2"></i> Editar Descripción
-            </button>
-            <button id="btn-edit-image" data-section="image">
-                <i class="fa-solid fa-image me-2"></i> Editar Imagen
-            </button>
-        </div>
+    <div class="home-container">
 
-        <div class="main-content">
+        <header class="top-header">
+            <div class="header-content container-fluid">
+                <button class="mobile-menu-toggle d-lg-none" id="mobileMenuToggle" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
 
-            <div id="section-description" class="setting-section">
-                <div class="setting-box">
-                    <h3>Editar Descripción </h3>
-                    <form id="form-edit-description">
-                        <div class="mb-4">
-                            <label for="current-description">Descripción Actual</label>
-                            <textarea id="current-description" class="form-control" readonly disabled></textarea>
-                        </div>
-                        <div class="mb-4">
-                            <label for="new-description">Nueva Descripcion (Máx. 160 caracteres)</label>
-                            <textarea id="new-description" class="form-control" maxlength="160"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-confirm w-100">
-                            Confirmar
+                <div class="header-left">
+                    <img src="../../Assets/default-avatar.png"  alt="SoundList Logo" class="logo-icon d-none d-md-block"> 
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, album">
+                        <button class="search-clear" id="searchClear" style="display: none;">
+                            <i class="fas fa-times"></i>
                         </button>
-                    </form>
+                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display: none;">
+
+                    </div>
+                </div>
+
+                <div class="header-center d-none d-lg-flex">
+                    <button class="nav-btn active" data-page="inicio">INICIO</button>
+                    <button class="nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="nav-btn" data-page="amigos">AMIGOS</button>
+                </div>
+
+                <div class="mobile-nav-menu" id="mobileNavMenu">
+                    <button class="mobile-nav-btn active" data-page="inicio">INICIO</button>
+                    <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="mobile-nav-btn" data-page="amigos">AMIGOS</button>
+                </div>
+
+                <div class="header-right">
+
+                    <div class="notifications-dropdown-container" id="notificationsContainer" style="display: none;">
+                        <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <div class="notifications-dropdown" id="notificationsDropdown" style="display: none;">
+                             <div class="notifications-dropdown-header">
+                                <h3>Notificaciones</h3>
+                            </div>
+                            <div class="notifications-list" id="notificationsList">
+                                <div class="notification-empty">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No tienes notificaciones</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="login-container" id="loginContainer" style="display: none;">
+                        <button class="login-btn" id="loginBtn">
+                            <img src="../../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon"> 
+                            <span class="login-text">Iniciar Sesion</span>
+                        </button>
+                    </div>
+
+                    <div class="profile-dropdown-container" id="profileContainer" style="display: none;">
+                        <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
+                            <img src="../../Assets/logo_perfil.png" alt="Perfil" class="profile-icon"> 
+                        </button>
+                        <div class="profile-dropdown" id="profileDropdown" style="display: none;">
+                            <div class="profile-dropdown-header">
+                                <img src="../../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small"> 
+                                <span id="usernameDisplay">Usuario</span>
+                            </div>
+                            <button class="profile-dropdown-item" id="verPerfilBtn">
+                                <i class="fas fa-user"></i> Perfil
+                            </button>
+                            <button class="profile-dropdown-item" id="ajustesBtn">
+                                <i class="fas fa-cog"></i> Ajustes
+                            </button>
+                            <button class="profile-dropdown-item" id="cerrarSesionBtn">
+                                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="add-review-container" id="addReviewContainer" style="display: none;">
+                        <button class="icon-btn add-review-btn" id="addReviewBtn" title="Crear reseña">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
+        </header>
 
-            <div id="section-image" class="setting-section hidden">
-                <div class="setting-box">
-                    <h3>Cambiar Imagen de Perfil</h3>
-                    <form id="form-edit-image">
-                        <div class="mb-4 text-center">
-                            <img id="image-upload-preview" src="../../Assets/default-avatar.png" alt="Nueva Imagen" class="profile-avatar-edit large-avatar">
-                            <input type="file" id="avatar-input" accept="image/*">
-                            <label for="avatar-input" class="file-upload-label mt-3">
-                                Seleccionar Nueva Imagen
-                            </label>
+        <main class="main-content">
+
+            <div class="settings-container">
+                <div class="sidebar">
+                    <div class="profile-section-edit">
+                        <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit"> 
+                        <span class="text-white">CUENTA <i class="fa-solid fa-check-circle text-success"></i></span>
+                    </div>
+                    
+                    <button id="btn-edit-description" data-section="description" class="active">
+                        <i class="fa-solid fa-file-alt me-2"></i> Editar Descripción
+                    </button>
+                    <button id="btn-edit-image" data-section="image">
+                        <i class="fa-solid fa-image me-2"></i> Editar Imagen
+                    </button>
+                </div>
+
+                <div class="settings-content"> 
+                
+                    <div id="section-description" class="setting-section">
+                        <div class="setting-box">
+                            <h3>Editar Descripción </h3>
+                            <form id="form-edit-description">
+                                <div class="mb-4">
+                                    <label for="current-description">Descripción Actual</label>
+                                    <textarea id="current-description" class="form-control" readonly disabled></textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="new-description">Nueva Descripcion (Máx. 160 caracteres)</label>
+                                    <textarea id="new-description" class="form-control" maxlength="160"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-confirm w-100">
+                                    Confirmar
+                                </button>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-confirm w-100" disabled id="confirm-image-btn">
-                            Confirmar Cambio de Imagen
-                        </button>
-                    </form>
+                    </div>
+
+                    <div id="section-image" class="setting-section hidden">
+                        <div class="setting-box">
+                            <h3>Cambiar Imagen de Perfil</h3>
+                            <form id="form-edit-image">
+                                <div class="mb-4 text-center">
+                                    <img id="image-upload-preview" src="../../Assets/default-avatar.png" alt="Nueva Imagen" class="profile-avatar-edit large-avatar">
+                                    <input type="file" id="avatar-input" accept="image/*">
+                                    <label for="avatar-input" class="file-upload-label mt-3">
+                                        Seleccionar Nueva Imagen
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-confirm w-100" disabled id="confirm-image-btn">
+                                    Confirmar Cambio de Imagen
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+    </div> 
+    <div class="login-required-modal-overlay" id="loginRequiredModalOverlay" style="display: none;">
+        <div class="login-required-modal">
+            <div class="login-required-modal-content">
+                <div class="login-required-modal-logo">
+                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="login-required-logo-img">
+                </div>
+                <h2 class="login-required-modal-title">Inicia sesión</h2>
+                <p class="login-required-modal-message">Debes iniciar sesión para realizar esta acción.</p>
+                <div class="login-required-modal-buttons">
+                    <button class="login-required-btn login-required-btn-primary" id="goToLoginBtn">Iniciar sesión</button>
+                    <button class="login-required-btn login-required-btn-secondary" id="cancelLoginRequiredBtn">Cancelar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
-    <!-- Requerido por tus handlers -->
-    <script src="../../JS/APIs/userApi.js"></script>
-    <script src="../../JS/Components/header.js"></script>
-    <script src="../../JS/Handlers/headerHandler.js"></script>
-    <script src="../../JS/Pages/editProfile.js"></script>
+    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="logout-logo-img">
+                </div>
+                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const headerHTML = window.createHeader();
-            document.getElementById("header-placeholder").innerHTML = headerHTML;
-            if (typeof setupHeaderHandlers === 'function') {
-                setupHeaderHandlers();
-            }
-            if (typeof setupNavButtons === 'function') {
-                setupNavButtons();
-            }
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script type="module" src="../../JS/main.js"></script> 
+    <script src="../../JS/APIs/userApi.js"></script>
+    <script src="../../JS/Pages/editProfile.js"></script>
+    
 </body>
 </html>

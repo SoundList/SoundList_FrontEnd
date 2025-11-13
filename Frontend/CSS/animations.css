@@ -1,4 +1,4 @@
-/* Animaciones utilizadas por el header y sus componentes */
+
 @keyframes gentleFadeIn {
     from {
         opacity: 0;
@@ -17,7 +17,6 @@
     }
 }
 
-/* Animaciones para modales (ej. logout, login) */
 @keyframes fadeInOverlay {
     from {
         opacity: 0;

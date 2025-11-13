@@ -1,19 +1,8 @@
-/* ===============================================
- * 🎨 CSS/editProfile.css
- * (REFRACTORIZADO con el tema de home.css)
- * =============================================== */
-
-/* * NOTA: Este archivo ya NO necesita :root.
- * Asume que las variables (--morado, --magenta, etc.)
- * ya están cargadas desde 'base.css'.
- */
-
 .settings-container {
     display: flex;
-    min-height: calc(100vh - 80px); /* Altura del header sticky */
     color: var(--blanco);
-    padding: 2rem; /* Añade espacio alrededor */
-    gap: 2rem; /* Espacio entre sidebar y contenido */
+    padding: 2rem; 
+    gap: 2rem; 
     max-width: 1400px;
     margin: 0 auto;
 }
@@ -23,18 +12,17 @@
     width: 280px;
     flex-shrink: 0;
     padding: 1.5rem;
-    /* Estilo "Glassmorphism" del header */
     background: rgba(13, 17, 32, 0.8);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px; /* Bordes redondeados consistentes */
+    border-radius: 15px; 
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: fit-content; /* Para que no ocupe toda la altura */
+    height: fit-content; 
 }
 
-/* Sección de Avatar en el Sidebar */
+
 .profile-section-edit {
     text-align: center;
     margin-bottom: 1.5rem;
@@ -47,7 +35,6 @@
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    /* Borde con el color magenta del tema */
     border: 3px solid var(--magenta);
     object-fit: cover;
     margin-bottom: 10px;
@@ -63,11 +50,11 @@
     height: 150px;
 }
 
-/* Botones de Navegación Lateral */
+
 .sidebar button {
     width: 100%;
     padding: 0.875rem 1.25rem; /* 14px 20px */
-    margin: 0.5rem 0; /* 8px */
+    margin: 0.5rem 0; 
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
@@ -79,13 +66,13 @@
 }
 
 .sidebar button:hover {
-    /* El hover estándar de 'home.css' */
+
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
 }
 
 .sidebar button.active {
-    /* El estilo de botón activo/primario de 'home.css' */
+
     background: linear-gradient(135deg, var(--morado, #7C3AED) 0%, var(--magenta, #EC4899) 100%);
     border-color: transparent;
     box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
@@ -93,28 +80,28 @@
 }
 
 
-/* --- 2. Contenido Principal --- */
-.main-content {
+
+.settings-content {
     flex-grow: 1;
-    overflow-y: auto; /* El scrollbar ahora está aquí */
-    padding: 0; /* Sin padding, la caja lo tendrá */
+    overflow-y: auto; 
+    padding: 0; 
 }
 
-/* Cajas de Ajustes (Contenido Principal) */
+
 .setting-box {
-    /* Estilo "Glassmorphism" de 'home.css' */
+
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(13, 17, 32, 0.3) 100%);
     padding: 30px;
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
     color: var(--blanco);
-    margin: 0 auto; /* Se centra solo */
+    margin: 0 auto; 
     animation: fadeIn 0.5s ease-out;
 }
 
 .setting-box h3 {
-    /* Título estilo 'home.css' */
+
     font-family: 'League Spartan', sans-serif;
     font-size: 1.75rem;
     font-weight: 700;
@@ -122,7 +109,7 @@
     color: var(--blanco);
     border-bottom: 1px solid var(--morado);
     padding-bottom: 10px;
-    text-align: left; /* Queda mejor alineado a la izquierda */
+    text-align: left; 
 }
 
 /* --- 3. Formulario --- */
@@ -130,15 +117,15 @@
     font-weight: 500;
     margin-bottom: 8px;
     display: block;
-    color: rgba(255, 255, 255, 0.7); /* Menos brillante que el blanco */
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .setting-box .form-control {
-    /* Estilo de input de 'home.css' (como el buscador) */
+
     width: 100%;
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 25px; /* Totalmente redondeado */
+    border-radius: 25px; 
     padding: 0.75rem 1.25rem;
     color: var(--blanco);
     font-size: 0.95rem;
@@ -146,7 +133,7 @@
 }
 
 .setting-box .form-control:focus {
-    /* Estilo de focus de 'home.css' */
+
     background: rgba(255, 255, 255, 0.15);
     border-color: var(--morado);
     box-shadow: 0 0 0 0.2rem rgba(124, 58, 237, 0.25);
@@ -154,9 +141,9 @@
     outline: none;
 }
 
-/* Botón de Confirmación (Guardar) */
+
 .btn-confirm {
-    /* Estilo de botón primario de 'home.css' */
+
     background: linear-gradient(135deg, var(--morado) 0%, var(--magenta) 100%);
     border: none;
     border-radius: 50px;
@@ -172,7 +159,7 @@
 }
 
 .btn-confirm:hover:not(:disabled) {
-    /* Efecto hover de 'home.css' */
+
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
 }
@@ -190,12 +177,12 @@
 }
 
 .setting-box .file-upload-label {
-    /* Dándole el mismo estilo que el botón de confirmar */
+
     display: inline-block;
     background: linear-gradient(135deg, var(--morado) 0%, var(--magenta) 100%);
     border: none;
     border-radius: 50px;
-    padding: 0.75rem 1.5rem; /* Un poco menos de padding lateral */
+    padding: 0.75rem 1.5rem; 
     color: var(--blanco);
     font-weight: 600;
     font-size: 0.95rem;
@@ -220,23 +207,22 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Scrollbar (Ahora usa las variables correctas) */
-.main-content::-webkit-scrollbar {
+.settings::-webkit-scrollbar {
     width: 12px;
 }
-.main-content::-webkit-scrollbar-track {
-    background: rgba(13, 17, 32, 0.8); /* Fondo oscuro */
+.settings::-webkit-scrollbar-track {
+    background: rgba(13, 17, 32, 0.8); 
     border-radius: 10px;
 }
-.main-content::-webkit-scrollbar-thumb {
-    background-color: var(--morado); /* Color principal del tema */
+.settings::-webkit-scrollbar-thumb {
+    background-color: var(--morado); 
     border-radius: 10px;
     border: 3px solid rgba(13, 17, 32, 0.8);
 }
-.main-content::-webkit-scrollbar-thumb:hover {
-    background-color: var(--magenta); /* Acento al pasar el mouse */
+.settings::-webkit-scrollbar-thumb:hover {
+    background-color: var(--magenta); 
 }
-.main-content {
+.settings {
     scrollbar-width: thin;
     scrollbar-color: var(--morado) rgba(13, 17, 32, 0.8);
 }
@@ -252,11 +238,11 @@
         border-color: var(--magenta); 
     }
     100% {
-        /* Vuelve al color de borde normal del input */
+
         border-color: rgba(255, 255, 255, 0.2); 
     }
 }
-.form-control.flash-success { /* Aplicado al input */
+.form-control.flash-success { 
     animation: flashSuccess 1.5s ease-out;
 }
 .profile-avatar-edit.flash-success {
@@ -266,7 +252,7 @@
 
 /* Estilo del botón "¡Guardado!" */
 .btn-confirm.btn-success-feedback {
-    background: var(--verde-exito, #10B981) !important; /* Usando tu variable anterior */
+    background: var(--verde-exito, #10B981) !important; 
     border-color: var(--verde-exito, #10B981) !important;
     color: var(--blanco) !important;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
@@ -274,7 +260,7 @@
 
 
 /* --- 5. Diseño Responsivo --- */
-@media (max-width: 992px) { /* Ajustado a 992px para tablets */
+@media (max-width: 992px) { 
     .settings-container {
         flex-direction: column;
         padding: 1.5rem;
@@ -291,15 +277,15 @@
         gap: 0.5rem;
     }
     .sidebar button {
-        width: auto; /* Se ajustan al contenido */
-        flex-grow: 1; /* Crecen para llenar el espacio */
+        width: auto; 
+        flex-grow: 1; 
         text-align: center;
         margin: 4px;
     }
     .profile-section-edit {
-        display: none; /* Ocultar el avatar en móvil para ahorrar espacio */
+        display: none; 
     }
-    .main-content {
+    .settings-content {
         padding: 0;
     }
     .setting-box {
@@ -322,11 +308,10 @@
         gap: 1rem;
     }
     .sidebar button {
-        width: 100%; /* En móviles pequeños, 1 por fila */
+        width: 100%; 
         text-align: center;
     }
     .btn-confirm {
-        /* Botón ocupa todo el ancho en móvil */
         width: 100%;
         padding: 0.75rem 1.5rem;
     }

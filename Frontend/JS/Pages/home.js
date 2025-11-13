@@ -8,6 +8,11 @@ let loadReviews = null; // Función para cargar reseñas (se asignará en initia
 let userReviewsState = {}; // Estado anterior de las reseñas del usuario (para detectar cambios)
 let notificationPollingInterval = null; // Intervalo de polling para notificaciones
 
+
+const GATEWAY_BASE_URL = 'http://localhost:5000';
+const CONTENT_API_URL = 'http://localhost:8001'; 
+const SOCIAL_API_BASE_URL = 'http://localhost:8002';
+
 // Función global para cambiar el filtro de reseñas
 function setReviewFilter(filter) {
     currentReviewFilter = filter;
@@ -56,13 +61,19 @@ function renderStars(rating) {
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
-    initializeCarousel();
+    if (document.getElementById('carouselWrapper')) {
+        initializeCarousel();
+    }
+    if (document.getElementById('reviewsList')) {
+        initializeReviews();
+        //initializeCreateReviewModal(); 
+        initializeSampleComments();
+    }
     initializeSearch();
     initializeProfileDropdown();
-    initializeReviews();
     initializeNavigation();
     loadUserData();
-    
+    initializeLogoutModal();
     // Asegurar que la página se marque como completamente cargada
     window.addEventListener('load', function() {
         // Forzar que el navegador reconozca que la página terminó de cargar
@@ -96,16 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
          */
         async function getMasRecomendado() {
             try {
-                const GATEWAY_BASE_URL = 'http://localhost:5000';
-                // Intentar obtener del backend a través del gateway
-                // TODO: Cuando el backend esté listo, descomentar esta línea y ajustar la ruta
-                // const response = await axios.get(`${GATEWAY_BASE_URL}/api/gateway/contents/songs/most-recommended`, {
-                //     timeout: 5000
-                // });
-                // if (response.data) return response.data;
-                
-                // Datos de ejemplo SOLO si el backend no está disponible
-                // Estos datos se reemplazarán automáticamente cuando el backend responda
+
                 return {
                     totalSongs: 0, // Se actualizará con datos reales
                     minReviews: 10,
@@ -143,15 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
          */
         async function getMasComentado() {
             try {
-                const GATEWAY_BASE_URL = 'http://localhost:5000';
-                // Intentar obtener del backend a través del gateway
-                // TODO: Cuando el backend esté listo, descomentar esta línea y ajustar la ruta
-                // const response = await axios.get(`${GATEWAY_BASE_URL}/api/gateway/reviews/most-commented`, {
-                //     timeout: 5000
-                // });
-                // if (response.data) return response.data;
                 
-                // Datos de ejemplo SOLO si el backend no está disponible
                 return {
                     totalSongs: 0, // Se actualizará con datos reales
                     topSong: {
@@ -185,15 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
          */
         async function getTop10Semana() {
             try {
-                const GATEWAY_BASE_URL = 'http://localhost:5000';
-                // Intentar obtener del backend a través del gateway
-                // TODO: Cuando el backend esté listo, descomentar esta línea y ajustar la ruta
-                // const response = await axios.get(`${GATEWAY_BASE_URL}/api/gateway/reviews/top-weekly?limit=10`, {
-                //     timeout: 5000
-                // });
-                // if (response.data) return response.data;
                 
-                // Datos de ejemplo SOLO si el backend no está disponible
                 return {
                     period: 'semana',
                     limit: 10,
@@ -227,15 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
          */
         async function getTop50Mes() {
             try {
-                const GATEWAY_BASE_URL = 'http://localhost:5000';
-                // Intentar obtener del backend a través del gateway
-                // TODO: Cuando el backend esté listo, descomentar esta línea y ajustar la ruta
-                // const response = await axios.get(`${GATEWAY_BASE_URL}/api/gateway/reviews/top-monthly?limit=50`, {
-                //     timeout: 5000
-                // });
-                // if (response.data) return response.data;
                 
-                // Datos de ejemplo SOLO si el backend no está disponible
                 return {
                     period: 'mes',
                     limit: 50,
@@ -270,15 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
          */
         async function getTrending() {
             try {
-                const GATEWAY_BASE_URL = 'http://localhost:5000';
-                // Intentar obtener del backend a través del gateway
-                // TODO: Cuando el backend esté listo, descomentar esta línea y ajustar la ruta
-                // const response = await axios.get(`${GATEWAY_BASE_URL}/api/gateway/reviews/trending?hours=48`, {
-                //     timeout: 5000
-                // });
-                // if (response.data) return response.data;
                 
-                // Datos de ejemplo SOLO si el backend no está disponible
                 return {
                     timeWindow: '48 horas',
                     topSong: {
@@ -472,9 +442,9 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="carousel-card">
                 <div class="carousel-album-art">
                     <img src="${imageUrl}" 
-                         alt="${top.title}" 
-                         class="album-image"
-                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300/7C3AED/ffffff?text='+encodeURIComponent('${top.title.replace(/'/g, "\\'")}')">
+                        alt="${top.title}" 
+                        class="album-image"
+                        onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300/7C3AED/ffffff?text='+encodeURIComponent('${top.title.replace(/'/g, "\\'")}')">
                 </div>
                 <div class="carousel-content">
                     <h3 class="carousel-title">${top.title}</h3>
@@ -824,29 +794,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Función para navegar a las vistas de contenido (en desarrollo)
     function navigateToContentView(type, id) {
-        // TODO: Implementar navegación a las vistas cuando estén listas
-        // Por ahora, mostrar un mensaje informativo
-        switch(type) {
-            case 'song':
-                // window.location.href = `song.html?id=${id}`;
-                console.log('Navegar a vista de canción:', id);
-                showAlert('Vista de canción en desarrollo. Próximamente disponible.', 'info');
-                break;
-            case 'album':
-                // window.location.href = `album.html?id=${id}`;
-                console.log('Navegar a vista de álbum:', id);
-                showAlert('Vista de álbum en desarrollo. Próximamente disponible.', 'info');
-                break;
-            case 'artist':
-                // window.location.href = `artist.html?id=${id}`;
-                console.log('Navegar a vista de artista:', id);
-                showAlert('Vista de artista en desarrollo. Próximamente disponible.', 'info');
-                break;
-            default:
-                console.warn('Tipo de contenido desconocido:', type);
+    if (!id || id.trim() === '' || id === '00000000-0000-0000-0000-000000000000') {
+        console.error('Error: El ID del contenido está vacío o es inválido. No se puede navegar.');
+         // (Si 'showAlert' está disponible en este scope, úsalo)
+        // showAlert('Error: El ID del contenido es inválido.', 'danger');
+        return;
         }
-    }
+        let destinationUrl = '';
+        switch(type) {
+        case 'song':
+        destinationUrl = `song.html?id=${id}`;
+        break;
+        case 'album':
+        destinationUrl = `album.html?id=${id}`;
+        break;
+        case 'artist':
+        destinationUrl = `artist.html?id=${id}`;
+        break;
+        default:
+        console.warn('Tipo de contenido desconocido:', type);
+        return;
+        }
 
+        console.log(`Navegando a: ${destinationUrl}`);
+        window.location.href = destinationUrl;
+    }
     // Profile dropdown functionality
     function initializeProfileDropdown() {
         const profileBtn = document.getElementById('profileBtn');
@@ -871,8 +843,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Profile actions
         verPerfilBtn.addEventListener('click', function() {
             profileDropdown.style.display = 'none';
-            showAlert('Funcionalidad de ver perfil en desarrollo', 'info');
-            // TODO: Navigate to profile page when ready
+         //   showAlert('Funcionalidad de ver perfil en desarrollo', 'info');
+        //     // TODO: Navigate to profile page when ready
         });
 
         ajustesBtn.addEventListener('click', function() {
@@ -1229,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Validar que ReviewId existe (puede venir como ReviewId, reviewId, o id)
                             // También verificar variantes con guiones bajos (Id_Review, id_review)
                             let reviewId = review.ReviewId || review.reviewId || review.id || 
-                                         review.Id_Review || review.id_Review || review.Id_Review;
+                                        review.Id_Review || review.id_Review || review.Id_Review;
                             
                             if (!reviewId) {
                                 console.warn('⚠️ Reseña sin ID válido, omitiendo:', review);
@@ -2217,6 +2189,7 @@ function initializeNavigation() {
         if (authToken.startsWith('dev-token-')) {
             // Simular eliminación exitosa para modo desarrollo
             localStorage.removeItem(`reaction_${reviewId}_${userId}`);
+            
             console.log('Like eliminado (modo desarrollo)');
             return;
         }
@@ -5531,7 +5504,7 @@ function initializeNavigation() {
     }
     
     // Inicializar comentarios de ejemplo
-    initializeSampleComments();
+    //initializeSampleComments();
     
 
     // Create Review Modal functionality
@@ -6404,7 +6377,7 @@ function initializeNavigation() {
     }
     
     // Initialize create review modal
-    initializeCreateReviewModal();
+    //initializeCreateReviewModal();
 
     // Alert helper function
     function showAlert(message, type) {
@@ -6487,6 +6460,6 @@ function initializeNavigation() {
     }
     
     // Initialize logout modal on page load
-    initializeLogoutModal();
+    //initializeLogoutModal();
 });
 

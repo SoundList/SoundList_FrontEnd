@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundList - Vista de Álbum</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800&family=Arimo:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="./../CSS/home.css">
+    <link rel="stylesheet" href="./../CSS/album.css">
+</head>
+<body>
+    <div class="home-container">
+        <header class="top-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <img src="./../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, play">
+                        <button class="search-clear" id="searchClear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display: none;">
+                        </div>
+                </div>
+
+                <div class="header-center">
+                    <button class="nav-btn" data-page="inicio">INICIO</button>
+                    <button class="nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="nav-btn active" data-page="explorar">EXPLORAR</button> </div>
+
+                <div class="header-right">
+                    <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <div class="profile-dropdown-container">
+                        <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
+                            <img src="./../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
+                        </button>
+                        <div class="profile-dropdown" id="profileDropdown" style="display: none;">
+                            <div class="profile-dropdown-header">
+                                <img src="./../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small">
+                                <span id="usernameDisplay">Usuario</span>
+                            </div>
+                            <button class="profile-dropdown-item" id="verPerfilBtn">
+                                <i class="fas fa-user"></i> Perfil
+                            </button>
+                            <button class="profile-dropdown-item" id="ajustesBtn">
+                                <i class="fas fa-cog"></i> Ajustes
+                            </button>
+                            <button class="profile-dropdown-item" id="cerrarSesionBtn">
+                                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content album-page-container">
+            
+            <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+
+            <div id="albumContent" style="display: block;"> <section class="album-hero">
+                    <div class="album-cover-container">
+                        <img src="./../Assets/logo_perfil.png" alt="Portada" class="album-cover-img" id="albumCover">
+                    </div>
+
+                    <div class="album-info-primary">
+                        <span class="album-type">ÁLBUM</span>
+                        <h1 class="album-title" id="albumTitle">Cargando...</h1>
+                        <h2 class="album-artist">
+                            <a href="#" id="albumArtistLink" class="text-decoration-none text-light">Cargando artista...</a>
+                        </h2>
+
+                        <div class="album-rating-container">
+                            <span class="rating-number" id="ratingNumber">-.-</span>
+                            <div class="rating-stars" id="ratingStars">
+                                <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
+                            </div>
+                            <span class="rating-count" id="ratingCount">(0 reviews)</span>
+                        </div>
+
+                        <button class="btn-primary" id="btnAgregarResena">
+                            <i class="fas fa-plus me-2"></i> AGREGAR RESEÑA
+                        </button>
+                    </div>
+                </section>
+
+                <section class="album-content-tabs">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" data-tab="canciones">CANCIONES</button>
+                        <button class="tab-btn" data-tab="resenas">RESEÑAS</button>
+                        <button class="tab-btn" data-tab="detalle">DETALLE</button>
+                    </div>
+
+                    <div class="tab-content-container">
+                        <div class="tab-pane active" id="tab-canciones">
+                            <ul class="song-list" id="songList">
+                                </ul>
+                        </div>
+
+                        <div class="tab-pane" id="tab-resenas">
+                            <div class="ai-summary" id="aiSummary" style="display: none;">
+                                <i class="fas fa-robot ai-icon"></i>
+                                <div>
+                                    <h5 class="mb-1" style="color: #3B82F6; font-weight: 700;">Resumen de IA</h5>
+                                    <p class="ai-text" id="aiSummaryText">Analizando reseñas...</p>
+                                </div>
+                            </div>
+                            <div class="reviews-list" id="reviewsList">
+                                </div>
+                        </div>
+
+                        <div class="tab-pane" id="tab-detalle">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">NOMBRE</span>
+                                <span class="detail-value" id="detailName">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">FECHA DE LANZAMIENTO</span>
+                                <span class="detail-value" id="detailReleaseDate">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">GÉNERO</span>
+                                <span class="detail-value" id="detailGenre">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">TOTAL CANCIONES</span>
+                                <span class="detail-value" id="detailTotalTracks">-</span>
+                            </div>
+                        </div>
+                        </div>
+                </section>
+
+            </div> </main>
+    </div>
+
+    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="./../Assets/logo_perfil.png" alt="SoundList Logo" class="logout-logo-img">
+                </div>
+                <h2 class="logout-modal-title">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="review-modal-overlay" id="createReviewModalOverlay" style="display: none;">
+     <div class="review-modal">
+        <div class="review-modal-header">
+            <h2 class="review-modal-title">CREA UNA RESEÑA</h2>
+            <button class="review-modal-close" id="closeCreateReviewModal">&times;</button>
+        </div>
+        <div class="review-modal-content">
+            
+            <div class="review-rating-input">
+                <label for="reviewStars" class="form-label">Calificación</label>
+                <div class="stars-input" id="starsRatingInput">
+                    <i class="far fa-star" data-value="1"></i>
+                    <i class="far fa-star" data-value="2"></i>
+                    <i class="far fa-star" data-value="3"></i>
+                    <i class="far fa-star" data-value="4"></i>
+                    <i class="far fa-star" data-value="5"></i>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="reviewTitleInput" class="form-label">Reseña</label>
+                <input type="text" class="form-control" id="reviewTitleInput" placeholder="Título de la reseña">
+            </div>
+            <div class="mb-3">
+                <textarea class="form-control" id="reviewTextInput" rows="4" placeholder="Escribe tu reseña"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">SUBIR</button>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <script type="module" src="../JS/main.js"></script></body>
+</body>
+</html>

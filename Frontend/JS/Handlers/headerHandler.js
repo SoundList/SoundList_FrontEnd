@@ -1,46 +1,971 @@
+/*
+ * JavaScript/Handlers/headerHandler.js
+ *
+ * Responsabilidad: Manejar toda la lógica de los elementos compartidos
+ * en el <header> (Búsqueda, Perfil, Notificaciones, Navegación, Sesión).
+ * Es cargado en TODAS las páginas por main.js.
+ */
 
-function setupHeaderHandlers() {
+// --- 1. IMPORTACIONES DE API ---
+import { API_BASE_URL } from '../APIs/configApi.js'; 
+import { fetchSearchResults } from '../APIs/searchApi.js';
+import { 
+    getNotifications, 
+    getReviews, 
+    getReviewReactionCount, 
+    getCommentsByReview
+} from '../APIs/socialApi.js'; 
+
+// --- 2. VARIABLES GLOBALES DEL HEADER ---
+let notificationConnection = null;
+let notifications = []; // Array para almacenar notificaciones
+let userReviewsState = {}; // Estado para polling
+let notificationPollingInterval = null; // Intervalo de polling
+
+// --- 3. FUNCIÓN DE INICIALIZACIÓN PRINCIPAL ---
+/**
+ * Inicializa todos los componentes compartidos del header.
+ * Esta función es llamada por main.js en CADA carga de página.
+ */
+export function initializeHeader() {
+    // Agregamos el listener que envuelve toda la lógica del header
     
-    const userMenuButton = document.getElementById("userMenuButton");
-    const userMenuDropdown = document.getElementById("userMenuDropdown");
-    const logoutButton = document.getElementById("logoutButton");
+        console.log("Inicializando Header (Búsqueda, Perfil, Notificaciones)...");
+        initializeSearch();
+        initializeProfileDropdown();
+        initializeNavigation();
+        loadUserData(); 
+        initializeLogoutModal();
+        initializeLoginRequiredModal();
+        initializeNotificationsDropdown();
+    
+}
 
-    if (userMenuButton) {
-        userMenuButton.addEventListener("click", (e) => {
-            e.stopPropagation(); 
-            userMenuDropdown.classList.toggle("show");
-        });
-    }
+// --- 4. SECCIÓN DE BÚSQUEDA ---
 
-    if (logoutButton) {
-        logoutButton.addEventListener("click", (e) => {
-            e.preventDefault(); 
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("userId");
-            localStorage.removeItem("username");
-            localStorage.removeItem("userAvatar");
-            
-            alert("Has cerrado sesión.");
+function initializeSearch() {
+    const searchInput = document.getElementById('searchInput');
+    const searchClear = document.getElementById('searchClear');
+    const searchDropdown = document.getElementById('searchDropdown');
+    
+    // Si no hay barra de búsqueda en la página, no hacer nada.
+    if (!searchInput || !searchDropdown || !searchClear) return;
 
-            window.location.reload(); 
-        });
-    }
+    let searchTimeout;
+    let currentSearchController = null;
 
-    document.addEventListener("click", (e) => {
-        if (userMenuDropdown && !e.target.closest(".user-menu-wrapper")) {
-            userMenuDropdown.classList.remove("show");
+    searchInput.addEventListener('input', function() {
+        searchClear.style.display = this.value ? 'block' : 'none';
+        if (currentSearchController) {
+            currentSearchController.abort();
         }
+        clearTimeout(searchTimeout);
+        
+        if (this.value.length > 0) {
+            searchTimeout = setTimeout(() => {
+                currentSearchController = new AbortController();
+                performSearch(this.value.trim(), currentSearchController.signal);
+            }, 500);
+        } else {
+            searchDropdown.style.display = 'none';
+        }
+    });
 
-        const notifDropdown = document.getElementById("notificationDropdown");
-        if (notifDropdown && !e.target.closest(".notification-wrapper")) {
-            notifDropdown.classList.remove("show");
+    searchClear.addEventListener('click', function() {
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        searchDropdown.style.display = 'none';
+        if (currentSearchController) {
+            currentSearchController.abort();
+        }
+        clearTimeout(searchTimeout);
+        searchInput.focus();
+    });
+
+    document.addEventListener('click', function(e) {
+        // Comprobación defensiva
+        if (searchInput && searchDropdown && !searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+            searchDropdown.style.display = 'none';
         }
     });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-
-    if (!document.getElementById("header-placeholder")) {
-        setupHeaderHandlers();
+async function performSearch(query, signal) {
+    const searchDropdown = document.getElementById('searchDropdown');
+    if (!query || query.length === 0) {
+        if(searchDropdown) searchDropdown.style.display = 'none';
+        return;
     }
-});
+
+    searchDropdown.innerHTML = '<div class="search-loading">Buscando...</div>';
+    searchDropdown.style.display = 'block';
+
+    try {
+        // Llama a la API centralizada
+        const results = await fetchSearchResults(query, signal);
+        if (results === null) return; // Búsqueda cancelada
+        
+        displaySearchResults(results, query);
+
+    } catch (error) {
+        console.error('Error en la búsqueda:', error);
+        searchDropdown.innerHTML = `
+            <div class="search-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Error al buscar. Intenta nuevamente.</span>
+            </div>
+        `;
+        searchDropdown.style.display = 'block';
+    }
+}
+
+function displaySearchResults(results, query) {
+    const searchDropdown = document.getElementById('searchDropdown');
+    const searchInput = document.getElementById('searchInput');
+
+    const artists = results.Artists || results.artists || [];
+    const albums = results.Albums || results.albums || [];
+    const songs = results.Songs || results.songs || [];
+
+    if (artists.length === 0 && albums.length === 0 && songs.length === 0) {
+        searchDropdown.innerHTML = `
+            <div class="search-no-results">
+                <i class="fas fa-search"></i>
+                <span>No se encontraron resultados para "${query}"</span>
+            </div>
+        `;
+        searchDropdown.style.display = 'block';
+        return;
+    }
+
+    let html = '';
+
+    // Sección de Artistas
+    if (artists.length > 0) {
+        html += '<div class="search-section"><div class="search-section-title">Artistas</div>';
+        artists.forEach(artist => {
+            const artistId = artist.APIArtistId || artist.apiArtistId || '';
+            const artistName = artist.Name || artist.name || '';
+            const artistImage = artist.Imagen || artist.imagen || '../Assets/default-avatar.png';
+            
+            html += `
+                <div class="search-dropdown-item" data-type="artist" data-id="${artistId}">
+                    <img src="${artistImage}" alt="${artistName}" class="search-item-image" onerror="this.src='../Assets/default-avatar.png'">
+                    <span class="search-item-text">${artistName}</span>
+                    <i class="fas fa-user search-item-icon"></i>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    // Sección de Álbumes
+    if (albums.length > 0) {
+        html += '<div class="search-section"><div class="search-section-title">Álbumes</div>';
+        albums.forEach(album => {
+            const albumId = album.APIAlbumId || album.apiAlbumId || '';
+            const albumTitle = album.Title || album.title || '';
+            const albumImage = album.Image || album.image || '../Assets/default-avatar.png';
+            
+            html += `
+                <div class="search-dropdown-item" data-type="album" data-id="${albumId}">
+                    <img src="${albumImage}" alt="${albumTitle}" class="search-item-image" onerror="this.src='../Assets/default-avatar.png'">
+                    <span class="search-item-text">${albumTitle}</span>
+                    <i class="fas fa-compact-disc search-item-icon"></i>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    // Sección de Canciones
+    if (songs.length > 0) {
+        html += '<div class="search-section"><div class="search-section-title">Canciones</div>';
+        songs.forEach(song => {
+            const songId = song.APISongId || song.apiSongId || '';
+            const songTitle = song.Title || song.title || '';
+            const songImage = song.Image || song.image || '../Assets/default-avatar.png';
+            const artistName = song.ArtistName || song.artistName || '';
+            const artistNameDisplay = artistName ? ` - ${artistName}` : '';
+            
+            html += `
+                <div class="search-dropdown-item" data-type="song" data-id="${songId}">
+                    <img src="${songImage}" alt="${songTitle}" class="search-item-image" onerror="this.src='../Assets/default-avatar.png'">
+                    <span class="search-item-text">${songTitle}${artistNameDisplay}</span>
+                    <i class="fas fa-music search-item-icon"></i>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    searchDropdown.innerHTML = html;
+    searchDropdown.style.display = 'block';
+
+    searchDropdown.querySelectorAll('.search-dropdown-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            const id = this.getAttribute('data-id');
+            const text = this.querySelector('.search-item-text').textContent;
+            
+            searchInput.value = text;
+            searchDropdown.style.display = 'none';
+            
+            navigateToContentView(type, id);
+        });
+    });
+}
+
+/**
+ * Navega a la vista de contenido.
+ * Asume que todos los HTML están en la misma carpeta (ej. /HTML/).
+ */
+function navigateToContentView(type, id) {
+    if (!id || id.trim() === '' || id === '00000000-0000-0000-0000-000000000000') {
+        console.error('Error: El ID del contenido está vacío o es inválido.');
+        showAlert('Error: El ID del contenido es inválido.', 'danger');
+        return;
+    }
+    let destinationUrl = '';
+    
+    // CORREGIDO: "artist.html" a "artists.html" para que coincida con tu archivo
+    switch(type) {
+        case 'song':
+            destinationUrl = `song.html?id=${id}`;
+            break;
+        case 'album':
+            destinationUrl = `album.html?id=${id}`;
+            break;
+        case 'artist':
+            destinationUrl = `artist.html?id=${id}`; 
+            break;
+        default:
+            console.warn('Tipo de contenido desconocido:', type);
+            return;
+    }
+
+    console.log(`Navegando a: ${destinationUrl}`);
+    window.location.href = destinationUrl;
+}
+
+// --- 5. SECCIÓN DE PERFIL, NAVEGACIÓN Y SESIÓN ---
+
+function initializeProfileDropdown() {
+    const profileBtn = document.getElementById('profileBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const verPerfilBtn = document.getElementById('verPerfilBtn');
+    const ajustesBtn = document.getElementById('ajustesBtn');
+    const cerrarSesionBtn = document.getElementById('cerrarSesionBtn');
+
+    // Defensivo: si no están los botones, no hace nada.
+    if (!profileBtn || !profileDropdown) {
+        return; 
+    }
+
+    profileBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const notificationsDropdown = document.getElementById('notificationsDropdown');
+        if (notificationsDropdown) notificationsDropdown.style.display = 'none';
+        
+        const isVisible = profileDropdown.style.display === 'block';
+        profileDropdown.style.display = isVisible ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (profileBtn && !profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+            profileDropdown.style.display = 'none';
+        }
+    });
+
+    // Hacemos defensivos los botones de adentro
+    if(verPerfilBtn) {
+        verPerfilBtn.addEventListener('click', function() {
+            profileDropdown.style.display = 'none';
+            showAlert('Funcionalidad de ver perfil en desarrollo', 'info');
+        });
+    }
+
+    if(ajustesBtn) {
+        ajustesBtn.addEventListener('click', function() {
+            profileDropdown.style.display = 'none';
+            showAlert('Funcionalidad de ajustes en desarrollo', 'info');
+        });
+    }
+
+    if(cerrarSesionBtn) {
+        cerrarSesionBtn.addEventListener('click', function() {
+            profileDropdown.style.display = 'none';
+            showLogoutModal();
+        });
+    }
+}
+
+function initializeNavigation() {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const mobileNavButtons = document.querySelectorAll('.mobile-nav-btn');
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const mobileNavMenu = document.getElementById('mobileNavMenu');
+
+    if (navButtons.length > 0) {
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                handleNavigation(this, navButtons, mobileNavButtons);
+            });
+        });
+    }
+
+    if (mobileNavButtons.length > 0) {
+        mobileNavButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                handleNavigation(this, navButtons, mobileNavButtons);
+                if (mobileNavMenu) {
+                    mobileNavMenu.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    if (mobileMenuToggle && mobileNavMenu) {
+        mobileMenuToggle.addEventListener('click', function() {
+            mobileNavMenu.classList.toggle('active');
+            const icon = this.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-bars', !mobileNavMenu.classList.contains('active'));
+                icon.classList.toggle('fa-times', mobileNavMenu.classList.contains('active'));
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (mobileMenuToggle && mobileNavMenu &&
+                !mobileMenuToggle.contains(e.target) && 
+                !mobileNavMenu.contains(e.target) && 
+                mobileNavMenu.classList.contains('active')) 
+            {
+                mobileNavMenu.classList.remove('active');
+                const icon = mobileMenuToggle.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            }
+        });
+    }
+
+    // Esta es la función 'handleNavigation' que estaba dentro de 'initializeNavigation'
+    function handleNavigation(clickedBtn, desktopBtns, mobileBtns) {
+        desktopBtns.forEach(b => b.classList.remove('active'));
+        mobileBtns.forEach(b => b.classList.remove('active'));
+        
+        clickedBtn.classList.add('active');
+        
+        const page = clickedBtn.getAttribute('data-page');
+        desktopBtns.forEach(b => {
+            if (b.getAttribute('data-page') === page) b.classList.add('active');
+        });
+        mobileBtns.forEach(b => {
+            if (b.getAttribute('data-page') === page) b.classList.add('active');
+        });
+        
+        // Lógica de navegación (si la hubiera)
+        switch(page) {
+            case 'inicio':
+                // window.location.href = '/HTML/home.html'; // Si es necesario
+                break;
+            case 'rankings':
+                showAlert('Vista de Rankings en desarrollo', 'info');
+                break;
+            case 'amigos':
+                showAlert('Vista de Amigos en desarrollo', 'info');
+                break;
+        }
+    }
+}
+
+function loadUserData() {
+    const authToken = localStorage.getItem('authToken');
+    const username = localStorage.getItem('username');
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    const loginContainer = document.getElementById('loginContainer');
+    const profileContainer = document.getElementById('profileContainer');
+    const notificationsContainer = document.getElementById('notificationsContainer');
+    const addReviewContainer = document.getElementById('addReviewContainer');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    if (!authToken) {
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (profileContainer) profileContainer.style.display = 'none';
+        if (notificationsContainer) notificationsContainer.style.display = 'none';
+        if (addReviewContainer) addReviewContainer.style.display = 'none';
+        
+        if (loginBtn) {
+            loginBtn.addEventListener('click', function() {
+                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
+            });
+        }
+    } else {
+        if (loginContainer) loginContainer.style.display = 'none';
+        if (profileContainer) profileContainer.style.display = 'block';
+        if (notificationsContainer) notificationsContainer.style.display = 'block';
+        if (addReviewContainer) addReviewContainer.style.display = 'block';
+    
+        if (username && usernameDisplay) {
+            usernameDisplay.textContent = username;
+        } else if (usernameDisplay) {
+            usernameDisplay.textContent = 'Usuario';
+        }
+        
+        loadNotifications();
+        startNotificationPolling();
+        
+        if (typeof signalR !== 'undefined' && signalR) {
+            initializeSignalR();
+        } else {
+            setTimeout(() => {
+                if (typeof signalR !== 'undefined' && signalR) {
+                    initializeSignalR();
+                } else {
+                    console.warn('SignalR no está disponible. Notificaciones en tiempo real no funcionarán.');
+                }
+            }, 500);
+        }
+    }
+}
+
+function initializeLogoutModal() {
+    const logoutModalOverlay = document.getElementById('logoutModalOverlay');
+    // Salir si el modal no existe en esta página
+    if (!logoutModalOverlay) return; 
+
+    const logoutModalTitle = document.getElementById('logoutModalTitle');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+        
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', function() {
+                stopNotificationPolling();
+                userReviewsState = {};
+                notifications = [];
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('username');
+                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
+            });
+    }
+        
+    if (cancelLogoutBtn) {
+            cancelLogoutBtn.addEventListener('click', function() {
+                logoutModalOverlay.style.display = 'none';
+            });
+    }
+        
+    logoutModalOverlay.addEventListener('click', function(e) {
+        if (e.target === logoutModalOverlay) {
+            logoutModalOverlay.style.display = 'none';
+        }
+    });
+}
+
+function showLogoutModal() {
+    const logoutModalOverlay = document.getElementById('logoutModalOverlay');
+    const logoutModalTitle = document.getElementById('logoutModalTitle');
+    
+    if (!logoutModalOverlay || !logoutModalTitle) return;
+
+    const username = localStorage.getItem('username') || 'Usuario';
+    logoutModalTitle.textContent = `¿Salir de ${username}?`;
+    logoutModalOverlay.style.display = 'flex';
+}
+
+// --- 6. SECCIÓN DE NOTIFICACIONES ---
+
+function initializeNotificationsDropdown() {
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    const notificationsDropdown = document.getElementById('notificationsDropdown');
+    const profileDropdown = document.getElementById('profileDropdown');
+        
+    if (notificationsBtn && notificationsDropdown) {
+        notificationsBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            if (profileDropdown) {
+                profileDropdown.style.display = 'none';
+            }
+            
+            const isVisible = notificationsDropdown.style.display === 'block';
+            notificationsDropdown.style.display = isVisible ? 'none' : 'block';
+            
+            const badge = notificationsBtn.querySelector('.notification-badge');
+            if (badge) {
+                badge.remove();
+            }
+        });
+            
+        document.addEventListener('click', function(e) {
+            // Comprobación defensiva
+            if (notificationsBtn && notificationsDropdown && !notificationsBtn.contains(e.target) && !notificationsDropdown.contains(e.target)) {
+                notificationsDropdown.style.display = 'none';
+            }
+        });
+    }
+}
+
+function renderNotifications() {
+    const notificationsList = document.getElementById('notificationsList');
+    if (!notificationsList) return;
+    
+    if (notifications.length === 0) {
+        notificationsList.innerHTML = `
+            <div class="notification-empty">
+                <i class="fas fa-bell-slash"></i>
+                <p>No tienes notificaciones</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const sortedNotifications = [...notifications].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    notificationsList.innerHTML = sortedNotifications.map(notification => {
+        const icon = getNotificationIcon(notification.type);
+        const text = getNotificationText(notification);
+        const time = formatNotificationTime(notification.date);
+        return `
+            <div class="notification-item">
+                <div class="notification-icon">
+                    <i class="${icon}"></i>
+                </div>
+                <div class="notification-content">
+                    <p class="notification-text">${text}</p>
+                    <span class="notification-time">${time}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function addNotification(notification) {
+    const exists = notifications.some(n => 
+        n.type === notification.type &&
+        n.reviewId === notification.reviewId &&
+        n.username === notification.username &&
+        Math.abs(new Date(n.date) - new Date(notification.date)) < 1000
+    );
+    
+    if (exists) return;
+    
+    notifications.push({
+        ...notification,
+        date: notification.date || new Date().toISOString(),
+        username: notification.username || 'Usuario',
+        songName: notification.songName || null
+    });
+
+    renderNotifications();
+    
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    if (notificationsBtn && !notificationsBtn.querySelector('.notification-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'notification-badge';
+        badge.textContent = '!';
+        notificationsBtn.appendChild(badge);
+    }
+}
+
+// CORREGIDO: Eliminada la duplicación
+function getNotificationIcon(type) {
+    switch(type) {
+        case 'NewReaction':
+        case 'NewNotification':
+            return 'fas fa-heart';
+        case 'NewComment':
+            return 'fas fa-comment';
+        case 'NewFollower':
+            return 'fas fa-user-plus';
+        default:
+            return 'fas fa-bell';
+    }
+}
+
+function getNotificationText(notification) {
+    const username = notification.username || 'Alguien';
+    switch(notification.type) {
+        case 'NewReaction':
+        case 'NewNotification':
+            return `<span class="notification-username">${username}</span> le dio me gusta a tu reseña`;
+        case 'NewComment':
+            const songName = notification.songName || 'tu reseña';
+            return `<span class="notification-username">${username}</span> comentó en tu review de <strong>${songName}</strong>`;
+        case 'NewFollower':
+            return `<span class="notification-username">${username}</span> comenzó a seguirte`;
+        default:
+            return `Nueva notificación de <span class="notification-username">${username}</span>`;
+    }
+}
+
+function formatNotificationTime(dateString) {
+    if (!dateString) return 'Ahora';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    if (diffHours < 24) return `Hace ${diffHours} h`;
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
+
+async function loadNotifications() {
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    if (!authToken || !userId) return;
+    
+    try {
+        // ¡CAMBIO CLAVE! Usamos la función importada de socialApi.js
+        const notificationsData = await getNotifications(userId, authToken);
+        
+        notifications = []; // Limpiar notificaciones existentes
+        
+        notificationsData.forEach(notification => {
+            addNotification({
+                type: notification.Type || notification.type || 'NewNotification',
+                date: notification.Date || notification.date || new Date().toISOString(),
+                username: notification.Username || notification.username || 'Usuario',
+                songName: notification.SongName || notification.songName || null,
+                reviewId: notification.ReviewId || notification.reviewId || null
+            });
+        });
+        
+        renderNotifications();
+        
+    } catch (error) {
+        const status = error.response?.status;
+        const errorCode = error.code;
+        const errorMessage = error?.message || String(error);
+        
+        const isExpectedError = status === 404 || 
+                                  status === 502 || 
+                          status === 503 ||
+                                  errorCode === 'ECONNABORTED' ||
+                                  errorMessage.includes('timeout') ||
+                                  errorMessage.includes('Network Error') ||
+                                  errorMessage.includes('ERR_CONNECTION_REFUSED');
+        
+        if (!isExpectedError) {
+            console.error('Error cargando notificaciones:', error);
+        } else {
+            console.debug('Servicio de notificaciones no disponible');
+        }
+    }
+}
+
+function initializeSignalR() {
+    if (typeof signalR === 'undefined' || !signalR) {
+        console.warn('SignalR no está disponible.');
+        return;
+    }
+    
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    if (!authToken || !userId) return;
+
+    if (notificationConnection && (notificationConnection.state === signalR.HubConnectionState.Connected || notificationConnection.state === signalR.HubConnectionState.Connecting)) {
+        console.log('SignalR ya está conectado o conectando');
+        return;
+    }
+
+    // ¡CAMBIO CLAVE! Usamos la URL del Gateway importada
+    const hubUrl = 'http://localhost:8002/notificationHub';
+    try {
+        const newConnection = new signalR.HubConnectionBuilder()
+            .withUrl(hubUrl) // (Se podría necesitar pasar el token aquí si el hub está protegido)
+            .withAutomaticReconnect()
+            .build();
+        
+        notificationConnection = newConnection;
+
+        notificationConnection.start()
+            .then(() => {
+                console.log('SignalR Connected');
+                return notificationConnection.invoke('JoinUserGroup', userId);
+            })
+            .then(() => console.log('Joined user group:', userId))
+            .catch(err => {
+                const errorMessage = err?.message || String(err);
+                const isConnectionError = errorMessage.includes('Failed to fetch') || 
+                                            errorMessage.includes('ERR_CONNECTION_REFUSED') ||
+                                            errorMessage.includes('Failed to complete negotiation') ||
+                                            errorMessage.includes('Failed to start the connection');
+                
+                if (!isConnectionError) {
+                    console.error('Error connecting to SignalR:', err);
+                } else {
+                    console.debug('SignalR service no disponible.');
+                }
+            });
+
+        notificationConnection.on('ReceiveNotification', function(notification) {
+            console.log('Notification received:', notification);
+            playNotificationSound();
+            showNotificationAlert(notification);
+        });
+
+        notificationConnection.onreconnecting(() => {
+            console.log('SignalR reconnecting...');
+        });
+
+        notificationConnection.onreconnected(() => {
+            console.log('SignalR reconnected');
+            if (userId) {
+                notificationConnection.invoke('JoinUserGroup', userId);
+            }
+        });
+
+    } catch (error) {
+        const errorMessage = error?.message || String(error);
+        const isConnectionError = errorMessage.includes('Failed to fetch') || 
+                            errorMessage.includes('ERR_CONNECTION_REFUSED') ||
+                                errorMessage.includes('Failed to complete negotiation');
+        
+        if (!isConnectionError) {
+            console.error('Error initializing SignalR:', error);
+        } else {
+            console.debug('SignalR no disponible.');
+        }
+    }
+}
+
+function playNotificationSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.warn('No se pudo reproducir el sonido de notificación:', error);
+    }
+}
+
+function showNotificationAlert(notification) {
+    addNotification({
+        type: notification.Type || notification.type,
+        date: notification.Date || notification.date || new Date().toISOString(),
+        username: notification.Username || notification.username || 'Usuario',
+        songName: notification.SongName || notification.songName || null,
+        reviewId: notification.ReviewId || notification.reviewId || null
+    });
+    
+    let message = 'Nueva notificación';
+    if (notification.Type === 'NewReaction' || notification.type === 'NewReaction') {
+        message = '¡Alguien le dio me gusta a tu reseña!';
+    } else if (notification.Type === 'NewComment' || notification.type === 'NewComment') {
+        message = '¡Alguien comentó tu reseña!';
+    } else if (notification.Type === 'NewFollower' || notification.type === 'NewFollower') {
+        message = '¡Nuevo seguidor!';
+    }
+    showAlert(message, 'info');
+}
+
+// --- 7. POLLING DE NOTIFICACIONES ---
+
+async function checkForNotifications(isInitialLoad = false) {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        stopNotificationPolling();
+        return;
+    }
+    
+    try {
+        const allReviews = await getReviews();
+        
+        const userReviews = allReviews.filter(review => {
+            const reviewUserId = review.UserId || review.userId;
+            return reviewUserId && (
+                reviewUserId.toString() === userId.toString() ||
+                reviewUserId === userId
+            );
+        });
+        
+        for (const review of userReviews) {
+            const reviewId = review.id || review.ReviewId || review.reviewId;
+            if (!reviewId) continue;
+            
+            const reviewIdStr = String(reviewId);
+            
+            // ¡LLAMADAS A API REFACTORIZADAS!
+            const currentLikes = await getReviewReactionCount(reviewIdStr);
+            const commentsData = await getCommentsByReview(reviewIdStr);
+            const currentComments = commentsData.length;
+            
+            const previousState = userReviewsState[reviewIdStr];
+            
+            if (isInitialLoad || !previousState) {
+                userReviewsState[reviewIdStr] = { likes: currentLikes, comments: currentComments };
+                continue;
+            }
+            
+            if (currentLikes > previousState.likes) {
+                const newLikes = currentLikes - previousState.likes;
+                // ¡LLAMADA A API REFACTORIZADA!
+                const contentInfo = await getReviewContentInfo(reviewIdStr);
+                
+                addNotification({
+                    type: 'NewReaction',
+                    date: new Date().toISOString(),
+                    username: newLikes === 1 ? 'Alguien' : `${newLikes} personas`,
+                    songName: contentInfo.songName,
+                    reviewId: reviewIdStr
+                });
+                
+                playNotificationSound();
+                showAlert(
+                    newLikes === 1 
+                        ? `¡Alguien le dio me gusta a tu reseña de "${contentInfo.songName}"!`
+                        : `¡${newLikes} personas le dieron me gusta a tu reseña de "${contentInfo.songName}"!`,
+                    'info'
+                );
+            }
+            
+            if (currentComments > previousState.comments) {
+                const newComments = currentComments - previousState.comments;
+                // ¡LLAMADA A API REFACTORIZADA!
+                const contentInfo = await getReviewContentInfo(reviewIdStr);
+                
+                addNotification({
+                    type: 'NewComment',
+                    date: new Date().toISOString(),
+                    username: newComments === 1 ? 'Alguien' : `${newComments} personas`,
+                    songName: contentInfo.songName,
+                    reviewId: reviewIdStr
+                });
+                
+                playNotificationSound();
+                showAlert(
+                    newComments === 1
+                        ? `¡Alguien comentó tu reseña de "${contentInfo.songName}"!`
+                        : `¡${newComments} personas comentaron tu reseña de "${contentInfo.songName}"!`,
+                    'info'
+                );
+            }
+            
+             userReviewsState[reviewIdStr] = {
+                likes: currentLikes,
+                comments: currentComments
+            };
+        }
+        
+    } catch (error) {
+        console.debug('Error en polling de notificaciones:', error);
+    }
+}
+
+function startNotificationPolling() {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    
+    stopNotificationPolling();
+    checkForNotifications(true); // Carga inicial
+    
+    notificationPollingInterval = setInterval(() => {
+        checkForNotifications(false);
+    }, 15000); 
+    
+    console.log('✅ Polling de notificaciones iniciado (cada 15 segundos)');
+}
+
+function stopNotificationPolling() {
+    if (notificationPollingInterval) {
+        clearInterval(notificationPollingInterval);
+        notificationPollingInterval = null;
+        console.log('⏹️ Polling de notificaciones detenido');
+    }
+}
+
+
+// --- 8. MODALS Y UTILIDADES COMPARTIDAS ---
+
+// (Esta función es llamada por otros módulos, así que la exportamos)
+export function showAlert(message, type) {
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `custom-alert custom-alert-${type}`;
+    alertDiv.innerHTML = `
+        <div class="alert-content">
+            <i class="alert-icon"></i>
+            <span class="alert-message">${message}</span>
+            <button type="button" class="alert-close">&times;</button>
+        </div>
+    `;
+
+    // Intenta encontrar 'main-content', si no, usa 'body'
+    const mainContent = document.querySelector('.main-content') || document.body;
+    mainContent.insertBefore(alertDiv, mainContent.firstChild);
+
+    const closeBtn = alertDiv.querySelector('.alert-close');
+    closeBtn.addEventListener('click', () => {
+        alertDiv.remove();
+    });
+
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+                alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// (Exportamos estas también para que los handlers de reseñas puedan usarlas)
+export function showLoginRequiredModal() {
+    const modalOverlay = document.getElementById('loginRequiredModalOverlay');
+    if (modalOverlay) {
+        modalOverlay.style.display = 'flex';
+    }
+}
+
+function hideLoginRequiredModal() {
+    const modalOverlay = document.getElementById('loginRequiredModalOverlay');
+    if (modalOverlay) {
+        modalOverlay.style.display = 'none';
+  t   }
+}
+
+// CORREGIDO: Eliminada la duplicación
+function initializeLoginRequiredModal() {
+    const goToLoginBtn = document.getElementById('goToLoginBtn');
+    const cancelLoginRequiredBtn = document.getElementById('cancelLoginRequiredBtn');
+    const loginRequiredModalOverlay = document.getElementById('loginRequiredModalOverlay');
+
+    if (goToLoginBtn) {
+        goToLoginBtn.addEventListener('click', function() {
+            // Asume que login.html está en la misma carpeta HTML
+          window.location.href = 'login.html'; 
+        });
+    }
+
+    if (cancelLoginRequiredBtn) {
+        cancelLoginRequiredBtn.addEventListener('click', function() {
+            hideLoginRequiredModal();
+        });
+    }
+
+    if (loginRequiredModalOverlay) {
+        loginRequiredModalOverlay.addEventListener('click', function(e) {
+          if (e.target === loginRequiredModalOverlay) {
+                hideLoginRequiredModal();
+            }
+        });
+    }
+}
+

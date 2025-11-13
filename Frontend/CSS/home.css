@@ -1,0 +1,4211 @@
+/* Home Page Styles */
+:root {
+    --amarillo: #FFD85E;
+    --magenta: #EC4899;
+    --morado: #7C3AED;
+    --blanco: #ffffff;
+}
+
+body {
+    font-family: 'Arimo', sans-serif;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    animation: gentleFadeIn 0.8s ease-out forwards;
+    background: #0d1120;
+    overflow-x: hidden;
+}
+
+@keyframes gentleFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.home-container {
+    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
+    min-height: 100vh;
+    padding-bottom: 2rem;
+}
+
+/* Header Styles */
+.top-header {
+    background: rgba(13, 17, 32, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    position: relative;
+    min-width: 0;
+    margin-left: -12rem;
+}
+
+.logo-icon {
+    width: 100px;
+    height: 90px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    align-self: flex-start;
+    margin-top: -0.5rem;
+}
+
+.search-container {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+    min-width: 300px;
+}
+
+.search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+
+.search-clear {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: color 0.3s ease;
+}
+
+.search-clear:hover {
+    color: #fff;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    background: rgba(13, 17, 32, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1001;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.search-dropdown-item {
+    padding: 0.75rem 1rem;
+    color: #fff;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.search-dropdown-item:hover {
+    background: rgba(124, 58, 237, 0.2);
+}
+
+.search-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.search-section {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-section:last-child {
+    border-bottom: none;
+}
+
+.search-section-title {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-item-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.search-item-text {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-item-icon {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.search-loading,
+.search-error,
+.search-no-results {
+    padding: 1.5rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-loading i,
+.search-error i,
+.search-no-results i {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.search-error {
+    color: #ff6b6b;
+}
+
+.search-error i {
+    color: #ff6b6b;
+}
+
+.header-center {
+    display: flex;
+    gap: 7rem;
+    justify-content: flex-end;
+    flex: 1;
+    align-items: center;
+    margin-right: -13rem;
+    position: relative;
+    z-index: 10;
+    isolation: isolate;
+}
+
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+    display: none;
+    background: rgba(124, 58, 237, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.3s ease;
+    z-index: 1001;
+}
+
+.mobile-menu-toggle:hover {
+    background: rgba(124, 58, 237, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mobile-menu-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Mobile Navigation Menu */
+.mobile-nav-menu {
+    display: none !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(13, 17, 32, 0.98);
+    backdrop-filter: blur(20px);
+    z-index: 10000;
+    padding: 5rem 2rem 2rem;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.mobile-nav-menu.active {
+    transform: translateX(0);
+}
+
+.mobile-nav-btn {
+    display: none !important;
+    width: 100%;
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    border: none;
+    border-radius: 15px;
+    padding: 1rem 1.5rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    margin-bottom: 1rem;
+    text-align: center;
+    min-height: 48px;
+    touch-action: manipulation;
+}
+
+.mobile-nav-btn:hover,
+.mobile-nav-btn:active {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.mobile-nav-btn.active {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+/* Show mobile menu on tablets and mobile */
+@media (max-width: 991.98px) {
+    .mobile-menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .mobile-nav-menu {
+        display: flex !important;
+        flex-direction: column;
+    }
+    
+    .mobile-nav-btn {
+        display: block !important;
+    }
+    
+    /* Asegurar tamaño mínimo para touch en móviles */
+    button,
+    .icon-btn,
+    .carousel-nav-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+.nav-btn {
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem 3.5rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    white-space: nowrap;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+    outline: none !important;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+}
+
+.nav-btn:hover,
+button.nav-btn:hover,
+button[data-page="amigos"]:hover,
+button[data-page="rankings"]:hover,
+button[data-page="inicio"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4) !important;
+    outline: none !important;
+}
+
+.nav-btn.active,
+button.nav-btn.active {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%) !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+    transform: translateY(-2px) !important;
+    outline: none !important;
+}
+
+.nav-btn.active:hover,
+button.nav-btn.active:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%) !important;
+    outline: none !important;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    justify-content: flex-end;
+    margin-right: -8rem;
+}
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    align-self: center;
+}
+
+.login-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    transition: all 0.3s ease;
+    justify-content: flex-start;
+}
+
+.login-btn:hover {
+    transform: scale(1.05);
+}
+
+.login-icon {
+    width: 70px;
+    height: 50px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    margin-top:  1.1rem;
+}
+
+.login-text {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: 'Arimo', sans-serif;
+    white-space: nowrap;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.75rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: var(--magenta, #EC4899);
+    color: #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.icon-btn.profile-btn {
+    width: 50px !important;
+    height: 50px !important;
+    padding: 0 !important;
+    min-width: 50px !important;
+    min-height: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.icon-btn.profile-btn:hover {
+    background: none;
+    transform: scale(1.1);
+}
+
+.icon-btn.profile-btn:hover .profile-icon {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.profile-icon {
+    width: 50px !important;
+    height: 50px !important;
+    max-width: 50px !important;
+    max-height: 50px !important;
+    object-fit: cover;
+    object-position: center center;
+    filter: brightness(0) invert(1);
+    border-radius: 50%;
+    display: block;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.profile-dropdown-container {
+    position: relative;
+    margin-left: 1rem; 
+}
+
+.notifications-dropdown-container {
+    position: relative;
+    margin-left: 1rem; /
+}
+
+.notifications-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: rgba(13, 17, 32, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 350px;
+    max-width: 400px;
+    max-height: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 1002;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.notifications-dropdown-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.notifications-dropdown-header h3 {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.notifications-list {
+    overflow-y: auto;
+    max-height: 400px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+
+.notifications-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.notifications-list::-webkit-scrollbar-thumb {
+    background: rgba(130, 60, 255, 0.6);
+    border-radius: 4px;
+}
+
+.notifications-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.notification-item {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.notification-item:hover {
+    background: rgba(124, 58, 237, 0.2);
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: #fff;
+    line-height: 1;
+}
+
+.notification-icon i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-text {
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin: 0 0 0.25rem 0;
+}
+
+.notification-username {
+    font-weight: 600;
+    color: var(--magenta, #EC4899);
+}
+
+.notification-time {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.notification-empty {
+    padding: 2rem 1.25rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.notification-empty i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.notification-empty p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: rgba(13, 17, 32, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 1002;
+    overflow: hidden;
+}
+
+.profile-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-weight: 600;
+}
+
+.profile-icon-small {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.profile-dropdown-item {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Arimo', sans-serif;
+    font-size: 0.95rem;
+}
+
+.profile-dropdown-item:hover {
+    background: rgba(124, 58, 237, 0.3);
+}
+
+.profile-dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Main Content */
+.main-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.section-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+
+/* Carousel Section */
+.carousel-section {
+    margin-bottom: 3rem;
+}
+
+.carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.carousel-nav-btn {
+    background: rgba(124, 58, 237, 0.3);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.carousel-nav-btn:hover {
+    background: rgba(124, 58, 237, 0.5);
+    transform: scale(1.1);
+}
+
+.carousel-wrapper {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    height: 300px;
+}
+
+.carousel-item {
+    display: none;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.carousel-item.active {
+    display: block;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.carousel-item:hover .carousel-card {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+}
+
+.carousel-card {
+    transition: all 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.carousel-card {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.3) 0%, rgba(13, 17, 32, 0.6) 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.carousel-album-art {
+    flex-shrink: 0;
+}
+
+.album-image {
+    width: 200px;
+    height: 200px;
+    border-radius: 15px;
+    object-fit: cover;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.carousel-content {
+    flex: 1;
+    color: #fff;
+}
+
+.carousel-title {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.carousel-description {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.5rem;
+}
+
+.carousel-text {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.carousel-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 27.5rem 0;
+    padding: 0;
+}
+
+.carousel-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.carousel-indicator.active {
+    background: #EC4899;
+    transform: scale(1.2);
+}
+
+.carousel-indicator:hover {
+    background: rgba(236, 72, 153, 0.7);
+}
+
+/* Reviews Section */
+.reviews-section {
+    margin-top: 5rem; /* Aumentado de 3rem a 5rem para más espacio arriba */
+    margin-bottom: 2rem;
+}
+
+.reviews-content-wrapper {
+    max-width: 1200px; /* Limitar ancho máximo para alinear con las reseñas */
+    margin: 0 auto; /* Centrar el contenido */
+    width: 100%;
+}
+
+.reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem; /* Agregar espacio arriba para bajar el título */
+    flex-wrap: wrap;
+    gap: 1rem;
+    width: 100%; /* Asegurar que use todo el ancho disponible del wrapper */
+}
+
+.reviews-header .section-title {
+    flex: 0 0 auto; /* No permitir que el título crezca */
+    margin-top: 1rem; /* Bajar el texto "RESEÑAS" un poco más */
+}
+
+.reviews-header .reviews-filter {
+    margin-right: auto; /* Empujar los filtros hacia la izquierda */
+    margin-left: 47rem; /* Agregar un poco de espacio desde el título */
+}
+
+.reviews-filter {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(124, 58, 237, 0.1);
+    padding: 0.25rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filter-btn {
+    padding: 0.5rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.8) 0%, rgba(236, 72, 153, 0.8) 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.reviews-container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+    align-items: start;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.review-item {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(13, 17, 32, 0.4) 100%);
+    border-radius: 15px;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.review-item:hover {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.3) 0%, rgba(13, 17, 32, 0.5) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
+}
+
+.review-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.review-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.review-info {
+    flex: 1;
+}
+
+.review-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+    color: #fff;
+    font-weight: 600;
+}
+
+.review-username {
+    color: #fff;
+}
+
+.review-separator {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.review-song {
+    color: #fff;
+}
+
+.review-artist {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.review-title {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0.25rem 0;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.review-comment {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.review-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.review-rating {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.review-stars {
+    font-size: 1.155em;
+    display: flex;
+    gap: 0.1rem;
+}
+
+.review-stars .star {
+    display: inline-block;
+    line-height: 1;
+    overflow: hidden;
+}
+
+.review-stars .full-star {
+    color: #ffd700;
+}
+
+.review-stars .empty-star {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.review-stars .half-star {
+    position: relative;
+    width: 0.5em;
+    color: #ffd700;
+}
+
+.review-stars .half-star::before {
+    content: '★';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1em;
+    overflow: hidden;
+    opacity: 0.5;
+}
+
+.review-interactions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.review-likes-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #fff;
+    font-weight: 600;
+}
+
+.review-likes-count {
+    font-size: 0.9rem;
+}
+
+.review-comments-count {
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+.review-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 0.5rem 0.75rem;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+}
+
+.review-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.review-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.review-btn.btn-report {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.review-btn.btn-report:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #F59E0B;
+}
+
+.review-btn.btn-edit:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #3B82F6;
+}
+
+.review-btn.btn-delete:hover:not(.disabled) {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #EF4444;
+}
+
+.review-btn.btn-like {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-size: 1.155rem;
+}
+
+.review-btn.btn-like:hover {
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
+    background: none;
+}
+
+.review-btn.btn-like:hover i {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.review-btn.btn-like.liked i {
+    color: var(--magenta, #EC4899);
+}
+
+.review-btn.btn-like.liked:hover i {
+    color: var(--magenta, #EC4899);
+}
+
+.review-btn.btn-like i {
+    transition: all 0.2s ease;
+    font-size: 1.155rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.review-btn.comment-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 1.155rem;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.review-btn.comment-btn:hover {
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
+}
+
+.reviews-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.action-btn {
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    border: none;
+    border-radius: 15px;
+    padding: 1rem 1.5rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+/* Alert Styles */
+.custom-alert {
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    padding: 0;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.3s ease-out;
+}
+
+.custom-alert-warning {
+    background: linear-gradient(135deg, rgba(255, 216, 94, 0.9), rgba(236, 72, 153, 0.85));
+    border-left: 4px solid #FFD85E;
+    backdrop-filter: blur(10px);
+}
+
+.custom-alert-info {
+    background: linear-gradient(135deg, #4ecdc4, #6dd5ed);
+    border-left: 4px solid #26d0ce;
+}
+
+.custom-alert-success {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(139, 92, 246, 0.85));
+    border-left: 4px solid #7C3AED;
+    backdrop-filter: blur(10px);
+}
+
+.custom-alert-danger {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    border-left: 4px solid #dc2626;
+}
+
+.alert-content {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+.alert-icon {
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.custom-alert-warning .alert-icon::before {
+    content: "⚠️";
+}
+
+.custom-alert-info .alert-icon::before {
+    content: "ℹ️";
+}
+
+.custom-alert-success .alert-icon::before {
+    content: "✅";
+}
+
+.custom-alert-danger .alert-icon::before {
+    content: "❌";
+}
+
+.alert-message {
+    flex: 1;
+    font-size: 0.95rem;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.75rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - UX/UI Optimized
+   ============================================ */
+
+/* Tablet (max-width: 992px) */
+@media (max-width: 991.98px) {
+    .header-content {
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .header-left {
+        margin-left: 0;
+        flex: 1 1 100%;
+        order: 1;
+    }
+    
+    .logo-icon {
+        width: 80px;
+        height: 70px;
+    }
+    
+    .search-container {
+        max-width: 100%;
+        min-width: 0;
+    }
+    
+    .header-center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+        margin-right: 0;
+        gap: 2rem;
+    }
+    
+    .header-right {
+        order: 2;
+        margin-right: 0;
+        flex: 0 0 auto;
+    }
+    
+    .nav-btn {
+        padding: 0.65rem 2rem;
+        font-size: 0.9rem;
+    }
+    
+    .main-content {
+        padding: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.35rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .carousel-wrapper {
+        height: 280px;
+    }
+    
+    .carousel-card {
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+    
+    .album-image {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .carousel-title {
+        font-size: 1.75rem;
+    }
+    
+    .carousel-description {
+        font-size: 1rem;
+    }
+    
+    .reviews-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .review-item {
+        padding: 1.25rem;
+    }
+}
+
+/* Mobile Large (max-width: 768px) */
+@media (max-width: 767.98px) {
+    .top-header {
+        padding: 0.5rem 0.75rem;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+    
+    .header-content {
+        padding: 0;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    .header-left {
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        margin-left: 0;
+        flex: 1;
+        min-width: 0;
+        align-items: center;
+        overflow: hidden;
+    }
+    
+    .logo-icon {
+        width: 32px;
+        height: 32px;
+        margin-top: 0;
+        flex-shrink: 0;
+    }
+    
+    .search-container {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .search-input {
+        padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+        font-size: 0.85rem;
+        border-radius: 20px;
+    }
+    
+    .search-icon {
+        left: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .header-right {
+        gap: 0.25rem;
+        flex-shrink: 0;
+    }
+    
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.25rem;
+        padding: 0.4rem;
+    }
+    
+    .mobile-menu-toggle {
+        width: 36px;
+        height: 36px;
+        padding: 0.4rem;
+        font-size: 1.1rem;
+    }
+    
+    .main-content {
+        padding: 1rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .carousel-section {
+        margin-bottom: 2rem;
+    }
+    
+    .carousel-container {
+        gap: 0.5rem;
+    }
+    
+    .carousel-nav-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    
+    .carousel-wrapper {
+        height: 240px;
+    }
+    
+    .carousel-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.25rem;
+        gap: 1rem;
+        height: 100%;
+        justify-content: center;
+    }
+    
+    .album-image {
+        width: 140px;
+        height: 140px;
+        margin: 0 auto;
+    }
+    
+    .carousel-content {
+        text-align: center;
+    }
+    
+    .carousel-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .carousel-description {
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .carousel-text {
+        font-size: 0.9rem;
+    }
+    
+    .carousel-indicators {
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+        gap: 0.35rem;
+    }
+    
+    .carousel-indicator {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .carousel-indicator.active {
+        transform: scale(1.3);
+    }
+    
+    .reviews-section {
+        margin-top: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .reviews-container {
+        gap: 1rem;
+    }
+    
+    .review-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .review-user {
+        width: 100%;
+    }
+    
+    .review-avatar {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .review-header {
+        font-size: 0.9rem;
+    }
+    
+    .review-comment {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .review-actions {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .review-rating {
+        font-size: 0.85rem;
+    }
+    
+    .review-stars {
+        font-size: 0.9rem;
+    }
+    
+    .comment-btn,
+    .like-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        min-height: 36px;
+    }
+    
+    /* Modales responsive */
+    .comments-modal {
+        width: 95%;
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 20px;
+    }
+    
+    .comments-modal-header {
+        padding: 1rem 1.25rem;
+    }
+    
+    .comments-modal-title {
+        font-size: 1.25rem;
+    }
+    
+    .comments-list-container {
+        padding: 0.75rem 1rem;
+    }
+    
+    .comments-input-container {
+        padding: 1rem;
+    }
+    
+    .comments-input-wrapper {
+        gap: 0.5rem;
+    }
+    
+    .comments-input-avatar {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .comments-send-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    /* Mejorar scroll en móviles */
+    .comments-list-container {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Asegurar que los elementos interactivos sean fáciles de tocar */
+    .comment-action-btn,
+    .comment-like-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem;
+    }
+}
+
+/* Mobile Small (max-width: 576px) */
+@media (max-width: 575.98px) {
+    .top-header {
+        padding: 0.5rem 0.625rem;
+    }
+    
+    .header-content {
+        gap: 0.4rem;
+    }
+    
+    .header-left {
+        gap: 0.4rem;
+    }
+    
+    .logo-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .search-input {
+        padding: 0.45rem 0.65rem 0.45rem 2rem;
+        font-size: 0.8rem;
+    }
+    
+    .search-icon {
+        left: 0.65rem;
+        font-size: 0.85rem;
+    }
+    
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1.15rem;
+        padding: 0.35rem;
+    }
+    
+    .mobile-menu-toggle {
+        width: 32px;
+        height: 32px;
+        padding: 0.35rem;
+        font-size: 1rem;
+    }
+    
+    .carousel-indicators {
+        gap: 0.3rem;
+    }
+    
+    .carousel-indicator {
+        width: 5px;
+        height: 5px;
+    }
+    
+    .main-content {
+        padding: 0.75rem;
+    }
+    
+    .section-title {
+        font-size: 1.15rem;
+        margin-bottom: 0.875rem;
+    }
+    
+    .carousel-wrapper {
+        height: 220px;
+    }
+    
+    .carousel-nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .carousel-card {
+        padding: 1rem;
+    }
+    
+    .album-image {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .carousel-title {
+        font-size: 1.35rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .carousel-description {
+        font-size: 0.9rem;
+    }
+    
+    .carousel-text {
+        font-size: 0.85rem;
+    }
+    
+    .review-item {
+        padding: 0.875rem;
+    }
+    
+    .review-avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .review-header {
+        font-size: 0.85rem;
+    }
+    
+    .review-comment {
+        font-size: 0.85rem;
+    }
+    
+    .comment-btn,
+    .like-btn {
+        padding: 0.45rem 0.875rem;
+        font-size: 0.8rem;
+        min-height: 32px;
+    }
+    
+    .comments-modal {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    .comments-modal-header {
+        padding: 0.875rem 1rem;
+    }
+    
+    .comments-modal-title {
+        font-size: 1.15rem;
+    }
+    
+    .comments-list-container {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .comments-input-container {
+        padding: 0.875rem;
+    }
+}
+
+/* Extra Small Mobile (max-width: 400px) */
+@media (max-width: 400px) {
+    .top-header {
+        padding: 0.45rem 0.5rem;
+    }
+    
+    .header-content {
+        gap: 0.35rem;
+    }
+    
+    .header-left {
+        gap: 0.35rem;
+    }
+    
+    .logo-icon {
+        width: 26px;
+        height: 26px;
+    }
+    
+    .search-input {
+        padding: 0.4rem 0.6rem 0.4rem 1.9rem;
+        font-size: 0.75rem;
+    }
+    
+    .search-icon {
+        left: 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .icon-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 1.1rem;
+        padding: 0.3rem;
+    }
+    
+    .mobile-menu-toggle {
+        width: 30px;
+        height: 30px;
+        padding: 0.3rem;
+        font-size: 0.95rem;
+    }
+    
+    .carousel-indicators {
+        gap: 0.25rem;
+    }
+    
+    .carousel-indicator {
+        width: 4px;
+        height: 4px;
+    }
+    
+    .main-content {
+        padding: 0.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.05rem;
+    }
+    
+    .carousel-wrapper {
+        height: 200px;
+    }
+    
+    .album-image {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .carousel-title {
+        font-size: 1.2rem;
+    }
+    
+    .review-item {
+        padding: 0.75rem;
+    }
+}
+
+/* Comments Modal Styles */
+.comments-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.comments-modal {
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.95) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.comments-modal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.comments-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comments-modal-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.comments-modal-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comments-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.comments-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 2rem;
+    max-height: calc(80vh - 200px);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 60, 255, 0.6) rgba(255, 255, 255, 0.08);
+}
+
+.comments-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.comments-list-container::-webkit-scrollbar-thumb {
+    background: rgba(130, 60, 255, 0.6);
+    border-radius: 4px;
+}
+
+.comments-list-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.comment-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.comment-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.comment-username {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.comment-time {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+}
+
+.comment-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0 0 0.5rem 0;
+    word-wrap: break-word;
+}
+
+.comment-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.comment-like-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comment-like-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.comment-like-btn.liked i {
+    color: var(--magenta, #EC4899);
+}
+
+.comment-likes-count {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.comment-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+.comment-action-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comment-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.comment-edit-btn:hover {
+    color: #3B82F6;
+}
+
+.comment-delete-btn:hover {
+    color: #EF4444;
+}
+
+.comment-report-btn:hover {
+    color: #F59E0B;
+}
+
+.comment-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.comment-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.comment-empty p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Estilos para edición inline de comentarios */
+.comment-item.editing {
+    background: rgba(124, 58, 237, 0.1);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.comment-text-edit {
+    width: 100%;
+    min-height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(124, 58, 237, 0.5);
+    border-radius: 12px;
+    padding: 1rem;
+    color: #fff;
+    font-size: 0.9rem;
+    font-family: 'Arimo', sans-serif;
+    resize: vertical;
+    outline: none;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.comment-text-edit::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.comment-text-edit:focus {
+    border-color: rgba(124, 58, 237, 0.8);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.comment-edit-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+.comment-edit-buttons .comment-edit-action-btn {
+    padding: 0.625rem 1.5rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Arimo', sans-serif;
+    border: none;
+    min-width: 100px;
+}
+
+.comment-edit-buttons .comment-edit-cancel {
+    background: rgba(255, 77, 106, 0.2);
+    color: #FF4D6A;
+    border: 1px solid rgba(255, 77, 106, 0.4);
+}
+
+.comment-edit-buttons .comment-edit-cancel:hover {
+    background: rgba(255, 77, 106, 0.3);
+    border-color: rgba(255, 77, 106, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 77, 106, 0.3);
+}
+
+.comment-edit-buttons .comment-edit-confirm {
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    color: #fff;
+    border: 1px solid rgba(124, 58, 237, 0.5);
+}
+
+.comment-edit-buttons .comment-edit-confirm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    background: linear-gradient(135deg, #8B4AED 0%, #FC5AA9 100%);
+}
+
+.comment-edit-buttons .comment-edit-confirm:active {
+    transform: translateY(0);
+}
+
+.comment-edit-buttons .comment-edit-cancel:active {
+    transform: translateY(0);
+}
+
+/* Review Detail Modal Styles (Vista detallada estilo Twitter/X) */
+.review-detail-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10004;
+    animation: fadeInOverlay 0.3s ease-out;
+    overflow-y: auto;
+}
+
+.review-detail-modal {
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.98) 0%, rgba(76, 29, 149, 0.95) 100%);
+    border-radius: 0;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUpModal 0.3s ease-out;
+    position: relative;
+}
+
+.review-detail-modal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 90vh;
+}
+
+.review-detail-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.98) 0%, rgba(76, 29, 149, 0.95) 100%);
+    z-index: 10;
+}
+
+.review-detail-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-detail-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.review-detail-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.6) rgba(255, 255, 255, 0.08);
+}
+
+.review-detail-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.review-detail-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.6);
+    border-radius: 4px;
+}
+
+.review-detail-scrollable::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.review-detail-content {
+    padding: 1.5rem;
+}
+
+.review-detail-main {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.review-detail-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.review-detail-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.review-detail-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.review-detail-username {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.review-detail-time {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.875rem;
+}
+
+.review-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.review-detail-content-type {
+    color: rgba(124, 58, 237, 0.9);
+    font-weight: 600;
+}
+
+.review-detail-separator {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.review-detail-content-name {
+    color: #fff;
+    font-weight: 600;
+}
+
+.review-detail-artist {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.review-detail-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'League Spartan', sans-serif;
+    margin: 0 0 1rem 0;
+    line-height: 1.4;
+}
+
+.review-detail-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0 0 1rem 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.review-detail-rating {
+    margin: 1rem 0;
+}
+
+.review-detail-stars {
+    display: flex;
+    gap: 0.25rem;
+    font-size: 1.2rem;
+}
+
+.review-detail-stars .star {
+    display: inline-block;
+    line-height: 1;
+    overflow: hidden;
+}
+
+.review-detail-stars .full-star {
+    color: #ffd700;
+}
+
+.review-detail-stars .empty-star {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.review-detail-stars .half-star {
+    position: relative;
+    width: 0.5em;
+    color: #ffd700;
+}
+
+.review-detail-stars .half-star::before {
+    content: '★';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1em;
+    overflow: hidden;
+    opacity: 0.5;
+}
+
+.review-detail-interactions {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.review-detail-interaction-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.review-detail-interaction-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.review-detail-interaction-btn.liked {
+    color: var(--magenta, #EC4899);
+}
+
+.review-detail-likes-count,
+.review-detail-comments-count {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.review-detail-comments-icon {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.review-detail-comments-section {
+    padding: 0.5rem 1.5rem 0;
+    margin-top: 0.5rem;
+}
+
+.review-detail-comments-header {
+    margin-bottom: 1rem;
+}
+
+.review-detail-comments-title {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: 'League Spartan', sans-serif;
+    margin: 0;
+}
+
+.review-detail-comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.review-detail-comment-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.review-detail-comment-item:last-child {
+    border-bottom: none;
+}
+
+.review-detail-comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.review-detail-comment-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.review-detail-comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.review-detail-comment-username {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.review-detail-comment-time {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+}
+
+.review-detail-comment-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0 0 0.5rem 0;
+    word-wrap: break-word;
+}
+
+.review-detail-comment-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.review-detail-comment-like-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.review-detail-comment-like-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.review-detail-comment-like-btn.liked i {
+    color: var(--magenta, #EC4899);
+}
+
+.review-detail-comment-likes-count {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.review-detail-comment-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.review-detail-comment-action-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+}
+
+.review-detail-comment-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.review-detail-comment-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.review-detail-comment-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.review-detail-comment-empty p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.review-detail-input-container {
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(76, 29, 149, 0.3);
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+}
+
+.review-detail-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.review-detail-input-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.review-detail-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    border-radius: 25px;
+    padding: 0.75rem 1.25rem;
+    color: #fff;
+    font-size: 0.9rem;
+    font-family: 'Arimo', sans-serif;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.review-detail-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.review-detail-input:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(124, 58, 237, 0.7);
+}
+
+.review-detail-send-btn {
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.review-detail-send-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+}
+
+.review-detail-send-btn:active {
+    transform: scale(0.95);
+}
+
+/* Hacer las reseñas clickeables */
+.review-clickable {
+    transition: background-color 0.2s ease;
+}
+
+.review-clickable:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+}
+
+/* Carousel Content Modal Styles */
+.carousel-content-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10005;
+    animation: fadeInOverlay 0.3s ease-out;
+    overflow-y: auto;
+}
+
+.carousel-content-modal {
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.98) 0%, rgba(76, 29, 149, 0.95) 100%);
+    border-radius: 0;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUpModal 0.3s ease-out;
+    position: relative;
+}
+
+.carousel-content-modal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 90vh;
+}
+
+.carousel-content-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.98) 0%, rgba(76, 29, 149, 0.95) 100%);
+    z-index: 10;
+}
+
+.carousel-content-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.carousel-content-header-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.carousel-content-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'League Spartan', sans-serif;
+    margin: 0;
+}
+
+.carousel-content-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-content-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.carousel-content-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.6) rgba(255, 255, 255, 0.08);
+}
+
+.carousel-content-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.carousel-content-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.6);
+    border-radius: 4px;
+}
+
+.carousel-content-scrollable::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.carousel-content-description {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.carousel-content-desc-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0 0 0.5rem 0;
+}
+
+.carousel-content-desc-subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.carousel-content-list {
+    padding: 1rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.carousel-content-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.carousel-content-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(124, 58, 237, 0.3);
+    transform: translateX(5px);
+}
+
+.carousel-content-item-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: rgba(124, 58, 237, 0.8);
+    min-width: 40px;
+    text-align: center;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.carousel-content-item-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.carousel-content-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.carousel-content-item-name {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.carousel-content-item-artist {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    margin: 0 0 0.25rem 0;
+}
+
+.carousel-content-item-type {
+    display: inline-block;
+    background: rgba(124, 58, 237, 0.2);
+    color: rgba(124, 58, 237, 0.9);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.carousel-content-item-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.carousel-content-item-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.carousel-content-item-stars {
+    display: flex;
+    gap: 0.1rem;
+    font-size: 0.9rem;
+}
+
+.carousel-content-item-stars .star {
+    display: inline-block;
+    line-height: 1;
+    overflow: hidden;
+}
+
+.carousel-content-item-stars .full-star {
+    color: #ffd700;
+}
+
+.carousel-content-item-stars .empty-star {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.carousel-content-item-stars .half-star {
+    position: relative;
+    width: 0.5em;
+    color: #ffd700;
+}
+
+.carousel-content-item-stars .half-star::before {
+    content: '★';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1em;
+    overflow: hidden;
+    opacity: 0.5;
+}
+
+.carousel-content-item-rating-value {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.carousel-content-item-reviews,
+.carousel-content-item-comments {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+}
+
+.carousel-content-item-reviews i,
+.carousel-content-item-comments i {
+    color: rgba(124, 58, 237, 0.7);
+}
+
+.carousel-content-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.carousel-content-empty i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.carousel-content-empty p {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.comments-input-container {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.comments-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.comments-input-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.comments-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    padding: 0.75rem 1.25rem;
+    color: #fff;
+    font-size: 0.9rem;
+    font-family: 'Arimo', sans-serif;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.comments-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.comments-input:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(124, 58, 237, 0.5);
+}
+
+.comments-send-btn {
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.comments-send-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+}
+
+.comments-send-btn:active {
+    transform: scale(0.95);
+}
+
+/* Edit Comment Modal Styles */
+.edit-comment-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.edit-comment-modal {
+    background: linear-gradient(135deg, rgba(26, 43, 107, 0.95) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3);
+    max-width: 600px;
+    width: 90%;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.edit-comment-modal-content {
+    padding: 2rem;
+}
+
+.edit-comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.edit-comment-user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.edit-comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    filter: brightness(0) invert(1);
+}
+
+.edit-comment-username {
+    color: #FFD85E;
+    font-weight: 700;
+    font-size: 1.1rem;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.edit-comment-likes {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.edit-comment-likes i {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.edit-comment-textarea {
+    width: 100%;
+    min-height: 150px;
+    background: rgba(106, 50, 205, 0.8);
+    border: 2px solid rgba(124, 58, 237, 0.5);
+    border-radius: 16px;
+    padding: 1.25rem;
+    color: #fff;
+    font-size: 1rem;
+    font-family: 'Arimo', sans-serif;
+    resize: vertical;
+    outline: none;
+    transition: all 0.2s ease;
+    margin-bottom: 1.5rem;
+}
+
+.edit-comment-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.edit-comment-textarea:focus {
+    border-color: rgba(124, 58, 237, 0.8);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+    background: rgba(106, 50, 205, 0.9);
+}
+
+.edit-comment-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.edit-comment-btn {
+    padding: 0.875rem 2rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    border: none;
+    min-width: 140px;
+}
+
+.edit-comment-cancel {
+    background: linear-gradient(135deg, #FF4D6A 0%, #FF6B8A 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255, 77, 106, 0.4);
+}
+
+.edit-comment-cancel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 77, 106, 0.5);
+}
+
+.edit-comment-confirm {
+    background: linear-gradient(135deg, #5C40C0 0%, #7C3AED 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(92, 64, 192, 0.4);
+}
+
+.edit-comment-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(92, 64, 192, 0.5);
+}
+
+/* Delete Comment Modal Styles */
+.delete-comment-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.delete-comment-modal {
+    background: linear-gradient(135deg, rgba(26, 43, 107, 0.95) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3);
+    max-width: 450px;
+    width: 90%;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.delete-comment-modal-content {
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.delete-comment-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #FF4D6A 0%, #FF6B8A 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    box-shadow: 0 8px 25px rgba(255, 77, 106, 0.4);
+}
+
+.delete-comment-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.delete-comment-message {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.delete-comment-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.delete-comment-btn {
+    padding: 0.875rem 2rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    border: none;
+    min-width: 140px;
+}
+
+.delete-comment-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.delete-comment-cancel:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.delete-comment-confirm {
+    background: linear-gradient(135deg, #FF4D6A 0%, #FF6B8A 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255, 77, 106, 0.4);
+}
+
+.delete-comment-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 77, 106, 0.5);
+}
+
+/* Delete Review Modal Styles */
+.delete-review-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.delete-review-modal {
+    background: linear-gradient(135deg, rgba(26, 43, 107, 0.95) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3);
+    max-width: 450px;
+    width: 90%;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.delete-review-modal-content {
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.delete-review-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #FF4D6A 0%, #FF6B8A 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    box-shadow: 0 8px 25px rgba(255, 77, 106, 0.4);
+}
+
+.delete-review-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.delete-review-message {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.delete-review-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.delete-review-btn {
+    padding: 0.875rem 2rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    border: none;
+    min-width: 140px;
+}
+
+.delete-review-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.delete-review-cancel:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.delete-review-confirm {
+    background: linear-gradient(135deg, #FF4D6A 0%, #FF6B8A 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255, 77, 106, 0.4);
+}
+
+.delete-review-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 77, 106, 0.5);
+}
+
+/* Report Comment Modal Styles */
+.report-comment-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.report-comment-modal {
+    background: linear-gradient(135deg, rgba(26, 43, 107, 0.95) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3);
+    max-width: 500px;
+    width: 90%;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.report-comment-modal-content {
+    padding: 2.5rem;
+}
+
+.report-comment-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+}
+
+.report-comment-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+
+.report-comment-message {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.report-comment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.report-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.report-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(124, 58, 237, 0.5);
+}
+
+.report-option:has(.report-radio:checked) {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: rgba(124, 58, 237, 0.6);
+}
+
+.report-radio {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #7C3AED;
+}
+
+.report-option-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    font-family: 'Arimo', sans-serif;
+    flex: 1;
+}
+
+.report-comment-textarea {
+    width: 100%;
+    min-height: 100px;
+    background: rgba(106, 50, 205, 0.8);
+    border: 2px solid rgba(124, 58, 237, 0.5);
+    border-radius: 12px;
+    padding: 1rem;
+    color: #fff;
+    font-size: 0.9rem;
+    font-family: 'Arimo', sans-serif;
+    resize: vertical;
+    outline: none;
+    transition: all 0.2s ease;
+    margin-bottom: 1.5rem;
+}
+
+.report-comment-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.report-comment-textarea:focus {
+    border-color: rgba(124, 58, 237, 0.8);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+    background: rgba(106, 50, 205, 0.9);
+}
+
+.report-comment-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.report-comment-btn {
+    padding: 0.875rem 2rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    border: none;
+    min-width: 140px;
+}
+
+.report-comment-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.report-comment-cancel:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.report-comment-confirm {
+    background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.report-comment-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+
+.report-comment-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Add Review Button Styles */
+.add-review-container {
+    display: flex;
+    align-items: center;
+    margin-left: 1rem; /* Ajusta este valor para mover el icono a la derecha (ej: 1rem, 2rem, auto) */
+}
+
+.add-review-btn {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 1.5rem !important;
+}
+
+.add-review-btn:hover {
+    background: rgba(124, 58, 237, 0.2);
+    transform: scale(1.1);
+}
+
+/* Create Review Modal Styles */
+.create-review-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10004;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.create-review-modal {
+    background: linear-gradient(135deg, rgba(26, 43, 107, 0.95) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.create-review-modal-content {
+    padding: 2rem;
+}
+
+.create-review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.create-review-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.create-review-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.create-review-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.create-review-content-selector {
+    margin-bottom: 1.5rem;
+}
+
+.content-search-container {
+    position: relative;
+}
+
+.content-search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: 'Arimo', sans-serif;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.content-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.content-search-input:focus {
+    border-color: rgba(124, 58, 237, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+}
+
+.content-search-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    background: rgba(13, 17, 32, 0.98);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 10005;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.content-search-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.content-search-item:hover {
+    background: rgba(124, 58, 237, 0.2);
+}
+
+.content-search-item:last-child {
+    border-bottom: none;
+}
+
+.content-search-item-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.content-search-item-image.artist {
+    border-radius: 50%;
+}
+
+.content-search-item-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.content-search-item-name {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.content-search-item-type {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.content-search-item-icon {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+}
+
+.create-review-content-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    position: relative;
+}
+
+.content-info-change-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.content-info-change-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.content-info-image {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.content-info-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.content-info-artist .content-info-image img {
+    border-radius: 50%;
+}
+
+.content-info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.content-info-name {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.content-info-type {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+    font-family: 'Arimo', sans-serif;
+    text-transform: uppercase;
+}
+
+.create-review-rating {
+    margin-bottom: 1.5rem;
+}
+
+.rating-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-family: 'Arimo', sans-serif;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.star-input {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.star-input:hover {
+    color: #FFD85E;
+    transform: scale(1.1);
+}
+
+.star-input.active {
+    color: #FFD85E;
+}
+
+.create-review-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.create-review-title-input,
+.create-review-text-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: 'Arimo', sans-serif;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.create-review-title-input::placeholder,
+.create-review-text-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.create-review-title-input:focus,
+.create-review-text-input:focus {
+    border-color: rgba(124, 58, 237, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+}
+
+.create-review-text-input {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.create-review-submit-btn {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    font-family: 'League Spartan', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    text-transform: uppercase;
+}
+
+.create-review-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+}
+
+.create-review-submit-btn:active {
+    transform: translateY(0);
+}
+
+/* Logout Modal Styles */
+/* Login Required Modal (estilo Spotify) */
+.login-required-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+.login-required-modal {
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.95) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 400px;
+    width: 90%;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+.login-required-modal-content {
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.login-required-modal-logo {
+    margin-bottom: 1.5rem;
+}
+
+.login-required-logo-img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.login-required-modal-title {
+    color: #fff;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.login-required-modal-message {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.login-required-modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.login-required-btn {
+    padding: 0.875rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+    border: none;
+}
+
+.login-required-btn-primary {
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+}
+
+.login-required-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+}
+
+.login-required-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-required-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.logout-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeInOverlay 0.3s ease-out;
+}
+
+@keyframes fadeInOverlay {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.logout-modal {
+    background: rgba(13, 17, 32, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 400px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: slideUpModal 0.3s ease-out;
+}
+
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.logout-modal-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.logout-modal-logo {
+    margin-bottom: 1.5rem;
+}
+
+.logout-logo-img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 15px;
+}
+
+.logout-modal-title {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+.logout-modal-message {
+    font-family: 'Arimo', sans-serif;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.logout-modal-buttons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 15px;
+    font-family: 'Arimo', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.logout-btn-primary {
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #EC4899 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.logout-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+.logout-btn-secondary {
+    background: rgba(13, 17, 32, 0.8);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logout-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Logout Modal Responsive - Mobile Small */
+@media (max-width: 575.98px) {
+    .logout-modal {
+        width: 95%;
+        max-width: 350px;
+    }
+    
+    .logout-modal-content {
+        padding: 1.5rem;
+    }
+    
+    .logout-modal-title {
+        font-size: 1.25rem;
+    }
+    
+    .logout-logo-img {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .action-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+

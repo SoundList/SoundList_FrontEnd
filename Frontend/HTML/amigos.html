@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundList - Amigos</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
+    <link rel="shortcut icon" type="image/png" href="../Assets/default-avatar.png">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../CSS/home.css">
+    <link rel="stylesheet" href="../CSS/amigos.css">
+</head>
+<body>
+    <div class="amigos-container">
+        <!-- Header/Navigation Bar -->
+        <header class="top-header">
+            <div class="header-content container-fluid">
+                <!-- Mobile Menu Toggle -->
+                <button class="mobile-menu-toggle d-lg-none" id="mobileMenuToggle" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <!-- Left Side: Logo and Search -->
+                <div class="header-left">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon d-none d-md-block">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, album">
+                        <button class="search-clear" id="searchClear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display: none;">
+                        <!-- Search results will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Center: Navigation Buttons -->
+                <div class="header-center d-none d-lg-flex">
+                    <button class="nav-btn" data-page="inicio">INICIO</button>
+                    <button class="nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="nav-btn active" data-page="amigos">AMIGOS</button>
+                </div>
+
+                <!-- Mobile Navigation Menu -->
+                <div class="mobile-nav-menu" id="mobileNavMenu">
+                    <button class="mobile-nav-btn" data-page="inicio">INICIO</button>
+                    <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="mobile-nav-btn active" data-page="amigos">AMIGOS</button>
+                </div>
+
+                <!-- Right Side: Notifications and Profile/Login -->
+                <div class="header-right">
+                    <!-- Notifications Dropdown (shown when logged in) -->
+                    <div class="notifications-dropdown-container" id="notificationsContainer" style="display: none;">
+                        <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <div class="notifications-dropdown" id="notificationsDropdown" style="display: none;">
+                            <div class="notifications-dropdown-header">
+                                <h3>Notificaciones</h3>
+                            </div>
+                            <div class="notifications-list" id="notificationsList">
+                                <div class="notification-empty">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No tienes notificaciones</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Login Button (shown when not logged in) -->
+                    <div class="login-container" id="loginContainer" style="display: none;">
+                        <button class="login-btn" id="loginBtn">
+                            <img src="../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon">
+                            <span class="login-text">Iniciar Sesion</span>
+                        </button>
+                    </div>
+                    <!-- Profile Dropdown (shown when logged in) -->
+                    <div class="profile-dropdown-container" id="profileContainer" style="display: none;">
+                        <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
+                            <img src="../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
+                        </button>
+                        <div class="profile-dropdown" id="profileDropdown" style="display: none;">
+                            <div class="profile-dropdown-header">
+                                <img src="../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small">
+                                <span id="usernameDisplay">Usuario</span>
+                            </div>
+                            <button class="profile-dropdown-item" id="verPerfilBtn">
+                                <i class="fas fa-user"></i> Perfil
+                            </button>
+                            <button class="profile-dropdown-item" id="ajustesBtn">
+                                <i class="fas fa-cog"></i> Ajustes
+                            </button>
+                            <button class="profile-dropdown-item" id="cerrarSesionBtn">
+                                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Add Review Button (shown when logged in) -->
+                    <div class="add-review-container" id="addReviewContainer" style="display: none;">
+                        <button class="icon-btn add-review-btn" id="addReviewBtn" title="Crear reseña">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- User Search Section -->
+            <section class="user-search-section">
+                <div class="container-fluid">
+                    <div class="user-search-container">
+                        <h2 class="section-title">
+                            <i class="fas fa-user-plus"></i> Buscar y Seguir Usuarios
+                        </h2>
+                        <div class="user-search-box">
+                            <i class="fas fa-search user-search-icon"></i>
+                            <input type="text" 
+                                   class="user-search-input" 
+                                   id="userSearchInput" 
+                                   placeholder="Buscar por nombre de usuario...">
+                            <button class="user-search-clear" id="userSearchClear" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="user-search-results" id="userSearchResults" style="display: none;">
+                            <!-- User search results will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reviews Filter Section -->
+            <section class="reviews-filter-section">
+                <div class="container-fluid">
+                    <div class="reviews-filter-container">
+                        <h2 class="section-title">
+                            <i class="fas fa-comments"></i> Reseñas
+                        </h2>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="amigos" id="filterAmigos">
+                                <i class="fas fa-user-friends"></i> Amigos
+                            </button>
+                            <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
+                                <i class="fas fa-heart"></i> Seguidos
+                            </button>
+                            <button class="filter-btn" data-filter="random" id="filterRandom">
+                                <i class="fas fa-random"></i> Descubrir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reviews List Section -->
+            <section class="reviews-list-section">
+                <div class="container-fluid">
+                    <div class="reviews-list-container">
+                        <div class="reviews-list" id="reviewsList">
+                            <!-- Reviews will be populated here -->
+                        </div>
+                        <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
+                            <i class="fas fa-comment-slash"></i>
+                            <p>No hay reseñas para mostrar</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Login Required Modal -->
+    <div class="login-required-modal-overlay" id="loginRequiredModalOverlay" style="display: none;">
+        <div class="login-required-modal">
+            <div class="login-required-modal-content">
+                <div class="login-required-modal-logo">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="login-required-logo-img">
+                </div>
+                <h2 class="login-required-modal-title">Inicia sesión</h2>
+                <p class="login-required-modal-message">Debes iniciar sesión para realizar esta acción.</p>
+                <div class="login-required-modal-buttons">
+                    <button class="login-required-btn login-required-btn-primary" id="goToLoginBtn">Iniciar sesión</button>
+                    <button class="login-required-btn login-required-btn-secondary" id="cancelLoginRequiredBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Detail Modal -->
+    <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
+        <div class="review-detail-modal">
+            <div class="review-detail-modal-content">
+                <div class="review-detail-header">
+                    <button class="review-detail-close" id="closeReviewDetailModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="review-detail-scrollable">
+                    <div class="review-detail-content" id="reviewDetailContent">
+                        <!-- Review content will be populated here -->
+                    </div>
+                    <div class="review-detail-comments-section">
+                        <div class="review-detail-comments-header">
+                            <h3 class="review-detail-comments-title">Comentarios <span id="reviewDetailCommentsCount">0</span></h3>
+                        </div>
+                        <div class="review-detail-comments-list" id="reviewDetailCommentsList">
+                            <!-- Comments will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script type="module" src="../JS/main.js"></script>
+</body>
+</html>
+

@@ -31,6 +31,7 @@ import {
     getOrCreateAlbum
 } from '../APIs/contentApi.js';
 import { fetchSearchResults } from '../APIs/searchApi.js';
+import { showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
 
 // (Idealmente, estas funciones de renderizado estarían en /Components/,
 // pero por ahora las dejamos aquí como estaban en tu home.js)
@@ -45,6 +46,8 @@ let originalCommentText = null;
 let deletingReviewId = null;
 let deletingCommentId = null;
 let reportingCommentId = null;
+let reportingReviewId = null;
+let reportingType = null; // 'comment' o 'review'
 
 
 // --- 3. PUNTO DE ENTRADA (LLAMADO POR MAIN.JS) ---
@@ -64,6 +67,11 @@ export function initializeHomePage() {
         initializeReviewDetailModalLogic();
         initializeDeleteModalsLogic();
         initializeReportModalLogic();
+    }
+    
+    // Hacer showCreateReviewModal disponible globalmente para que el headerHandler pueda usarla
+    if (typeof window !== 'undefined') {
+        window.showCreateReviewModal = showCreateReviewModal;
     }
 }
 
@@ -101,22 +109,90 @@ function initializeCarousel() {
 
     async function getMasRecomendado() {
             try {
+                // Obtener todas las reseñas
+                const reviews = await getReviews();
+                if (!reviews || reviews.length === 0) {
+                    return {
+                        totalSongs: 0,
+                        minReviews: 10,
+                        topSong: {
+                            name: 'No hay datos aún',
+                            artist: 'Crea reseñas para ver resultados',
+                            avgRating: 0,
+                            totalReviews: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Agrupar reseñas por SongId
+                const songsMap = {};
+                reviews.forEach(review => {
+                    const songId = review.SongId || review.songId;
+                    if (!songId) return;
+
+                    if (!songsMap[songId]) {
+                        songsMap[songId] = {
+                            songId: songId,
+                            ratings: [],
+                            reviewIds: []
+                        };
+                    }
+                    const rating = review.Rating || review.rating || 0;
+                    songsMap[songId].ratings.push(rating);
+                    songsMap[songId].reviewIds.push(review.ReviewId || review.reviewId || review.id);
+                });
+
+                // Calcular promedio de rating para cada canción (mínimo 10 reseñas)
+                const minReviews = 10;
+                const songsWithAvg = Object.values(songsMap)
+                    .filter(song => song.ratings.length >= minReviews)
+                    .map(song => ({
+                        ...song,
+                        avgRating: song.ratings.reduce((a, b) => a + b, 0) / song.ratings.length,
+                        totalReviews: song.ratings.length
+                    }))
+                    .sort((a, b) => b.avgRating - a.avgRating);
+
+                if (songsWithAvg.length === 0) {
+                    return {
+                        totalSongs: Object.keys(songsMap).length,
+                        minReviews: minReviews,
+                        topSong: {
+                            name: 'No hay suficientes reseñas',
+                            artist: `Mínimo ${minReviews} reseñas por canción`,
+                            avgRating: 0,
+                            totalReviews: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                const topSong = songsWithAvg[0];
+                // Obtener datos de la canción
+                let songData = null;
+                try {
+                    songData = await getSongByApiId(topSong.songId);
+                } catch (e) {
+                    console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+                }
 
                 return {
-                    totalSongs: 0, // Se actualizará con datos reales
-                    minReviews: 10,
+                    totalSongs: songsWithAvg.length,
+                    minReviews: minReviews,
                     topSong: {
-                        name: 'No hay datos aún',
-                        artist: 'Crea reseñas para ver resultados',
-                        avgRating: 0,
-                        totalReviews: 0,
-                        albumImage: null,
+                        name: songData?.Title || songData?.title || songData?.Name || 'Canción',
+                        artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
+                        avgRating: topSong.avgRating,
+                        totalReviews: topSong.totalReviews,
+                        albumImage: songData?.Image || songData?.image || null,
                         artistImage: null
                     }
                 };
             } catch (error) {
                 console.error('Error obteniendo más recomendado:', error);
-                // Si falla, retornar datos vacíos en lugar de datos de ejemplo
                 return {
                     totalSongs: 0,
                     minReviews: 10,
@@ -139,15 +215,94 @@ function initializeCarousel() {
          */
         async function getMasComentado() {
             try {
-                
+                // Obtener todas las reseñas
+                const reviews = await getReviews();
+                if (!reviews || reviews.length === 0) {
+                    return {
+                        totalSongs: 0,
+                        topSong: {
+                            name: 'No hay datos aún',
+                            artist: 'Crea reseñas y comenta para ver resultados',
+                            totalReviews: 0,
+                            totalComments: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Agrupar reseñas por SongId y contar comentarios
+                const songsMap = {};
+                const reviewIds = reviews.map(r => r.ReviewId || r.reviewId || r.id).filter(Boolean);
+
+                // Obtener comentarios para todas las reseñas en paralelo
+                const commentsPromises = reviewIds.map(reviewId => 
+                    getCommentsByReview(reviewId).catch(() => [])
+                );
+                const commentsArrays = await Promise.all(commentsPromises);
+
+                // Mapear comentarios por reviewId
+                const commentsByReview = {};
+                reviewIds.forEach((reviewId, index) => {
+                    commentsByReview[reviewId] = commentsArrays[index] || [];
+                });
+
+                // Agrupar por canción y contar comentarios
+                reviews.forEach(review => {
+                    const songId = review.SongId || review.songId;
+                    if (!songId) return;
+
+                    const reviewId = review.ReviewId || review.reviewId || review.id;
+                    const comments = commentsByReview[reviewId] || [];
+
+                    if (!songsMap[songId]) {
+                        songsMap[songId] = {
+                            songId: songId,
+                            totalComments: 0,
+                            totalReviews: 0,
+                            reviewIds: []
+                        };
+                    }
+                    songsMap[songId].totalComments += comments.length;
+                    songsMap[songId].totalReviews += 1;
+                    songsMap[songId].reviewIds.push(reviewId);
+                });
+
+                // Ordenar por total de comentarios
+                const songsSorted = Object.values(songsMap)
+                    .sort((a, b) => b.totalComments - a.totalComments);
+
+                if (songsSorted.length === 0 || songsSorted[0].totalComments === 0) {
+                    return {
+                        totalSongs: Object.keys(songsMap).length,
+                        topSong: {
+                            name: 'No hay comentarios aún',
+                            artist: 'Crea reseñas y comenta para ver resultados',
+                            totalReviews: 0,
+                            totalComments: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                const topSong = songsSorted[0];
+                // Obtener datos de la canción
+                let songData = null;
+                try {
+                    songData = await getSongByApiId(topSong.songId);
+                } catch (e) {
+                    console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+                }
+
                 return {
-                    totalSongs: 0, // Se actualizará con datos reales
+                    totalSongs: songsSorted.length,
                     topSong: {
-                        name: 'No hay datos aún',
-                        artist: 'Crea reseñas y comenta para ver resultados',
-                        totalReviews: 0,
-                        totalComments: 0,
-                        albumImage: null,
+                        name: songData?.Title || songData?.title || songData?.Name || 'Canción',
+                        artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
+                        totalReviews: topSong.totalReviews,
+                        totalComments: topSong.totalComments,
+                        albumImage: songData?.Image || songData?.image || null,
                         artistImage: null
                     }
                 };
@@ -173,15 +328,109 @@ function initializeCarousel() {
          */
         async function getTop10Semana() {
             try {
-                
+                const reviews = await getReviews();
+                if (!reviews || reviews.length === 0) {
+                    return {
+                        period: 'semana',
+                        limit: 10,
+                        topSong: {
+                            name: 'No hay datos aún',
+                            artist: 'Crea reseñas esta semana para ver resultados',
+                            score: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Filtrar reseñas de la última semana
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const weekReviews = reviews.filter(review => {
+                    const createdAt = new Date(review.CreatedAt || review.Created || review.createdAt);
+                    return createdAt >= oneWeekAgo;
+                });
+
+                if (weekReviews.length === 0) {
+                    return {
+                        period: 'semana',
+                        limit: 10,
+                        topSong: {
+                            name: 'No hay reseñas esta semana',
+                            artist: 'Crea reseñas para ver resultados',
+                            score: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Agrupar por canción y calcular score
+                const songsMap = {};
+                const reviewIds = weekReviews.map(r => r.ReviewId || r.reviewId || r.id).filter(Boolean);
+
+                // Obtener comentarios y likes en paralelo
+                const [commentsArrays, likesArrays] = await Promise.all([
+                    Promise.all(reviewIds.map(id => getCommentsByReview(id).catch(() => []))),
+                    Promise.all(reviewIds.map(id => getReviewReactionCount(id).catch(() => 0)))
+                ]);
+
+                weekReviews.forEach((review, index) => {
+                    const songId = review.SongId || review.songId;
+                    if (!songId) return;
+
+                    if (!songsMap[songId]) {
+                        songsMap[songId] = {
+                            songId: songId,
+                            totalRating: 0,
+                            reviewCount: 0,
+                            totalComments: 0,
+                            totalLikes: 0
+                        };
+                    }
+                    songsMap[songId].totalRating += (review.Rating || review.rating || 0);
+                    songsMap[songId].reviewCount += 1;
+                    songsMap[songId].totalComments += (commentsArrays[index]?.length || 0);
+                    songsMap[songId].totalLikes += (likesArrays[index] || 0);
+                });
+
+                // Calcular score: (avgRating * 2) + (comments * 0.5) + (likes * 0.3)
+                const songsWithScore = Object.values(songsMap).map(song => ({
+                    ...song,
+                    avgRating: song.totalRating / song.reviewCount,
+                    score: (song.totalRating / song.reviewCount) * 2 + song.totalComments * 0.5 + song.totalLikes * 0.3
+                })).sort((a, b) => b.score - a.score).slice(0, 10);
+
+                if (songsWithScore.length === 0) {
+                    return {
+                        period: 'semana',
+                        limit: 10,
+                        topSong: {
+                            name: 'No hay datos suficientes',
+                            artist: 'Esta semana',
+                            score: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                const topSong = songsWithScore[0];
+                let songData = null;
+                try {
+                    songData = await getSongByApiId(topSong.songId);
+                } catch (e) {
+                    console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+                }
+
                 return {
                     period: 'semana',
                     limit: 10,
                     topSong: {
-                        name: 'No hay datos aún',
-                        artist: 'Crea reseñas esta semana para ver resultados',
-                        score: 0,
-                        albumImage: null,
+                        name: songData?.Title || songData?.title || songData?.Name || 'Canción',
+                        artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
+                        score: topSong.score,
+                        albumImage: songData?.Image || songData?.image || null,
                         artistImage: null
                     }
                 };
@@ -207,15 +456,107 @@ function initializeCarousel() {
          */
         async function getTop50Mes() {
             try {
-                
+                const reviews = await getReviews();
+                if (!reviews || reviews.length === 0) {
+                    return {
+                        period: 'mes',
+                        limit: 50,
+                        topSong: {
+                            name: 'No hay datos aún',
+                            artist: 'Crea reseñas este mes para ver resultados',
+                            score: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Filtrar reseñas del último mes
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                const monthReviews = reviews.filter(review => {
+                    const createdAt = new Date(review.CreatedAt || review.Created || review.createdAt);
+                    return createdAt >= oneMonthAgo;
+                });
+
+                if (monthReviews.length === 0) {
+                    return {
+                        period: 'mes',
+                        limit: 50,
+                        topSong: {
+                            name: 'No hay reseñas este mes',
+                            artist: 'Crea reseñas para ver resultados',
+                            score: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Agrupar por canción y calcular score
+                const songsMap = {};
+                const reviewIds = monthReviews.map(r => r.ReviewId || r.reviewId || r.id).filter(Boolean);
+
+                const [commentsArrays, likesArrays] = await Promise.all([
+                    Promise.all(reviewIds.map(id => getCommentsByReview(id).catch(() => []))),
+                    Promise.all(reviewIds.map(id => getReviewReactionCount(id).catch(() => 0)))
+                ]);
+
+                monthReviews.forEach((review, index) => {
+                    const songId = review.SongId || review.songId;
+                    if (!songId) return;
+
+                    if (!songsMap[songId]) {
+                        songsMap[songId] = {
+                            songId: songId,
+                            totalRating: 0,
+                            reviewCount: 0,
+                            totalComments: 0,
+                            totalLikes: 0
+                        };
+                    }
+                    songsMap[songId].totalRating += (review.Rating || review.rating || 0);
+                    songsMap[songId].reviewCount += 1;
+                    songsMap[songId].totalComments += (commentsArrays[index]?.length || 0);
+                    songsMap[songId].totalLikes += (likesArrays[index] || 0);
+                });
+
+                const songsWithScore = Object.values(songsMap).map(song => ({
+                    ...song,
+                    avgRating: song.totalRating / song.reviewCount,
+                    score: (song.totalRating / song.reviewCount) * 2 + song.totalComments * 0.5 + song.totalLikes * 0.3
+                })).sort((a, b) => b.score - a.score).slice(0, 50);
+
+                if (songsWithScore.length === 0) {
+                    return {
+                        period: 'mes',
+                        limit: 50,
+                        topSong: {
+                            name: 'No hay datos suficientes',
+                            artist: 'Este mes',
+                            score: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                const topSong = songsWithScore[0];
+                let songData = null;
+                try {
+                    songData = await getSongByApiId(topSong.songId);
+                } catch (e) {
+                    console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+                }
+
                 return {
                     period: 'mes',
                     limit: 50,
                     topSong: {
-                        name: 'No hay datos aún',
-                        artist: 'Crea reseñas este mes para ver resultados',
-                        score: 0,
-                        albumImage: null,
+                        name: songData?.Title || songData?.title || songData?.Name || 'Canción',
+                        artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
+                        score: topSong.score,
+                        albumImage: songData?.Image || songData?.image || null,
                         artistImage: null
                     }
                 };
@@ -238,18 +579,116 @@ function initializeCarousel() {
         /**
          * TRENDING
          * Lógica: Canciones con mayor crecimiento de actividad en las últimas 24-48 horas
-         * Cálculo: Compara actividad (reseñas + comentarios + likes) de últimas 24-48h vs período anterior
+         * Cálculo: Compara actividad (reseñas + comentarios + likes) de últimas 48h vs período anterior (48-96h)
          */
         async function getTrending() {
             try {
-                
+                const reviews = await getReviews();
+                if (!reviews || reviews.length === 0) {
+                    return {
+                        timeWindow: '48 horas',
+                        topSong: {
+                            name: 'No hay datos aún',
+                            artist: 'Crea reseñas para ver tendencias',
+                            growthRate: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                const now = new Date();
+                const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+                const last96h = new Date(now.getTime() - 96 * 60 * 60 * 1000);
+
+                // Filtrar reseñas de los dos períodos
+                const recentReviews = reviews.filter(r => {
+                    const date = new Date(r.CreatedAt || r.Created || r.createdAt);
+                    return date >= last48h;
+                });
+                const previousReviews = reviews.filter(r => {
+                    const date = new Date(r.CreatedAt || r.Created || r.createdAt);
+                    return date >= last96h && date < last48h;
+                });
+
+                if (recentReviews.length === 0) {
+                    return {
+                        timeWindow: '48 horas',
+                        topSong: {
+                            name: 'No hay actividad reciente',
+                            artist: 'Últimas 48 horas',
+                            growthRate: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                // Calcular actividad por canción en ambos períodos
+                const recentActivity = {};
+                const previousActivity = {};
+
+                const processPeriod = (reviewList, activityMap) => {
+                    reviewList.forEach(review => {
+                        const songId = review.SongId || review.songId;
+                        if (!songId) return;
+                        if (!activityMap[songId]) {
+                            activityMap[songId] = { reviews: 0, comments: 0, likes: 0 };
+                        }
+                        activityMap[songId].reviews += 1;
+                    });
+                };
+
+                processPeriod(recentReviews, recentActivity);
+                processPeriod(previousReviews, previousActivity);
+
+                // Calcular crecimiento
+                const growthRates = {};
+                Object.keys(recentActivity).forEach(songId => {
+                    const recent = recentActivity[songId];
+                    const previous = previousActivity[songId] || { reviews: 0, comments: 0, likes: 0 };
+                    const recentTotal = recent.reviews + recent.comments + recent.likes;
+                    const previousTotal = previous.reviews + previous.comments + previous.likes;
+                    
+                    if (previousTotal === 0) {
+                        growthRates[songId] = recentTotal > 0 ? 100 : 0; // 100% si no había actividad antes
+                    } else {
+                        growthRates[songId] = ((recentTotal - previousTotal) / previousTotal) * 100;
+                    }
+                });
+
+                // Ordenar por crecimiento
+                const sorted = Object.entries(growthRates)
+                    .sort((a, b) => b[1] - a[1]);
+
+                if (sorted.length === 0) {
+                    return {
+                        timeWindow: '48 horas',
+                        topSong: {
+                            name: 'No hay tendencias',
+                            artist: 'Últimas 48 horas',
+                            growthRate: 0,
+                            albumImage: null,
+                            artistImage: null
+                        }
+                    };
+                }
+
+                const [topSongId, growthRate] = sorted[0];
+                let songData = null;
+                try {
+                    songData = await getSongByApiId(topSongId);
+                } catch (e) {
+                    console.debug('No se pudo obtener datos de la canción:', topSongId);
+                }
+
                 return {
                     timeWindow: '48 horas',
                     topSong: {
-                        name: 'No hay datos aún',
-                        artist: 'Crea reseñas para ver tendencias',
-                        growthRate: 0,
-                        albumImage: null,
+                        name: songData?.Title || songData?.title || songData?.Name || 'Canción',
+                        artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
+                        growthRate: Math.round(growthRate),
+                        albumImage: songData?.Image || songData?.image || null,
                         artistImage: null
                     }
                 };
@@ -591,6 +1030,265 @@ function initializeCarousel() {
         });
     }
 
+// Función para cargar contenido de una categoría del carrusel
+async function loadCarouselContent(categoryId, categoryData) {
+    try {
+        const reviews = await getReviews();
+        if (!reviews || reviews.length === 0) return [];
+
+        let songsMap = {};
+        const reviewIds = reviews.map(r => r.ReviewId || r.reviewId || r.id).filter(Boolean);
+
+        // Obtener comentarios y likes en paralelo
+        const [commentsArrays, likesArrays] = await Promise.all([
+            Promise.all(reviewIds.map(id => getCommentsByReview(id).catch(() => []))),
+            Promise.all(reviewIds.map(id => getReviewReactionCount(id).catch(() => 0)))
+        ]);
+
+        // Procesar según la categoría
+        if (categoryId === 'lo-mas-recomendado') {
+            // Agrupar por canción y calcular promedio (mínimo 10 reseñas)
+            reviews.forEach((review, index) => {
+                const songId = review.SongId || review.songId;
+                if (!songId) return;
+                if (!songsMap[songId]) {
+                    songsMap[songId] = { songId, ratings: [], reviewIds: [] };
+                }
+                songsMap[songId].ratings.push(review.Rating || review.rating || 0);
+                songsMap[songId].reviewIds.push(reviewIds[index]);
+            });
+
+            const songsWithAvg = Object.values(songsMap)
+                .filter(s => s.ratings.length >= 10)
+                .map(s => ({
+                    ...s,
+                    avgRating: s.ratings.reduce((a, b) => a + b, 0) / s.ratings.length,
+                    totalReviews: s.ratings.length
+                }))
+                .sort((a, b) => b.avgRating - a.avgRating)
+                .slice(0, 10);
+
+            // Obtener datos de canciones
+            const songsData = await Promise.all(
+                songsWithAvg.map(s => getSongByApiId(s.songId).catch(() => null))
+            );
+
+            return songsData.filter(Boolean).map((song, i) => ({
+                name: song.Title || song.title || song.Name || 'Canción',
+                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
+                image: song.Image || song.image || null,
+                avgRating: songsWithAvg[i]?.avgRating || 0,
+                totalReviews: songsWithAvg[i]?.totalReviews || 0
+            }));
+
+        } else if (categoryId === 'lo-mas-comentado') {
+            // Agrupar por canción y contar comentarios
+            reviews.forEach((review, index) => {
+                const songId = review.SongId || review.songId;
+                if (!songId) return;
+                if (!songsMap[songId]) {
+                    songsMap[songId] = { songId, totalComments: 0, reviewIds: [] };
+                }
+                songsMap[songId].totalComments += (commentsArrays[index]?.length || 0);
+                songsMap[songId].reviewIds.push(reviewIds[index]);
+            });
+
+            const songsSorted = Object.values(songsMap)
+                .sort((a, b) => b.totalComments - a.totalComments)
+                .slice(0, 10);
+
+            const songsData = await Promise.all(
+                songsSorted.map(s => getSongByApiId(s.songId).catch(() => null))
+            );
+
+            return songsData.filter(Boolean).map((song, i) => ({
+                name: song.Title || song.title || song.Name || 'Canción',
+                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
+                image: song.Image || song.image || null,
+                totalComments: songsSorted[i]?.totalComments || 0
+            }));
+
+        } else if (categoryId === 'top-10-semana' || categoryId === 'top-50-mes') {
+            // Filtrar por período
+            const periodStart = categoryId === 'top-10-semana' 
+                ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            const limit = categoryId === 'top-10-semana' ? 10 : 50;
+
+            const periodReviews = reviews.filter(r => {
+                const date = new Date(r.CreatedAt || r.Created || r.createdAt);
+                return date >= periodStart;
+            });
+
+            periodReviews.forEach((review, index) => {
+                const songId = review.SongId || review.songId;
+                if (!songId) return;
+                if (!songsMap[songId]) {
+                    songsMap[songId] = {
+                        songId,
+                        totalRating: 0,
+                        reviewCount: 0,
+                        totalComments: 0,
+                        totalLikes: 0
+                    };
+                }
+                const reviewIndex = reviews.indexOf(review);
+                songsMap[songId].totalRating += (review.Rating || review.rating || 0);
+                songsMap[songId].reviewCount += 1;
+                songsMap[songId].totalComments += (commentsArrays[reviewIndex]?.length || 0);
+                songsMap[songId].totalLikes += (likesArrays[reviewIndex] || 0);
+            });
+
+            const songsWithScore = Object.values(songsMap)
+                .map(s => ({
+                    ...s,
+                    score: (s.totalRating / s.reviewCount) * 2 + s.totalComments * 0.5 + s.totalLikes * 0.3
+                }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit);
+
+            const songsData = await Promise.all(
+                songsWithScore.map(s => getSongByApiId(s.songId).catch(() => null))
+            );
+
+            return songsData.filter(Boolean).map((song, i) => ({
+                name: song.Title || song.title || song.Name || 'Canción',
+                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
+                image: song.Image || song.image || null,
+                score: songsWithScore[i]?.score || 0
+            }));
+
+        } else if (categoryId === 'trending') {
+            // Calcular crecimiento (últimas 48h vs 48-96h)
+            const now = new Date();
+            const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+            const last96h = new Date(now.getTime() - 96 * 60 * 60 * 1000);
+
+            const recentReviews = reviews.filter(r => {
+                const date = new Date(r.CreatedAt || r.Created || r.createdAt);
+                return date >= last48h;
+            });
+            const previousReviews = reviews.filter(r => {
+                const date = new Date(r.CreatedAt || r.Created || r.createdAt);
+                return date >= last96h && date < last48h;
+            });
+
+            const recentActivity = {};
+            const previousActivity = {};
+
+            recentReviews.forEach(r => {
+                const songId = r.SongId || r.songId;
+                if (songId) recentActivity[songId] = (recentActivity[songId] || 0) + 1;
+            });
+            previousReviews.forEach(r => {
+                const songId = r.SongId || r.songId;
+                if (songId) previousActivity[songId] = (previousActivity[songId] || 0) + 1;
+            });
+
+            const growthRates = Object.keys(recentActivity).map(songId => {
+                const recent = recentActivity[songId] || 0;
+                const previous = previousActivity[songId] || 0;
+                const growth = previous === 0 ? (recent > 0 ? 100 : 0) : ((recent - previous) / previous) * 100;
+                return { songId, growthRate: growth };
+            }).sort((a, b) => b.growthRate - a.growthRate).slice(0, 10);
+
+            const songsData = await Promise.all(
+                growthRates.map(s => getSongByApiId(s.songId).catch(() => null))
+            );
+
+            return songsData.filter(Boolean).map((song, i) => ({
+                name: song.Title || song.title || song.Name || 'Canción',
+                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
+                image: song.Image || song.image || null,
+                growthRate: Math.round(growthRates[i]?.growthRate || 0)
+            }));
+        }
+
+        return [];
+    } catch (error) {
+        console.error(`Error cargando contenido del carrusel para ${categoryId}:`, error);
+        return [];
+    }
+}
+
+// Función para mostrar el modal de contenido del carrusel
+function showCarouselContentModal(categoryId, categoryTitle, categoryText, categoryDescription, categoryData) {
+    const modal = document.getElementById('carouselContentModalOverlay');
+    if (!modal) {
+        console.error('Modal de contenido del carrusel no encontrado');
+        return;
+    }
+
+    // Mostrar el modal
+    modal.style.display = 'flex';
+
+    // Actualizar título
+    const titleEl = document.getElementById('carouselContentTitle');
+    if (titleEl) {
+        titleEl.textContent = categoryTitle;
+    }
+
+    // Actualizar descripción
+    const descriptionEl = document.getElementById('carouselContentDescription');
+    if (descriptionEl) {
+        descriptionEl.innerHTML = `
+            <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 0.5rem; font-size: 1rem;">${categoryText}</p>
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem;">${categoryDescription}</p>
+        `;
+    }
+
+    // Limpiar lista de contenido
+    const contentListEl = document.getElementById('carouselContentList');
+    if (contentListEl) {
+        contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.6);">Cargando contenido...</div>';
+    }
+
+    // Cargar contenido de forma asíncrona
+    loadCarouselContent(categoryId, categoryData).then(content => {
+        if (contentListEl) {
+            if (content && content.length > 0) {
+                // Renderizar lista de contenido
+                contentListEl.innerHTML = content.map(item => {
+                    const image = item.image || item.albumImage || item.artistImage || '../Assets/default-avatar.png';
+                    const name = item.name || item.title || item.Name || item.Title || 'Sin nombre';
+                    const artist = item.artist || item.artistName || item.ArtistName || 'Artista desconocido';
+                    
+                    return `
+                        <div class="carousel-content-item" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 1rem; cursor: pointer;">
+                            <img src="${image}" alt="${name}" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;" onerror="this.src='../Assets/default-avatar.png'">
+                            <div style="flex: 1;">
+                                <h4 style="color: #fff; margin: 0 0 0.25rem 0; font-size: 1rem;">${name}</h4>
+                                <p style="color: rgba(255, 255, 255, 0.6); margin: 0; font-size: 0.9rem;">${artist}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.6);">No hay contenido disponible en esta categoría aún.</div>';
+            }
+        }
+    }).catch(error => {
+        console.error('Error cargando contenido del modal:', error);
+        if (contentListEl) {
+            contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ff6b6b;">Error al cargar el contenido. Por favor, intenta nuevamente.</div>';
+        }
+    });
+
+    // Configurar botón de cerrar
+    const closeBtn = document.getElementById('closeCarouselContentModal');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+
+    // Cerrar al hacer clic fuera del modal
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+}
 
 // (Pega aquí las funciones del carrusel)
 
@@ -1991,6 +2689,8 @@ async function showReviewDetailModal(reviewId) {
     const modal = document.getElementById('reviewDetailModalOverlay');
     if (!modal) return;
     
+    // Establecer el reviewId en el modal para que submitReviewDetailComment pueda obtenerlo
+    modal.setAttribute('data-review-id', reviewId);
     modal.style.display = 'flex';
     const contentDiv = document.getElementById('reviewDetailContent');
     if (contentDiv) {
@@ -1998,25 +2698,67 @@ async function showReviewDetailModal(reviewId) {
     }
     
     try {
-        const [reviewData, allReviews, comments, likes] = await Promise.all([
-            getReviewDetails(reviewId),
-            getReviews(), 
-            getCommentsByReview(reviewId),
-            getReviewReactionCount(reviewId)
+        // Obtener datos de forma resiliente - NO usar getReviewDetails que está fallando
+        const [allReviewsResult, commentsResult, likesResult] = await Promise.allSettled([
+            getReviews().catch(err => {
+                console.warn('Error obteniendo todas las reseñas:', err);
+                return [];
+            }), 
+            getCommentsByReview(reviewId).catch(err => {
+                console.warn('Error obteniendo comentarios:', err);
+                return [];
+            }),
+            getReviewReactionCount(reviewId).catch(err => {
+                console.warn('Error obteniendo likes:', err);
+                return 0;
+            })
         ]);
         
-        const review = allReviews.find(r => (r.ReviewId || r.reviewId || r.id) === reviewId);
+        const allReviews = allReviewsResult.status === 'fulfilled' ? allReviewsResult.value : [];
+        const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
+        const likes = likesResult.status === 'fulfilled' ? likesResult.value : 0;
         
-        if (!review && !reviewData) {
-            throw new Error('Reseña no encontrada');
+        // Buscar la reseña en la lista
+        let review = null;
+        if (allReviews && allReviews.length > 0) {
+            review = allReviews.find(r => {
+                const rId = r.ReviewId || r.reviewId || r.id || r.Id_Review;
+                return String(rId).trim() === String(reviewId).trim();
+            });
+        }
+        
+        // Si no encontramos la reseña, mostrar error
+        if (!review) {
+            console.error('No se pudo obtener la reseña con ID:', reviewId);
+            if (contentDiv) {
+                contentDiv.innerHTML = '<div class="review-detail-loading" style="color: #ff6b6b;">No se pudo cargar la reseña. Por favor, intenta nuevamente.</div>';
+            }
+            return;
+        }
+        
+        // Obtener datos del usuario directamente del User Service (como se hace en loadReviewsFunction)
+        let username = `Usuario ${String(review.UserId || review.userId || '').substring(0, 8)}`;
+        let avatar = '../Assets/default-avatar.png';
+        
+        if (review.UserId || review.userId) {
+            try {
+                const userId = review.UserId || review.userId;
+                const userData = await getUser(userId);
+                if (userData) {
+                    username = userData.Username || userData.username || username;
+                    avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                }
+            } catch (userError) {
+                // Silenciar errores de usuario - usar valores por defecto
+                console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+            }
         }
         
         const fullReview = {
             ...review,
-            ...reviewData?.review,
-            user: reviewData?.user || {},
-            song: reviewData?.song || {},
-            album: reviewData?.album || {}
+            user: { username, imgProfile: avatar },
+            song: {},
+            album: {}
         };
         
         const storageKey = `review_content_${reviewId}`;
@@ -2041,9 +2783,7 @@ async function showReviewDetailModal(reviewId) {
             artistName = fullReview.album.ArtistName || fullReview.album.artistName || artistName;
         }
         
-        const username = fullReview.user?.username || fullReview.user?.Username || 'Usuario';
-        const avatar = fullReview.user?.imgProfile || fullReview.user?.ImgProfile || '../Assets/default-avatar.png';
-        
+        // username y avatar ya están declarados arriba (líneas 2045-2046)
         const reviewTitle = fullReview.Title || fullReview.title || '';
         const reviewContent = fullReview.Content || fullReview.content || '';
         const reviewRating = fullReview.Rating || fullReview.rating || 0;
@@ -2067,9 +2807,19 @@ async function showReviewDetailModal(reviewId) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                                            </div>
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar" onerror="this.src='../Assets/default-avatar.png'">
+                        <div class="review-detail-user-info">
+                            <span class="review-detail-username">${username}</span>
+                            <span class="review-detail-time">${timeAgo}</span>
+                        </div>
+                    </div>
                     <div class="review-detail-meta">
-                                            </div>
+                        <span class="review-detail-content-type">${contentType === 'song' ? 'Canción' : 'Álbum'}</span>
+                        <span class="review-detail-separator">-</span>
+                        <span class="review-detail-content-name">${contentName}</span>
+                        <span class="review-detail-separator">-</span>
+                        <span class="review-detail-artist">${artistName}</span>
+                    </div>
                     ${reviewTitle ? `<h2 class="review-detail-title">${reviewTitle}</h2>` : ''}
                     <p class="review-detail-text">${reviewContent}</p>
                     <div class="review-detail-rating">
@@ -2108,7 +2858,21 @@ async function showReviewDetailModal(reviewId) {
         
     } catch (error) {
         console.error('Error cargando vista detallada:', error);
-        if (contentDiv) contentDiv.innerHTML = '<div class="review-detail-loading">Error al cargar la reseña</div>';
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="review-detail-loading" style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.7);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem; color: #ff6b6b;"></i>
+                    <p style="margin: 0;">Error al cargar la reseña. Por favor, intenta nuevamente.</p>
+                </div>
+            `;
+        }
+        // Aún así, cargar los comentarios si es posible
+        try {
+            const comments = await getCommentsByReview(reviewId).catch(() => []);
+            await loadReviewDetailComments(reviewId, comments);
+        } catch (commentError) {
+            console.warn('No se pudieron cargar los comentarios:', commentError);
+        }
     }
 }
     
@@ -2539,6 +3303,90 @@ function hideReviewDetailModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// --- INICIALIZACIÓN DEL MODAL DE VISTA DETALLADA ---
+
+function initializeReviewDetailModalLogic() {
+    const closeReviewDetailModal = document.getElementById('closeReviewDetailModal');
+    const reviewDetailModalOverlay = document.getElementById('reviewDetailModalOverlay');
+    const reviewDetailSubmitCommentBtn = document.getElementById('reviewDetailSubmitCommentBtn');
+    const reviewDetailCommentInput = document.getElementById('reviewDetailCommentInput');
+    
+    if (closeReviewDetailModal) {
+        closeReviewDetailModal.addEventListener('click', hideReviewDetailModal);
+    }
+    
+    if (reviewDetailModalOverlay) {
+        reviewDetailModalOverlay.addEventListener('click', (e) => {
+            if (e.target === reviewDetailModalOverlay) {
+                hideReviewDetailModal();
+            }
+        });
+    }
+    
+    if (reviewDetailSubmitCommentBtn) {
+        reviewDetailSubmitCommentBtn.addEventListener('click', submitReviewDetailComment);
+    }
+    
+    if (reviewDetailCommentInput) {
+        reviewDetailCommentInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitReviewDetailComment();
+            }
+        });
+    }
+}
+
+async function submitReviewDetailComment() {
+    const modal = document.getElementById('reviewDetailModalOverlay');
+    if (!modal || modal.style.display !== 'flex') return;
+    
+    // Obtener el reviewId del modal (se establece cuando se abre)
+    const reviewId = modal.getAttribute('data-review-id');
+    const commentInput = document.getElementById('reviewDetailCommentInput');
+    
+    if (!reviewId || !commentInput) {
+        console.warn('No se pudo obtener reviewId o commentInput en modal de detalle');
+        return;
+    }
+    
+    const commentText = commentInput.value.trim();
+    if (!commentText) {
+        showAlert('Por favor, escribe un comentario', 'warning');
+        return;
+    }
+    
+    try {
+        const authToken = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        
+        if (!authToken) {
+            showLoginRequiredModal();
+            return;
+        }
+        
+        // Crear comentario usando la API
+        await createComment(reviewId, commentText, userId, authToken);
+        
+        // Limpiar input
+        commentInput.value = '';
+        
+        // Recargar comentarios en el modal de detalle
+        await loadReviewDetailComments(reviewId);
+        
+        // Actualizar contador
+        const commentsCount = document.getElementById('reviewDetailCommentsCount');
+        if (commentsCount) {
+            const comments = await getCommentsByReview(reviewId);
+            commentsCount.textContent = comments.length;
+        }
+        
+        showAlert('Comentario agregado exitosamente', 'success');
+    } catch (error) {
+        console.error('Error agregando comentario en vista detallada:', error);
+        showAlert('Error al agregar el comentario', 'danger');
+    }
+}
+
 // --- MODAL DE COMENTARIOS (POPUP) ---
 
 function initializeCommentsModalLogic() {
@@ -2749,7 +3597,7 @@ function attachCommentActionListeners() {
     document.querySelectorAll('.comment-delete-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const commentId = this.getAttribute('data-comment-id');
-            deleteComment(commentId);
+            showDeleteCommentModal(commentId);
         });
     });
     
@@ -3166,19 +4014,41 @@ function initializeReportModalLogic() {
 }
 
 function reportComment(commentId) {
-    showReportCommentModal(commentId);
-}
-function reportReview(reviewId) {
-    // TODO: Podríamos adaptar este modal para reportar reseñas también
-    showAlert('Funcionalidad de reportar reseña en desarrollo.', 'info');
+    showReportModal(commentId, 'comment');
 }
 
-function showReportCommentModal(commentId) {
-    reportingCommentId = commentId; // O 'reviewId' si adaptamos
+function reportReview(reviewId) {
+    showReportModal(reviewId, 'review');
+}
+
+function showReportModal(id, type) {
+    // Guardar el ID y tipo (comment o review)
+    if (type === 'comment') {
+        reportingCommentId = id;
+        reportingReviewId = null;
+    } else {
+        reportingReviewId = id;
+        reportingCommentId = null;
+    }
+    reportingType = type;
+    
     const modal = document.getElementById('reportCommentModalOverlay');
     const textarea = document.getElementById('reportCommentTextarea');
     const confirmBtn = document.getElementById('confirmReportCommentBtn');
+    const title = document.querySelector('.report-comment-title');
+    const message = document.querySelector('.report-comment-message');
     
+    // Cambiar el título y mensaje según el tipo
+    if (title) {
+        title.textContent = type === 'comment' ? 'Reportar comentario' : 'Reportar reseña';
+    }
+    if (message) {
+        message.textContent = type === 'comment' 
+            ? '¿Por qué quieres reportar este comentario?' 
+            : '¿Por qué quieres reportar esta reseña?';
+    }
+    
+    // Resetear el formulario
     document.querySelectorAll('.report-radio').forEach(radio => radio.checked = false);
     if (textarea) {
         textarea.value = '';
@@ -3192,11 +4062,11 @@ function hideReportCommentModal() {
     const modal = document.getElementById('reportCommentModalOverlay');
     if(modal) modal.style.display = 'none';
     reportingCommentId = null;
+    reportingReviewId = null;
+    reportingType = null;
 }
     
 async function confirmReportComment() {
-    if (!reportingCommentId) return;
-    
     const selectedReason = document.querySelector('.report-radio:checked');
     if (!selectedReason) {
         showAlert('Por favor, selecciona un motivo para el reporte', 'warning');
@@ -3207,17 +4077,26 @@ async function confirmReportComment() {
     const textarea = document.getElementById('reportCommentTextarea');
     const additionalInfo = textarea ? textarea.value.trim() : '';
     
-    // TODO: Implementar 'reportComment' en socialApi.js
     const reportData = {
-        commentId: reportingCommentId,
         reason: reason,
         additionalInfo: additionalInfo
     };
     
-    console.log('Reportar comentario:', reportData);
-    
-    hideReportCommentModal();
-    showAlert('Comentario reportado. Gracias por tu reporte.', 'success');
+    if (reportingType === 'comment' && reportingCommentId) {
+        reportData.commentId = reportingCommentId;
+        console.log('Reportar comentario:', reportData);
+        // TODO: Implementar 'reportComment' en socialApi.js cuando esté disponible
+        hideReportCommentModal();
+        showAlert('Comentario reportado. Gracias por tu reporte.', 'success');
+    } else if (reportingType === 'review' && reportingReviewId) {
+        reportData.reviewId = reportingReviewId;
+        console.log('Reportar reseña:', reportData);
+        // TODO: Implementar 'reportReview' en socialApi.js cuando esté disponible
+        hideReportCommentModal();
+        showAlert('Reseña reportada. Gracias por tu reporte.', 'success');
+    } else {
+        showAlert('Error: No se pudo identificar el elemento a reportar', 'danger');
+    }
 }
 
 

@@ -38,6 +38,28 @@ export function initializeHeader() {
         initializeLogoutModal();
         initializeLoginRequiredModal();
         initializeNotificationsDropdown();
+        
+        // Hacer showAlert disponible globalmente
+        if (typeof window !== 'undefined' && typeof showAlert === 'function') {
+            window.showAlert = showAlert;
+        }
+        
+        // Hacer fetchSearchResults disponible globalmente para otros handlers
+        if (typeof window !== 'undefined' && typeof fetchSearchResults === 'function') {
+            window.fetchSearchResults = fetchSearchResults;
+        }
+        
+        // Hacer funciones de socialApi disponibles globalmente si están disponibles
+        if (typeof window !== 'undefined') {
+            // Intentar importar y exponer socialApi si no está disponible
+            if (!window.socialApi && typeof getCommentsByReview === 'function') {
+                window.socialApi = window.socialApi || {};
+                window.socialApi.getCommentsByReview = getCommentsByReview;
+                window.socialApi.createComment = typeof createComment !== 'undefined' ? createComment : null;
+                window.socialApi.updateComment = typeof updateComment !== 'undefined' ? updateComment : null;
+                window.socialApi.deleteComment = typeof deleteComment !== 'undefined' ? deleteComment : null;
+            }
+        }
     
 }
 
@@ -126,6 +148,38 @@ function displaySearchResults(results, query) {
     const artists = results.Artists || results.artists || [];
     const albums = results.Albums || results.albums || [];
     const songs = results.Songs || results.songs || [];
+    
+    // Debug: Log de los resultados para verificar la estructura
+    if (artists.length > 0) {
+        console.log('Artista de ejemplo:', {
+            objeto: artists[0],
+            APIArtistId: artists[0].APIArtistId,
+            apiArtistId: artists[0].apiArtistId,
+            Id: artists[0].Id,
+            id: artists[0].id,
+            todasLasKeys: Object.keys(artists[0])
+        });
+    }
+    if (albums.length > 0) {
+        console.log('Álbum de ejemplo:', {
+            objeto: albums[0],
+            APIAlbumId: albums[0].APIAlbumId,
+            apiAlbumId: albums[0].apiAlbumId,
+            Id: albums[0].Id,
+            id: albums[0].id,
+            todasLasKeys: Object.keys(albums[0])
+        });
+    }
+    if (songs.length > 0) {
+        console.log('Canción de ejemplo:', {
+            objeto: songs[0],
+            APISongId: songs[0].APISongId,
+            apiSongId: songs[0].apiSongId,
+            Id: songs[0].Id,
+            id: songs[0].id,
+            todasLasKeys: Object.keys(songs[0])
+        });
+    }
 
     if (artists.length === 0 && albums.length === 0 && songs.length === 0) {
         searchDropdown.innerHTML = `
@@ -144,9 +198,15 @@ function displaySearchResults(results, query) {
     if (artists.length > 0) {
         html += '<div class="search-section"><div class="search-section-title">Artistas</div>';
         artists.forEach(artist => {
-            const artistId = artist.APIArtistId || artist.apiArtistId || '';
+            const artistId = artist.APIArtistId || artist.apiArtistId || artist.Id || artist.id || '';
             const artistName = artist.Name || artist.name || '';
             const artistImage = artist.Imagen || artist.imagen || '../Assets/default-avatar.png';
+            
+            // Solo renderizar si tiene un ID válido
+            if (!artistId || artistId.trim() === '') {
+                console.warn('Artista sin ID válido, omitiendo:', artist);
+                return;
+            }
             
             html += `
                 <div class="search-dropdown-item" data-type="artist" data-id="${artistId}">
@@ -163,9 +223,15 @@ function displaySearchResults(results, query) {
     if (albums.length > 0) {
         html += '<div class="search-section"><div class="search-section-title">Álbumes</div>';
         albums.forEach(album => {
-            const albumId = album.APIAlbumId || album.apiAlbumId || '';
+            const albumId = album.APIAlbumId || album.apiAlbumId || album.Id || album.id || '';
             const albumTitle = album.Title || album.title || '';
             const albumImage = album.Image || album.image || '../Assets/default-avatar.png';
+            
+            // Solo renderizar si tiene un ID válido
+            if (!albumId || albumId.trim() === '') {
+                console.warn('Álbum sin ID válido, omitiendo:', album);
+                return;
+            }
             
             html += `
                 <div class="search-dropdown-item" data-type="album" data-id="${albumId}">
@@ -182,11 +248,17 @@ function displaySearchResults(results, query) {
     if (songs.length > 0) {
         html += '<div class="search-section"><div class="search-section-title">Canciones</div>';
         songs.forEach(song => {
-            const songId = song.APISongId || song.apiSongId || '';
+            const songId = song.APISongId || song.apiSongId || song.Id || song.id || '';
             const songTitle = song.Title || song.title || '';
             const songImage = song.Image || song.image || '../Assets/default-avatar.png';
             const artistName = song.ArtistName || song.artistName || '';
             const artistNameDisplay = artistName ? ` - ${artistName}` : '';
+            
+            // Solo renderizar si tiene un ID válido
+            if (!songId || songId.trim() === '') {
+                console.warn('Canción sin ID válido, omitiendo:', song);
+                return;
+            }
             
             html += `
                 <div class="search-dropdown-item" data-type="song" data-id="${songId}">
@@ -208,6 +280,16 @@ function displaySearchResults(results, query) {
             const id = this.getAttribute('data-id');
             const text = this.querySelector('.search-item-text').textContent;
             
+            // Validar que el ID existe y no está vacío
+            if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
+                console.error('Error: ID inválido en resultado de búsqueda', { type, id, text });
+                if (typeof showAlert === 'function') {
+                    showAlert('Error: No se pudo obtener el ID del contenido seleccionado.', 'danger');
+                }
+                return;
+            }
+            
+            console.log(`Navegando a ${type} con ID: ${id}`);
             searchInput.value = text;
             searchDropdown.style.display = 'none';
             
@@ -218,33 +300,76 @@ function displaySearchResults(results, query) {
 
 /**
  * Navega a la vista de contenido.
- * Asume que todos los HTML están en la misma carpeta (ej. /HTML/).
+ * Maneja rutas relativas correctamente desde cualquier ubicación.
  */
 function navigateToContentView(type, id) {
-    if (!id || id.trim() === '' || id === '00000000-0000-0000-0000-000000000000') {
-        console.error('Error: El ID del contenido está vacío o es inválido.');
-        showAlert('Error: El ID del contenido es inválido.', 'danger');
-        return;
-    }
-    let destinationUrl = '';
+    // Validación más estricta del ID
+    if (!id || typeof id !== 'string' || id.trim() === '' || 
+        id === '00000000-0000-0000-0000-000000000000' ||
+        id === 'undefined' || id === 'null' ||
+        id.toLowerCase() === 'album' || id.toLowerCase() === 'artist' || id.toLowerCase() === 'song') {
+        console.error('Error: El ID del contenido está vacío o es inválido.', { type, id });
+        if (typeof showAlert === 'function') {
+            showAlert('Error: El ID del contenido es inválido. Por favor, intenta buscar nuevamente.', 'danger');
+        }
+        return;
+    }
     
-    switch(type) {
-        case 'song':
-            destinationUrl = `song.html?id=${id}`;
-            break;
-        case 'album':
-            destinationUrl = `album.html?id=${id}`;
-            break;
-        case 'artist':
-            destinationUrl = `artist.html?id=${id}`; 
-            break;
-        default:
-            console.warn('Tipo de contenido desconocido:', type);
-            return;
-    }
+    // Validar que el tipo sea válido
+    if (!type || !['song', 'album', 'artist'].includes(type)) {
+        console.error('Error: Tipo de contenido inválido.', { type, id });
+        if (typeof showAlert === 'function') {
+            showAlert('Error: Tipo de contenido inválido.', 'danger');
+        }
+        return;
+    }
+    
+    const currentPath = window.location.pathname;
+    const currentFile = currentPath.split('/').pop() || '';
+    let destinationUrl = '';
+    
+    // Determinar el nombre del archivo según el tipo
+    let fileName = '';
+    switch(type) {
+        case 'song':
+            fileName = 'song.html';
+            break;
+        case 'album':
+            fileName = 'album.html';
+            break;
+        case 'artist':
+            fileName = 'artist.html'; 
+            break;
+        default:
+            console.warn('Tipo de contenido desconocido:', type);
+            return;
+    }
+    
+    // Codificar el ID para la URL (por si tiene caracteres especiales)
+    const encodedId = encodeURIComponent(id.trim());
+    
+    // Determinar la ruta correcta según dónde estemos
+    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+        // Estamos en Pages/, necesitamos subir un nivel para llegar a HTML/
+        destinationUrl = `../${fileName}?id=${encodedId}`;
+    } else if (currentPath.includes('/HTML/') || 
+               currentFile === 'home.html' || 
+               currentFile === 'album.html' || 
+               currentFile === 'song.html' || 
+               currentFile === 'artist.html' ||
+               currentFile === 'rankings.html' ||
+               currentFile === 'amigos.html' ||
+               currentFile === 'login.html' ||
+               currentFile === 'register.html') {
+        // Ya estamos en HTML/, solo necesitamos el nombre del archivo
+        destinationUrl = `${fileName}?id=${encodedId}`;
+    } else {
+        // Fallback: asumir que estamos en el mismo directorio
+        destinationUrl = `${fileName}?id=${encodedId}`;
+    }
 
-    console.log(`Navegando a: ${destinationUrl}`);
-    window.location.href = destinationUrl;
+    console.log(`Navegando a: ${destinationUrl} (desde: ${currentFile}, tipo: ${type}, id: ${id})`);
+    window.location.href = destinationUrl;
 }
 
 // --- 5. SECCIÓN DE PERFIL, NAVEGACIÓN Y SESIÓN ---
@@ -261,14 +386,15 @@ function initializeProfileDropdown() {
         return; 
     }
 
-    profileBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const notificationsDropdown = document.getElementById('notificationsDropdown');
-        if (notificationsDropdown) notificationsDropdown.style.display = 'none';
-        
-        const isVisible = profileDropdown.style.display === 'block';
-        profileDropdown.style.display = isVisible ? 'none' : 'block';
-    });
+    profileBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const notificationsDropdown = document.getElementById('notificationsDropdown');
+        if (notificationsDropdown) notificationsDropdown.style.display = 'none';
+        
+        // Comportamiento normal: abrir/cerrar dropdown
+        const isVisible = profileDropdown.style.display === 'block';
+        profileDropdown.style.display = isVisible ? 'none' : 'block';
+    });
 
     document.addEventListener('click', function(e) {
         if (profileBtn && !profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
@@ -276,13 +402,55 @@ function initializeProfileDropdown() {
         }
     });
 
-    // Hacemos defensivos los botones de adentro
-    if(verPerfilBtn) {
-        verPerfilBtn.addEventListener('click', function() {
-            profileDropdown.style.display = 'none';
-            showAlert('Funcionalidad de ver perfil en desarrollo', 'info');
-        });
-    }
+    // Hacemos defensivos los botones de adentro
+    if(verPerfilBtn) {
+        verPerfilBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            profileDropdown.style.display = 'none';
+            // Obtener el userId del usuario logueado
+            const userId = localStorage.getItem('userId');
+            if (userId) {
+                // Obtener el userId actual de la URL si estamos en profile.html
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentUserId = urlParams.get('userId');
+                
+                // Si ya estamos en el perfil del usuario logueado, no redirigir
+                const currentPath = window.location.pathname;
+                const currentFile = currentPath.split('/').pop();
+                
+                if (currentFile === 'profile.html' && currentUserId === userId) {
+                    console.log('Ya estamos en el perfil del usuario, no redirigiendo');
+                    return;
+                }
+                
+                // Redirigir a la página de perfil con el userId
+                // La ruta relativa depende de dónde estemos
+                let profilePath = '';
+                
+                // Determinar la ruta correcta según dónde estemos
+                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                    // Ya estamos en Pages/, solo necesitamos el nombre del archivo
+                    profilePath = 'profile.html';
+                } else if (currentPath.includes('/HTML/') || currentFile === 'home.html' || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
+                    // Estamos en HTML/, necesitamos ir a Pages/
+                    profilePath = 'Pages/profile.html';
+                } else {
+                    // Fallback: intentar detectar la estructura
+                    profilePath = '../Pages/profile.html';
+                }
+                
+                console.log('Navegando a perfil:', profilePath);
+                window.location.href = `${profilePath}?userId=${userId}`;
+            } else {
+                if (typeof showAlert === 'function') {
+                    showAlert('No se encontró información del usuario. Por favor, inicia sesión nuevamente.', 'error');
+                } else {
+                    alert('No se encontró información del usuario. Por favor, inicia sesión nuevamente.');
+                }
+            }
+        });
+    }
 
     if(ajustesBtn) {
         ajustesBtn.addEventListener('click', function() {
@@ -352,82 +520,201 @@ function initializeNavigation() {
 
     // Esta es la función 'handleNavigation' que estaba dentro de 'initializeNavigation'
     function handleNavigation(clickedBtn, desktopBtns, mobileBtns) {
-        desktopBtns.forEach(b => b.classList.remove('active'));
-        mobileBtns.forEach(b => b.classList.remove('active'));
-        
-        clickedBtn.classList.add('active');
-        
-        const page = clickedBtn.getAttribute('data-page');
-        desktopBtns.forEach(b => {
-            if (b.getAttribute('data-page') === page) b.classList.add('active');
-        });
-        mobileBtns.forEach(b => {
-            if (b.getAttribute('data-page') === page) b.classList.add('active');
-        });
-        
-        // Lógica de navegación (si la hubiera)
-        switch(page) {
-            case 'inicio':
-                // window.location.href = '/HTML/home.html'; // Si es necesario
-                break;
-            case 'rankings':
-                showAlert('Vista de Rankings en desarrollo', 'info');
-                break;
-            case 'amigos':
-                showAlert('Vista de Amigos en desarrollo', 'info');
-                break;
-        }
+        desktopBtns.forEach(b => b.classList.remove('active'));
+        mobileBtns.forEach(b => b.classList.remove('active'));
+        
+        clickedBtn.classList.add('active');
+        
+        const page = clickedBtn.getAttribute('data-page');
+        console.log('Navegación clickeada - página:', page, 'desde:', window.location.pathname);
+        
+        desktopBtns.forEach(b => {
+            if (b.getAttribute('data-page') === page) b.classList.add('active');
+        });
+        mobileBtns.forEach(b => {
+            if (b.getAttribute('data-page') === page) b.classList.add('active');
+        });
+        
+        // Lógica de navegación
+        switch(page) {
+            case 'inicio':
+                // Redirigir a home.html con ruta relativa correcta
+                const currentPath = window.location.pathname;
+                const currentHref = window.location.href;
+                const currentFile = currentPath.split('/').pop() || '';
+                let homePath = '';
+                
+                // Determinar la ruta correcta según dónde estemos
+                // Si estamos en Pages/ (profile, editProfile)
+                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                    homePath = '../home.html';
+                } 
+                // Si estamos en HTML/ o en cualquier página del nivel raíz (home, album, song, artist, rankings, amigos)
+                else if (currentPath.includes('/HTML/') || 
+                         currentFile === 'home.html' || 
+                         currentFile === 'album.html' || 
+                         currentFile === 'song.html' || 
+                         currentFile === 'artist.html' || 
+                         currentFile === 'rankings.html' || 
+                         currentFile === 'amigos.html' ||
+                         currentHref.includes('rankings.html') ||
+                         currentHref.includes('home.html') ||
+                         currentHref.includes('album.html') ||
+                         currentHref.includes('song.html') ||
+                         currentHref.includes('artist.html')) {
+                    homePath = 'home.html';
+                } 
+                // Fallback: asumir que estamos en el mismo directorio
+                else {
+                    homePath = 'home.html';
+                }
+                
+                // Solo redirigir si no estamos ya en home
+                if (!currentPath.includes('home.html') && currentFile !== 'home.html' && !currentHref.includes('home.html')) {
+                    console.log('Navegando a inicio desde:', currentFile, '->', homePath);
+                    window.location.href = homePath;
+                } else {
+                    console.log('Ya estamos en home, no redirigiendo');
+                }
+                break;
+            case 'rankings':
+                // Redirigir a rankings.html con ruta relativa correcta
+                const rankingsCurrentPath = window.location.pathname;
+                const rankingsCurrentFile = window.location.pathname.split('/').pop();
+                let rankingsPath = '';
+                
+                // Determinar la ruta correcta según dónde estemos
+                if (rankingsCurrentPath.includes('/Pages/') || rankingsCurrentFile === 'profile.html' || rankingsCurrentFile === 'editProfile.html') {
+                    // Estamos en Pages/, necesitamos subir un nivel
+                    rankingsPath = '../rankings.html';
+                } else if (rankingsCurrentPath.includes('/HTML/') || rankingsCurrentFile === 'home.html' || rankingsCurrentFile === 'album.html' || rankingsCurrentFile === 'song.html' || rankingsCurrentFile === 'artist.html' || rankingsCurrentFile === 'amigos.html') {
+                    // Ya estamos en HTML/, solo necesitamos el nombre del archivo
+                    rankingsPath = 'rankings.html';
+                } else {
+                    // Fallback
+                    rankingsPath = 'rankings.html';
+                }
+                
+                // Solo redirigir si no estamos ya en rankings
+                if (!rankingsCurrentPath.includes('rankings.html') && rankingsCurrentFile !== 'rankings.html') {
+                    window.location.href = rankingsPath;
+                }
+                break;
+            case 'amigos':
+                // Redirigir a amigos.html con ruta relativa correcta
+                const amigosCurrentPath = window.location.pathname;
+                const amigosCurrentFile = window.location.pathname.split('/').pop();
+                let amigosPath = '';
+                
+                // Determinar la ruta correcta según dónde estemos
+                if (amigosCurrentPath.includes('/Pages/') || amigosCurrentFile === 'profile.html' || amigosCurrentFile === 'editProfile.html') {
+                    // Estamos en Pages/, necesitamos subir un nivel
+                    amigosPath = '../amigos.html';
+                } else if (amigosCurrentPath.includes('/HTML/') || amigosCurrentFile === 'home.html' || amigosCurrentFile === 'album.html' || amigosCurrentFile === 'song.html' || amigosCurrentFile === 'artist.html' || amigosCurrentFile === 'rankings.html') {
+                    // Ya estamos en HTML/, solo necesitamos el nombre del archivo
+                    amigosPath = 'amigos.html';
+                } else {
+                    // Fallback
+                    amigosPath = 'amigos.html';
+                }
+                
+                // Solo redirigir si no estamos ya en amigos
+                if (!amigosCurrentPath.includes('amigos.html') && amigosCurrentFile !== 'amigos.html') {
+                    window.location.href = amigosPath;
+                }
+                break;
+        }
     }
 }
 
 function loadUserData() {
-    const authToken = localStorage.getItem('authToken');
-    const username = localStorage.getItem('username');
-    const usernameDisplay = document.getElementById('usernameDisplay');
-    const loginContainer = document.getElementById('loginContainer');
-    const profileContainer = document.getElementById('profileContainer');
-    const notificationsContainer = document.getElementById('notificationsContainer');
-    const addReviewContainer = document.getElementById('addReviewContainer');
-    const loginBtn = document.getElementById('loginBtn');
-    
-    if (!authToken) {
-        if (loginContainer) loginContainer.style.display = 'flex';
-        if (profileContainer) profileContainer.style.display = 'none';
-        if (notificationsContainer) notificationsContainer.style.display = 'none';
-        if (addReviewContainer) addReviewContainer.style.display = 'none';
-        
-        if (loginBtn) {
-            loginBtn.addEventListener('click', function() {
-                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
-            });
-        }
-    } else {
-        if (loginContainer) loginContainer.style.display = 'none';
-        if (profileContainer) profileContainer.style.display = 'block';
-        if (notificationsContainer) notificationsContainer.style.display = 'block';
-        if (addReviewContainer) addReviewContainer.style.display = 'block';
-    
-        if (username && usernameDisplay) {
-            usernameDisplay.textContent = username;
-        } else if (usernameDisplay) {
-            usernameDisplay.textContent = 'Usuario';
-        }
-        
-        loadNotifications();
-        startNotificationPolling();
-        
-        if (typeof signalR !== 'undefined' && signalR) {
-            initializeSignalR();
-        } else {
-            setTimeout(() => {
-                if (typeof signalR !== 'undefined' && signalR) {
-                    initializeSignalR();
-                } else {
-                    console.warn('SignalR no está disponible. Notificaciones en tiempo real no funcionarán.');
-                }
-            }, 500);
-        }
-    }
+    const authToken = localStorage.getItem('authToken');
+    const username = localStorage.getItem('username');
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    const loginContainer = document.getElementById('loginContainer');
+    const profileContainer = document.getElementById('profileContainer');
+    const notificationsContainer = document.getElementById('notificationsContainer');
+    const addReviewContainer = document.getElementById('addReviewContainer');
+    const addReviewBtn = document.getElementById('addReviewBtn');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    if (!authToken) {
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (profileContainer) profileContainer.style.display = 'none';
+        if (notificationsContainer) notificationsContainer.style.display = 'none';
+        if (addReviewContainer) addReviewContainer.style.display = 'none';
+        
+        if (loginBtn) {
+            loginBtn.addEventListener('click', function() {
+                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
+            });
+        }
+    } else {
+        if (loginContainer) loginContainer.style.display = 'none';
+        if (profileContainer) profileContainer.style.display = 'block';
+        if (notificationsContainer) notificationsContainer.style.display = 'block';
+        if (addReviewContainer) addReviewContainer.style.display = 'block';
+    
+        if (username && usernameDisplay) {
+            usernameDisplay.textContent = username;
+        } else if (usernameDisplay) {
+            usernameDisplay.textContent = 'Usuario';
+        }
+        
+        // Configurar el botón de agregar reseña
+        if (addReviewBtn) {
+            // Remover listeners anteriores si existen
+            const newAddReviewBtn = addReviewBtn.cloneNode(true);
+            addReviewBtn.parentNode.replaceChild(newAddReviewBtn, addReviewBtn);
+            
+            newAddReviewBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Intentar usar la función showCreateReviewModal si está disponible (desde homeAdmin o profileHandler)
+                if (typeof window.showCreateReviewModal === 'function') {
+                    window.showCreateReviewModal();
+                } else {
+                    // Si no está disponible, buscar el modal directamente
+                    const modal = document.getElementById('createReviewModalOverlay');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                    } else {
+                        console.warn('Modal de crear reseña no encontrado. Redirigiendo a home...');
+                        // Fallback: redirigir a home si no hay modal
+                        const currentPath = window.location.pathname;
+                        const currentFile = currentPath.split('/').pop();
+                        let homePath = '';
+                        
+                        if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                            homePath = '../home.html';
+                        } else if (currentPath.includes('/HTML/') || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
+                            homePath = 'home.html';
+                        } else {
+                            homePath = 'home.html';
+                        }
+                        
+                        window.location.href = homePath;
+                    }
+                }
+            });
+        }
+        
+        loadNotifications();
+        startNotificationPolling();
+        
+        if (typeof signalR !== 'undefined' && signalR) {
+            initializeSignalR();
+        } else {
+            setTimeout(() => {
+                if (typeof signalR !== 'undefined' && signalR) {
+                    initializeSignalR();
+                } else {
+                    console.warn('SignalR no está disponible. Notificaciones en tiempo real no funcionarán.');
+                }
+            }, 500);
+        }
+    }
 }
 
 function initializeLogoutModal() {
@@ -524,22 +811,22 @@ function renderNotifications() {
     
     const sortedNotifications = [...notifications].sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    notificationsList.innerHTML = sortedNotifications.map(notification => {
-        const icon = getNotificationIcon(notification.type);
-        const text = getNotificationText(notification);
-        const time = formatNotificationTime(notification.date);
-        return `
-            <div class="notification-item">
-                <div class="notification-icon">
-                    <i class="${icon}"></i>
-                </div>
-                <div class="notification-content">
-                    <p class="notification-text">${text}</p>
-                    <span class="notification-time">${time}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
+    notificationsList.innerHTML = sortedNotifications.map(notification => {
+        const icon = getNotificationIcon(notification.type);
+        const text = getNotificationText(notification);
+        const time = formatNotificationTime(notification.date);
+        return `
+            <div class="notification-item">
+                <div class="notification-icon">
+                    <i class="${icon}"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-text">${text}</div>
+                    <div class="notification-time">${time}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function addNotification(notification) {
@@ -602,19 +889,19 @@ function getNotificationText(notification) {
 }
 
 export function formatNotificationTime(dateString) {
-    if (!dateString) return 'Ahora';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Ahora';
-    if (diffMins < 60) return `Hace ${diffMins} min`;
-    if (diffHours < 24) return `Hace ${diffHours} h`;
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    if (!dateString) return 'Ahora';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    if (diffHours < 24) return `Hace ${diffHours} h`;
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }
 
 
@@ -894,9 +1181,9 @@ function stopNotificationPolling() {
 
 // --- 8. MODALS Y UTILIDADES COMPARTIDAS ---
 
-// (Esta función es llamada por otros módulos, así que la exportamos)
+// (Esta función es llamada por otros módulos, así que la exportamos y la hacemos global)
 export function showAlert(message, type) {
-    const existingAlerts = document.querySelectorAll('.custom-alert');
+    const existingAlerts = document.querySelectorAll('.custom-alert');
     existingAlerts.forEach(alert => alert.remove());
 
     const alertDiv = document.createElement('div');
@@ -934,10 +1221,10 @@ export function showLoginRequiredModal() {
 }
 
 function hideLoginRequiredModal() {
-    const modalOverlay = document.getElementById('loginRequiredModalOverlay');
-    if (modalOverlay) {
-        modalOverlay.style.display = 'none';
-  t   }
+    const modalOverlay = document.getElementById('loginRequiredModalOverlay');
+    if (modalOverlay) {
+        modalOverlay.style.display = 'none';
+    }
 }
 
 // CORREGIDO: Eliminada la duplicación

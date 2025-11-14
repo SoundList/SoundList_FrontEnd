@@ -1,4 +1,10 @@
 import { initializeHeader } from './Handlers/headerHandler.js';
+import { API_BASE_URL } from './APIs/configApi.js';
+
+// Configurar API_BASE_URL globalmente
+if (typeof window !== 'undefined') {
+    window.API_BASE_URL = API_BASE_URL;
+}
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,5 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
         import('./Pages/songAdmin.js') // CORREGIDO: songAdmin.js
             .then(module => module.initializeSongPage())
             .catch(err => console.error('Error al cargar songAdmin.js:', err));
+    
+    } else if (path.endsWith('/amigos.html')) {
+        import('./Pages/amigos.js')
+            .then(module => {
+                if (module.initializeAmigosPage) {
+                    module.initializeAmigosPage();
+                } else {
+                    // Si no tiene función de inicialización exportada, ejecutar directamente
+                    console.log('Cargando página de amigos...');
+                }
+            })
+            .catch(err => console.error('Error al cargar amigos.js:', err));
     }
 });

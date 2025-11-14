@@ -38,6 +38,7 @@ export function initializeHeader() {
         initializeLogoutModal();
         initializeLoginRequiredModal();
         initializeNotificationsDropdown();
+        initializeHeaderLogoutButton();
         
         // Hacer showAlert disponible globalmente
         if (typeof window !== 'undefined' && typeof showAlert === 'function') {
@@ -726,16 +727,10 @@ function initializeLogoutModal() {
     const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
     const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
         
-    if (confirmLogoutBtn) {
+    if (confirmLogoutBtn) {
         confirmLogoutBtn.addEventListener('click', function() {
-                stopNotificationPolling();
-                userReviewsState = {};
-                notifications = [];
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('username');
-                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
-            });
+            performLogout();
+        });
     }
         
     if (cancelLogoutBtn) {
@@ -752,14 +747,83 @@ function initializeLogoutModal() {
 }
 
 function showLogoutModal() {
-    const logoutModalOverlay = document.getElementById('logoutModalOverlay');
-    const logoutModalTitle = document.getElementById('logoutModalTitle');
-    
+    const logoutModalOverlay = document.getElementById('logoutModalOverlay');
+    const logoutModalTitle = document.getElementById('logoutModalTitle');
+    
     if (!logoutModalOverlay || !logoutModalTitle) return;
 
-    const username = localStorage.getItem('username') || 'Usuario';
-    logoutModalTitle.textContent = `¿Salir de ${username}?`;
-    logoutModalOverlay.style.display = 'flex';
+    const username = localStorage.getItem('username') || 'Usuario';
+    logoutModalTitle.textContent = `¿Salir de ${username}?`;
+    logoutModalOverlay.style.display = 'flex';
+}
+
+function initializeHeaderLogoutButton() {
+    const logoutButton = document.getElementById('logoutButton');
+    
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Mostrar el modal de confirmación si existe, sino hacer logout directo
+            const logoutModalOverlay = document.getElementById('logoutModalOverlay');
+            if (logoutModalOverlay) {
+                showLogoutModal();
+            } else {
+                // Si no hay modal, hacer logout directo
+                performLogout();
+            }
+        });
+    }
+}
+
+function performLogout() {
+    stopNotificationPolling();
+    userReviewsState = {};
+    notifications = [];
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userAvatar');
+    
+    // Determinar la ruta correcta a login.html según dónde estemos
+    const currentPath = window.location.pathname;
+    const pathParts = currentPath.split('/').filter(p => p);
+    let loginPath = '';
+    
+    // Si estamos en Pages/ (profile, editProfile) - necesitamos subir un nivel para llegar a HTML/
+    if (currentPath.includes('/Pages/')) {
+        // Encontrar el índice de 'HTML' en el path
+        const htmlIndex = pathParts.indexOf('HTML');
+        if (htmlIndex !== -1) {
+            // Construir ruta absoluta: /SoundList_FrontEnd/Frontend/HTML/login.html
+            const baseParts = pathParts.slice(0, htmlIndex + 1);
+            loginPath = '/' + baseParts.join('/') + '/login.html';
+        } else {
+            // Fallback: ruta relativa
+            loginPath = '../login.html';
+        }
+    } 
+    // Si estamos en HTML/ (home, album, song, artist, rankings, amigos, login, register)
+    else if (currentPath.includes('/HTML/') && !currentPath.includes('/Pages/')) {
+        // Ya estamos en HTML/, login.html está en el mismo directorio
+        loginPath = 'login.html';
+    }
+    // Fallback: intentar construir ruta absoluta si contiene SoundList_FrontEnd
+    else if (currentPath.includes('SoundList_FrontEnd')) {
+        const htmlIndex = pathParts.indexOf('HTML');
+        if (htmlIndex !== -1) {
+            const baseParts = pathParts.slice(0, htmlIndex + 1);
+            loginPath = '/' + baseParts.join('/') + '/login.html';
+        } else {
+            loginPath = 'login.html';
+        }
+    }
+    // Fallback final: usar ruta relativa simple
+    else {
+        loginPath = 'login.html';
+    }
+    
+    console.log('Cerrando sesión y redirigiendo a:', loginPath, '(desde:', currentPath, ')');
+    window.location.href = loginPath;
 }
 
 // --- 6. SECCIÓN DE NOTIFICACIONES ---

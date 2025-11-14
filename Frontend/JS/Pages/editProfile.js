@@ -39,12 +39,14 @@ async function loadCurrentProfileData() {
         
         const descTextarea = document.getElementById('current-description');
         if (descTextarea) {
-            descTextarea.value = profile.userQuote || profile.quote || "Sin frase personal";
+            // El backend devuelve Bio (con mayúscula)
+            descTextarea.value = profile.Bio || profile.bio || profile.userQuote || profile.quote || "Sin frase personal";
         }
 
         const avatarPreview = document.getElementById('avatar-preview');
         const imageUploadPreview = document.getElementById('image-upload-preview');
-        const avatarUrl = profile.avatar || defaultAvatar;
+        // El backend devuelve imgProfile (con minúscula)
+        const avatarUrl = profile.imgProfile || profile.Image || profile.image || profile.avatar || defaultAvatar;
 
         if (avatarPreview) avatarPreview.src = avatarUrl;
         if (imageUploadPreview) imageUploadPreview.src = avatarUrl;
@@ -79,7 +81,8 @@ async function handleDescriptionSubmit(e) {
     let isSuccess = false; 
 
     try {
-        const updateData = { userQuote: newQuote };
+        // El backend espera "Bio" (con mayúscula), no "userQuote"
+        const updateData = { Bio: newQuote };
         await window.userApi.updateUserProfile(currentUserId, updateData);
 
         (window.showAlert || alert)("Descripción actualizada exitosamente.", "success");
@@ -140,7 +143,8 @@ async function handleImageSubmit(e) {
         });
 
         const base64Image = reader.result; 
-        const updateData = { avatarUrl: base64Image };
+        // El backend espera imgProfile (con minúscula), no avatarUrl
+        const updateData = { imgProfile: base64Image };
         
         await window.userApi.updateUserProfile(currentUserId, updateData);
         
@@ -153,6 +157,9 @@ async function handleImageSubmit(e) {
         confirmBtn.classList.add('btn-success-feedback');
         (window.showAlert || alert)("Imagen de perfil actualizada.", "success");
         isSuccess = true; 
+        
+        // Recargar los datos del perfil para asegurar que todo esté actualizado
+        await loadCurrentProfileData();
         
         setTimeout(() => {
             confirmBtn.disabled = true; 

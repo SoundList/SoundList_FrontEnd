@@ -4,7 +4,6 @@
     const GATEWAY_BASE = "http://localhost:5000/api/gateway"; 
 
     const USER_GATEWAY_ROUTE = `${GATEWAY_BASE}/users`; 
-    const FOLLOW_GATEWAY_ROUTE = `${GATEWAY_BASE}/follows`; 
 
     // Interceptor para suprimir errores 404 de follows (endpoints pueden no existir aún)
     if (typeof axios !== 'undefined') {
@@ -17,9 +16,9 @@
                     error.response && 
                     error.response.status === 404 &&
                     error.config.url && 
-                    (error.config.url.includes('/follows/') && 
-                     (error.config.url.includes('/followers/count') || 
-                      error.config.url.includes('/followings/count')))) {
+                    (error.config.url.includes('/follow/count') || 
+                     error.config.url.includes('/followers') ||
+                     error.config.url.includes('/follow/status'))) {
                     // Retornar una respuesta simulada en lugar de lanzar error
                     return Promise.resolve({
                         status: 404,
@@ -63,9 +62,10 @@
     }
 
     // --- FOLLOWS ---
-    async function getFollowerList() {
+    async function getFollowerList(userId) {
         try {
-            const response = await axios.get(`${FOLLOW_GATEWAY_ROUTE}/followers`, getAuthHeaders());
+            // Endpoint: /api/gateway/users/{userId}/followers
+            const response = await axios.get(`${USER_GATEWAY_ROUTE}/${userId}/followers`, getAuthHeaders());
             return response.data;
         } catch (error) {
             console.error("❌ Error en getFollowerList:", error.response?.data || error.message);
@@ -127,7 +127,8 @@
         const payload = { followerId: currentUserId, followingId: userIdToFollow };
 
         try {
-            const response = await axios.post(FOLLOW_GATEWAY_ROUTE, payload, getAuthHeaders());
+            // Endpoint: POST /api/gateway/users/follow
+            const response = await axios.post(`${USER_GATEWAY_ROUTE}/follow`, payload, getAuthHeaders());
             return response.data;
         } catch (error) {
             console.error("❌ Error en followUser:", error.response?.data || error.message);
@@ -140,7 +141,8 @@
         if (!currentUserId) throw new Error("Usuario no logueado");
 
         try {
-            await axios.delete(`${FOLLOW_GATEWAY_ROUTE}/${currentUserId}/${userIdToUnfollow}`, getAuthHeaders());
+            // Endpoint: DELETE /api/gateway/users/{followerId}/unfollow/{followingId}
+            await axios.delete(`${USER_GATEWAY_ROUTE}/${currentUserId}/unfollow/${userIdToUnfollow}`, getAuthHeaders());
             return true;
         } catch (error) {
             console.error("❌ Error en unfollowUser:", error.response?.data || error.message);
@@ -153,14 +155,25 @@
         if (!currentUserId) return false;
 
         try {
-            const response = await axios.get(`${FOLLOW_GATEWAY_ROUTE}/status`, {
-                ...getAuthHeaders(),
-                params: { followerId: currentUserId, followingId: userIdToCheck }
-            });
-            return response.data;
+            // Endpoint: GET /api/gateway/users/{followerId}/follow/status
+            // El backend espera un body con FollowRequest, pero el API Gateway puede manejarlo
+            // Intentamos primero con POST ya que el backend usa [FromBody]
+            const payload = { followerId: currentUserId, followingId: userIdToCheck };
+            const response = await axios.post(`${USER_GATEWAY_ROUTE}/${currentUserId}/follow/status`, payload, getAuthHeaders());
+            // El backend devuelve { IsFollowing: boolean }
+            return response.data?.IsFollowing || response.data?.isFollowing || false;
         } catch (error) {
-            console.error("❌ Error en checkFollowStatus:", error.response?.data || error.message);
-            return false;
+            // Si falla, intentamos con GET (por si el API Gateway lo maneja diferente)
+            try {
+                const response = await axios.get(`${USER_GATEWAY_ROUTE}/${currentUserId}/follow/status`, {
+                    ...getAuthHeaders(),
+                    params: { followerId: currentUserId, followingId: userIdToCheck }
+                });
+                return response.data?.IsFollowing || response.data?.isFollowing || false;
+            } catch (getError) {
+                console.error("❌ Error en checkFollowStatus:", getError.response?.data || getError.message);
+                return false;
+            }
         }
     }
 

@@ -777,15 +777,15 @@ async function deleteReviewLogic(reviewId) {
                         }
                     }
                     
-                    // Verificar si quedan reseñas en "Reseñas Destacadas"
-                    const featuredContainer = document.getElementById("featured-reviews");
+                    // Verificar si quedan reseñas en "Reseñas Destacadas" (mejores reseñas)
+                    const featuredContainer = document.getElementById("featured-reviews-list-best");
                     if (featuredContainer) {
                         const featuredReviewItem = featuredContainer.querySelector(`.review-item[data-review-id="${reviewId}"]`);
                         if (featuredReviewItem) {
                             featuredReviewItem.remove();
                             const remainingFeatured = featuredContainer.querySelectorAll('.review-item');
                             if (remainingFeatured.length === 0) {
-                                featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas de este usuario.</p>";
+                                featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas.</p>";
                             }
                         }
                     }
@@ -802,9 +802,9 @@ async function deleteReviewLogic(reviewId) {
                 alert('✅ Reseña eliminada exitosamente');
             }
         
-            // Solo recargar si realmente se eliminó en el backend (no fue 409)
-            // Si fue 409, ya eliminamos del DOM manualmente arriba
-            if (profileUserId && !was409Error) {
+            // Recargar el perfil completo para actualizar todas las secciones (recientes y mejores)
+            // Esto asegura que las "mejores reseñas" se actualicen correctamente
+            if (profileUserId) {
                 await loadUserProfile(profileUserId);
             }
         }

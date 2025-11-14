@@ -1,0 +1,571 @@
+/* Amigos Page Styles - Based on home.css with additions */
+/* Note: This file includes only the styles specific to amigos page */
+/* The header and common styles should be shared from home.css or included separately */
+
+/* Override container class name */
+.amigos-container {
+    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
+    min-height: 100vh;
+    padding-bottom: 2rem;
+}
+
+/* User Search Section */
+.user-search-section {
+    padding: 2rem 0;
+    margin-top: 2rem;
+}
+
+.user-search-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.section-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.section-title i {
+    color: var(--magenta, #EC4899);
+    font-size: 1.25rem;
+}
+
+.user-search-box {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.user-search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    padding: 1rem 3rem 1rem 3.5rem;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: 'Arimo', sans-serif;
+}
+
+.user-search-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 0 0.2rem rgba(124, 58, 237, 0.3);
+}
+
+.user-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.user-search-icon {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+.user-search-clear {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.3s ease;
+    font-size: 1rem;
+}
+
+.user-search-clear:hover {
+    color: #fff;
+}
+
+.user-search-results {
+    margin-top: 1.5rem;
+    background: rgba(13, 17, 32, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.user-result-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-result-item:hover {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: rgba(124, 58, 237, 0.4);
+    transform: translateX(5px);
+}
+
+.user-result-item:last-child {
+    margin-bottom: 0;
+}
+
+.user-result-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.user-result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-result-username {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.user-result-bio {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-result-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.follow-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    font-family: 'Arimo', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.follow-btn.follow {
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    color: #fff;
+    border: 1px solid rgba(124, 58, 237, 0.5);
+}
+
+.follow-btn.follow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    background: linear-gradient(135deg, #8B4AED 0%, #FC5AA9 100%);
+}
+
+.follow-btn.following {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.follow-btn.following:hover {
+    background: rgba(255, 77, 106, 0.2);
+    border-color: rgba(255, 77, 106, 0.4);
+    color: #FF4D6A;
+}
+
+.follow-btn:active {
+    transform: translateY(0);
+}
+
+.user-search-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.user-search-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.user-search-empty p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Reviews Filter Section */
+.reviews-filter-section {
+    padding: 2rem 0 1rem;
+}
+
+.reviews-filter-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.filter-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'Arimo', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    border-color: rgba(124, 58, 237, 0.5);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.filter-btn.active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+.filter-btn i {
+    font-size: 1rem;
+}
+
+/* Reviews List Section */
+.reviews-list-section {
+    padding: 2rem 0;
+}
+
+.reviews-list-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.reviews-empty {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.reviews-empty i {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+}
+
+.reviews-empty p {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+/* Review Item with Follow Button */
+.review-item {
+    background: rgba(13, 17, 32, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.review-item:hover {
+    background: rgba(13, 17, 32, 0.8);
+    border-color: rgba(124, 58, 237, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.review-user {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.review-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.review-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.review-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.review-username {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    font-family: 'League Spartan', sans-serif;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.review-username:hover {
+    color: var(--magenta, #EC4899);
+}
+
+.review-separator {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.875rem;
+}
+
+.review-content-type {
+    color: var(--amarillo, #FFD85E);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+}
+
+.review-song {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.review-artist {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.review-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0.75rem 0 0.5rem;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.review-comment {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0.5rem 0;
+    word-wrap: break-word;
+}
+
+.review-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.review-rating {
+    display: flex;
+    align-items: center;
+}
+
+.review-stars {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.star {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.star.full-star {
+    color: var(--amarillo, #FFD85E);
+}
+
+.star.half-star {
+    background: linear-gradient(90deg, var(--amarillo, #FFD85E) 50%, rgba(255, 255, 255, 0.3) 50%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.review-interactions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.review-follow-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    font-family: 'Arimo', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(124, 58, 237, 0.2);
+    color: #fff;
+    border: 1px solid rgba(124, 58, 237, 0.4);
+}
+
+.review-follow-btn:hover {
+    background: rgba(124, 58, 237, 0.3);
+    border-color: rgba(124, 58, 237, 0.6);
+    transform: translateY(-1px);
+}
+
+.review-follow-btn.following {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.review-follow-btn.following:hover {
+    background: rgba(255, 77, 106, 0.2);
+    border-color: rgba(255, 77, 106, 0.4);
+    color: #FF4D6A;
+}
+
+.review-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.review-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.review-btn.btn-like.liked {
+    color: var(--magenta, #EC4899);
+}
+
+.review-btn.btn-like.liked i {
+    color: var(--magenta, #EC4899);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .user-search-container,
+    .reviews-filter-container,
+    .reviews-list-container {
+        padding: 0 1rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+    }
+
+    .filter-buttons {
+        flex-direction: column;
+    }
+
+    .filter-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .user-result-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .user-result-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .review-item {
+        padding: 1rem;
+    }
+
+    .review-header {
+        font-size: 0.85rem;
+    }
+
+    .review-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .review-interactions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+

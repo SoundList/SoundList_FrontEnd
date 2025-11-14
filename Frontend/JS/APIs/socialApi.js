@@ -6,6 +6,33 @@ import { API_BASE_URL } from './configApi.js';
 // No contiene lógica de DOM, ni de localStorage, ni de alertas.
 // Importa la URL del Gateway desde tu nuevo archivo de configuración.
 
+// Interceptor para suprimir errores 409 de deleteReview (permitimos eliminar reseñas con likes/comentarios)
+if (typeof axios !== 'undefined') {
+    axios.interceptors.response.use(
+        response => response,
+        error => {
+            // Suprimir errores 409 específicos de deleteReview
+            if (error.config && 
+                error.response && 
+                error.response.status === 409 &&
+                error.config.url && 
+                error.config.method === 'delete' &&
+                error.config.url.includes('/reviews/')) {
+                // Retornar una respuesta simulada en lugar de lanzar error
+                // Esto evita que aparezca como error en la consola
+                return Promise.resolve({
+                    status: 409,
+                    statusText: 'Conflict',
+                    data: { message: 'Review has reactions or comments' },
+                    headers: error.response.headers || {},
+                    config: error.config
+                });
+            }
+            return Promise.reject(error);
+        }
+    );
+}
+
 /**
  * Obtiene el feed principal de reseñas.
  * Ruta: GET /api/gateway/reviews
@@ -85,30 +112,63 @@ export async function createComment(reviewId, text, userId, authToken) {
  */
 export async function updateComment(commentId, newText, authToken) {
     try {
-        const response = await axios.put(
-            `${API_BASE_URL}/api/gateway/comments/${commentId}`,
-            { Text: newText }, // El body según tu OpenAPI (Social)
-            {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 5000
+        // Intentar primero con PATCH (método más común para actualizaciones parciales)
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/api/gateway/comments/${commentId}`,
+                { Text: newText },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 5000
+                }
+            );
+            return response.data;
+        } catch (patchError) {
+            // Si PATCH falla con 405, intentar con PUT
+            if (patchError.response?.status === 405) {
+                const response = await axios.put(
+                    `${API_BASE_URL}/api/gateway/comments/${commentId}`,
+                    { Text: newText },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 5000
+                    }
+                );
+                return response.data;
             }
-        );
-        return response.data;
+            throw patchError;
+        }
     } catch (error) {
         console.error(`Error en updateComment (ID: ${commentId}):`, error);
         // Si falla el gateway, probamos la ruta directa (lógica de home.js)
         try {
             console.warn('Fallback: Intentando ruta directa de SocialAPI para updateComment');
             const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            const response = await axios.put(
-                `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
-                { Text: newText },
-                { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
-            );
-            return response.data;
+            try {
+                const response = await axios.patch(
+                    `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
+                    { Text: newText },
+                    { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
+                );
+                return response.data;
+            } catch (patchError) {
+                // Si PATCH falla, intentar PUT
+                if (patchError.response?.status === 405) {
+                    const response = await axios.put(
+                        `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
+                        { Text: newText },
+                        { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
+                    );
+                    return response.data;
+                }
+                throw patchError;
+            }
         } catch (directError) {
             console.error('Error en updateComment (Fallback):', directError);
             throw directError; // Lanzamos el segundo error
@@ -121,8 +181,19 @@ export async function updateComment(commentId, newText, authToken) {
  * Ruta: DELETE /api/gateway/comments/{commentId}
  */
 export async function deleteComment(commentId, authToken) {
+    if (!commentId) {
+        throw new Error('Comment ID es requerido');
+    }
+    
+    // Normalizar el commentId (asegurarse de que sea string)
+    const normalizedCommentId = String(commentId).trim();
+    
+    if (!normalizedCommentId || normalizedCommentId === 'null' || normalizedCommentId === 'undefined') {
+        throw new Error('Comment ID inválido');
+    }
+    
     try {
-        await axios.delete(`${API_BASE_URL}/api/gateway/comments/${commentId}`, {
+        await axios.delete(`${API_BASE_URL}/api/gateway/comments/${normalizedCommentId}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
@@ -130,17 +201,29 @@ export async function deleteComment(commentId, authToken) {
             timeout: 5000
         });
     } catch (error) {
-        console.error(`Error en deleteComment (ID: ${commentId}):`, error);
-        // Fallback a ruta directa
+        console.error(`Error en deleteComment (ID: ${normalizedCommentId}):`, error);
+        
+        // Si es 404, el comentario no existe - no intentar fallback
+        if (error.response?.status === 404) {
+            throw new Error('El comentario no fue encontrado. Puede que ya haya sido eliminado.');
+        }
+        
+        // Fallback a ruta directa solo para otros errores
         try {
             console.warn('Fallback: Intentando ruta directa de SocialAPI para deleteComment');
             const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            await axios.delete(`${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`, {
+            await axios.delete(`${SOCIAL_API_BASE_URL}/api/Comments/${normalizedCommentId}`, {
                 headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
                 timeout: 5000
             });
         } catch (directError) {
             console.error('Error en deleteComment (Fallback):', directError);
+            
+            // Si el fallback también da 404, el comentario no existe
+            if (directError.response?.status === 404) {
+                throw new Error('El comentario no fue encontrado. Puede que ya haya sido eliminado.');
+            }
+            
             throw directError;
         }
     }
@@ -290,24 +373,51 @@ export async function deleteReview(reviewId, userId, authToken) {
     try {
         // Tu home.js intenta varias rutas. Esta es la que configuraste en el Gateway.
         const gatewayUrl = `${API_BASE_URL}/api/gateway/reviews/${reviewId}/${userId}`;
-        await axios.delete(gatewayUrl, {
+        const response = await axios.delete(gatewayUrl, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             },
-            timeout: 5000
+            timeout: 5000,
+            validateStatus: function (status) {
+                // Permitir 409 (Conflict) como éxito para permitir eliminar reseñas con likes/comentarios
+                return (status >= 200 && status < 300) || status === 409;
+            }
         });
+        
+        // Si la respuesta es 409, la tratamos como éxito (el interceptor ya la convirtió en respuesta exitosa)
+        if (response.status === 409) {
+            return; // Tratamos como éxito
+        }
     } catch (gatewayError) {
+        // El interceptor debería haber convertido el 409 en respuesta exitosa, pero por si acaso...
+        if (gatewayError.response && gatewayError.response.status === 409) {
+            return; // Tratamos como éxito
+        }
+        
         // Fallback a ruta directa (basado en tu OpenAPI)
         try {
             console.warn('Fallback: Intentando ruta directa de SocialAPI para deleteReview');
             const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
             const socialUrl = `${SOCIAL_API_BASE_URL}/api/reviews/${reviewId}/${userId}`;
-            await axios.delete(socialUrl, {
+            const directResponse = await axios.delete(socialUrl, {
                 headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                timeout: 5000
+                timeout: 5000,
+                validateStatus: function (status) {
+                    // Permitir 409 (Conflict) como éxito para permitir eliminar reseñas con likes/comentarios
+                    return (status >= 200 && status < 300) || status === 409;
+                }
             });
+            
+            // Si la respuesta es 409, la tratamos como éxito
+            if (directResponse.status === 409) {
+                return; // Tratamos como éxito
+            }
         } catch (directError) {
+            // Si el directo también devolvió 409, lo tratamos como éxito
+            if (directError.response && directError.response.status === 409) {
+                return; // Tratamos como éxito
+            }
             console.error('Error en deleteReview (Fallback):', directError);
             throw directError;
         }

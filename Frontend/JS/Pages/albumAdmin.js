@@ -62,13 +62,19 @@ async function loadPageData() {
     const loadingEl = document.getElementById('loadingSpinner');
     const contentEl = document.getElementById('albumContent');
     
-    try {
-        // 1. Obtener el ID de la URL
-        const params = new URLSearchParams(window.location.search);
-        const apiAlbumId = params.get('id'); 
-        if (!apiAlbumId) {
-            throw new Error("No se proporcionó un ID de álbum en la URL.");
-        }
+    try {
+        // 1. Obtener el ID de la URL
+        const params = new URLSearchParams(window.location.search);
+        const apiAlbumId = params.get('id'); 
+        
+        // Validación más estricta del ID
+        if (!apiAlbumId || apiAlbumId.trim() === '' || 
+            apiAlbumId === 'undefined' || apiAlbumId === 'null' ||
+            apiAlbumId.toLowerCase() === 'album' || apiAlbumId.toLowerCase() === 'artist' || apiAlbumId.toLowerCase() === 'song') {
+            throw new Error("ID de álbum inválido en la URL. Por favor, busca el álbum nuevamente.");
+        }
+        
+        console.log(`Cargando álbum con ID: ${apiAlbumId}`);
 
         // 2. Mostrar Spinner
         contentEl.style.display = 'none';

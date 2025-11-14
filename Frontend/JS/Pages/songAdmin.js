@@ -62,7 +62,15 @@ async function loadPageData() {
     try {
         const params = new URLSearchParams(window.location.search);
         const apiSongId = params.get('id'); // ID de Spotify
-        if (!apiSongId) throw new Error("No se proporcionó un ID de canción.");
+        
+        // Validación más estricta del ID
+        if (!apiSongId || apiSongId.trim() === '' || 
+            apiSongId === 'undefined' || apiSongId === 'null' ||
+            apiSongId.toLowerCase() === 'album' || apiSongId.toLowerCase() === 'artist' || apiSongId.toLowerCase() === 'song') {
+            throw new Error("ID de canción inválido en la URL. Por favor, busca la canción nuevamente.");
+        }
+        
+        console.log(`Cargando canción con ID: ${apiSongId}`);
 
         contentEl.style.display = 'none';
         loadingEl.style.display = 'block';

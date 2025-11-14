@@ -719,7 +719,7 @@ function initializeCarousel() {
                         artist: 'The Weeknd',
                         avgRating: 4.8,
                         totalReviews: 1250,
-                        albumImage: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=Blinding+Lights',
+                        albumImage: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('Blinding Lights')}`,
                         artistImage: null
                     }
                 },
@@ -730,7 +730,7 @@ function initializeCarousel() {
                         artist: 'Harry Styles',
                         totalComments: 342,
                         totalReviews: 89,
-                        albumImage: 'https://via.placeholder.com/300x300/3B82F6/ffffff?text=Watermelon+Sugar',
+                        albumImage: `https://dummyimage.com/300x300/3B82F6/ffffff&text=${encodeURIComponent('Watermelon Sugar')}`,
                         artistImage: null
                     }
                 },
@@ -739,7 +739,7 @@ function initializeCarousel() {
                         name: 'Levitating',
                         artist: 'Dua Lipa',
                         score: 95.5,
-                        albumImage: 'https://via.placeholder.com/300x300/EC4899/ffffff?text=Levitating',
+                        albumImage: `https://dummyimage.com/300x300/EC4899/ffffff&text=${encodeURIComponent('Levitating')}`,
                         artistImage: null
                     }
                 },
@@ -748,7 +748,7 @@ function initializeCarousel() {
                         name: 'Good 4 U',
                         artist: 'Olivia Rodrigo',
                         score: 92.3,
-                        albumImage: 'https://via.placeholder.com/300x300/8B5CF6/ffffff?text=Good+4+U',
+                        albumImage: `https://dummyimage.com/300x300/8B5CF6/ffffff&text=${encodeURIComponent('Good 4 U')}`,
                         artistImage: null
                     }
                 },
@@ -758,7 +758,7 @@ function initializeCarousel() {
                         artist: 'Harry Styles',
                         growthRate: 45,
                         timeWindow: '48 horas',
-                        albumImage: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=As+It+Was',
+                        albumImage: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('As It Was')}`,
                         artistImage: null
                     }
                 }
@@ -901,27 +901,30 @@ function initializeCarousel() {
             }
 
             // Fallback: Generar imagen con el título de la categoría
-            // Usando un servicio de placeholder con gradiente y texto
+            // Usando un servicio de placeholder más confiable
             const colors = {
-                'lo-mas-recomendado': '7C3AED-EC4899', // Púrpura a rosa
-                'lo-mas-comentado': '3B82F6-8B5CF6',     // Azul a púrpura
-                'top-10-semana': 'EC4899-7C3AED',        // Rosa a púrpura
-                'top-50-mes': '8B5CF6-3B82F6',          // Púrpura a azul
-                'trending': '7C3AED-3B82F6'              // Púrpura a azul
+                'lo-mas-recomendado': '7C3AED', // Púrpura
+                'lo-mas-comentado': '3B82F6',     // Azul
+                'top-10-semana': 'EC4899',        // Rosa
+                'top-50-mes': '8B5CF6',          // Púrpura claro
+                'trending': '7C3AED'              // Púrpura
             };
 
-            const gradient = colors[categoryId] || '7C3AED-EC4899';
-            const titleShort = categoryTitle.replace(/\s+/g, '%20');
+            const color = colors[categoryId] || '7C3AED';
+            const titleShort = encodeURIComponent(categoryTitle.substring(0, 20)); // Limitar longitud
             
-            // Usar placeholder.com con gradiente y texto
-            return `https://via.placeholder.com/300x300/${gradient}/ffffff?text=${titleShort}`;
+            // Usar dummyimage.com que es más confiable
+            // Formato: https://dummyimage.com/300x300/color/ffffff&text=texto
+            return `https://dummyimage.com/300x300/${color}/ffffff&text=${titleShort}`;
         }
 
         // Create carousel items
         async function createCarouselItems() {
             console.log('🎠 Iniciando creación de items del carrusel...');
+            // Limpiar completamente el wrapper
             carouselWrapper.innerHTML = '';
             indicatorsContainer.innerHTML = '';
+            console.log('🧹 Carrusel limpiado, wrapper vacío:', carouselWrapper.innerHTML === '');
 
             // Cargar datos dinámicos
             try {
@@ -959,34 +962,63 @@ function initializeCarousel() {
                     const description = top.getDescription ? top.getDescription(data) : top.description;
                 
         // Obtener URL de imagen (híbrido: backend o fallback)
-        // Intentar obtener imagen real del contenido si está disponible
-        let imageUrl = getCarouselImageUrl(top.id, top.title, data);
+        // Prioridad: 1) imagen del topSong, 2) getCarouselImageUrl, 3) placeholder
+        let imageUrl = null;
         
-        // Si hay datos del topSong con imagen, usarla
+        // Si hay datos del topSong con imagen, usarla primero
         if (data && data.topSong) {
             const realImage = data.topSong.albumImage || data.topSong.artistImage || data.topSong.image || data.topSong.Image;
-            if (realImage && realImage !== '../Assets/default-avatar.png' && realImage !== null) {
+            if (realImage && realImage !== '../Assets/default-avatar.png' && realImage !== null && realImage !== 'null' && realImage.trim() !== '') {
                 imageUrl = realImage;
+                console.log(`✅ Usando imagen del topSong para ${top.id}:`, imageUrl);
+            } else {
+                console.log(`⚠️ topSong existe pero no tiene imagen válida para ${top.id}:`, realImage);
             }
+        } else {
+            console.log(`⚠️ No hay datos o topSong para ${top.id}`);
         }
+        
+        // Si no hay imagen del topSong, usar getCarouselImageUrl como fallback
+        if (!imageUrl) {
+            imageUrl = getCarouselImageUrl(top.id, top.title, data);
+            console.log(`🔄 Usando getCarouselImageUrl para ${top.id}:`, imageUrl);
+        }
+        
+        console.log(`🖼️ Imagen final para ${top.id}:`, imageUrl);
 
+        // Asegurar que siempre tengamos una URL válida
+        if (!imageUrl || imageUrl === 'null' || imageUrl === 'undefined') {
+            // Fallback final: usar dummyimage con el nombre de la categoría
+            const categoryName = encodeURIComponent(top.title.substring(0, 20));
+            imageUrl = `https://dummyimage.com/300x300/7C3AED/ffffff&text=${categoryName}`;
+            console.log(`🔧 Usando fallback final para ${top.id}:`, imageUrl);
+        }
+        
         // Create carousel item
         const item = document.createElement('div');
         item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
         item.setAttribute('data-top', top.id);
         item.style.cursor = 'pointer'; // Hacer clickeable
+        
+        // Escapar comillas simples para evitar problemas en el HTML
+        const safeImageUrl = imageUrl.replace(/'/g, "&#39;");
+        const safeTitle = top.title.replace(/'/g, "&#39;");
+        const safeDescription = (description || '').replace(/'/g, "&#39;");
+        const safeText = (top.text || '').replace(/'/g, "&#39;");
+        
         item.innerHTML = `
             <div class="carousel-card">
                 <div class="carousel-album-art">
-                    <img src="${imageUrl}" 
-                        alt="${top.title}" 
+                    <img src="${safeImageUrl}" 
+                        alt="${safeTitle}" 
                         class="album-image"
-                        onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300/7C3AED/ffffff?text='+encodeURIComponent('${top.title.replace(/'/g, "\\'")}')">
+                        style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
+                        onerror="console.error('Error cargando imagen:', this.src); this.onerror=null; this.src='https://dummyimage.com/300x300/7C3AED/ffffff&text='+encodeURIComponent('${safeTitle}'.substring(0, 20))">
                 </div>
                 <div class="carousel-content">
-                    <h3 class="carousel-title">${top.title}</h3>
-                    <p class="carousel-description">${description}</p>
-                    <p class="carousel-text">${top.text}</p>
+                    <h3 class="carousel-title">${safeTitle}</h3>
+                    <p class="carousel-description">${safeDescription}</p>
+                    <p class="carousel-text">${safeText}</p>
                 </div>
             </div>
         `;
@@ -1009,16 +1041,22 @@ function initializeCarousel() {
                 const firstContent = await loadCarouselContent(top.id, data);
                 if (firstContent && firstContent.length > 0) {
                     const firstImage = firstContent[0].image || firstContent[0].albumImage || firstContent[0].artistImage;
-                    if (firstImage && firstImage !== '../Assets/default-avatar.png') {
+                    if (firstImage && firstImage !== '../Assets/default-avatar.png' && firstImage !== null && firstImage !== 'null') {
                         // Actualizar la imagen del carrusel si encontramos una real
                         const carouselImage = item.querySelector('.album-image');
                         if (carouselImage) {
+                            console.log(`🔄 Actualizando imagen del carrusel para ${top.id} con:`, firstImage);
                             carouselImage.src = firstImage;
+                            carouselImage.onerror = function() {
+                                console.error(`❌ Error cargando imagen actualizada para ${top.id}:`, firstImage);
+                            };
+                        } else {
+                            console.warn(`⚠️ No se encontró .album-image para ${top.id}`);
                         }
                     }
                 }
             } catch (e) {
-                // Silenciar errores, usar imagen por defecto
+                console.debug(`Error obteniendo contenido para ${top.id}:`, e);
             }
         })();
 
@@ -1159,43 +1197,55 @@ function initializeCarousel() {
         });
     }
 
-// Función para generar contenido simulado del carrusel
+// Función para generar contenido simulado del carrusel con imágenes de usuarios
 function generateMockCarouselContent(categoryId) {
+    // URLs de imágenes de usuarios simulados (usando placeholder con avatares)
+    const userAvatars = [
+        'https://i.pravatar.cc/150?img=1',
+        'https://i.pravatar.cc/150?img=5',
+        'https://i.pravatar.cc/150?img=12',
+        'https://i.pravatar.cc/150?img=33',
+        'https://i.pravatar.cc/150?img=47',
+        'https://i.pravatar.cc/150?img=51',
+        'https://i.pravatar.cc/150?img=68',
+        'https://i.pravatar.cc/150?img=70'
+    ];
+    
     const mockContent = {
         'lo-mas-recomendado': [
-            { name: 'Blinding Lights', artist: 'The Weeknd', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=Blinding+Lights', avgRating: 4.8, totalReviews: 1250 },
-            { name: 'Levitating', artist: 'Dua Lipa', image: 'https://via.placeholder.com/300x300/EC4899/ffffff?text=Levitating', avgRating: 4.7, totalReviews: 980 },
-            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/3B82F6/ffffff?text=Watermelon+Sugar', avgRating: 4.6, totalReviews: 850 },
-            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: 'https://via.placeholder.com/300x300/8B5CF6/ffffff?text=Good+4+U', avgRating: 4.5, totalReviews: 720 },
-            { name: 'As It Was', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=As+It+Was', avgRating: 4.4, totalReviews: 650 }
+            { name: 'Blinding Lights', artist: 'The Weeknd', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('Blinding Lights')}`, avgRating: 4.8, totalReviews: 1250, userAvatar: userAvatars[0], username: 'musiclover23' },
+            { name: 'Levitating', artist: 'Dua Lipa', image: `https://dummyimage.com/300x300/EC4899/ffffff&text=${encodeURIComponent('Levitating')}`, avgRating: 4.7, totalReviews: 980, userAvatar: userAvatars[1], username: 'popfan99' },
+            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/3B82F6/ffffff&text=${encodeURIComponent('Watermelon Sugar')}`, avgRating: 4.6, totalReviews: 850, userAvatar: userAvatars[2], username: 'harryfan2024' },
+            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: `https://dummyimage.com/300x300/8B5CF6/ffffff&text=${encodeURIComponent('Good 4 U')}`, avgRating: 4.5, totalReviews: 720, userAvatar: userAvatars[3], username: 'olivia_stan' },
+            { name: 'As It Was', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('As It Was')}`, avgRating: 4.4, totalReviews: 650, userAvatar: userAvatars[4], username: 'stylesforever' }
         ],
         'lo-mas-comentado': [
-            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/3B82F6/ffffff?text=Watermelon+Sugar', totalComments: 342 },
-            { name: 'Blinding Lights', artist: 'The Weeknd', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=Blinding+Lights', totalComments: 298 },
-            { name: 'Levitating', artist: 'Dua Lipa', image: 'https://via.placeholder.com/300x300/EC4899/ffffff?text=Levitating', totalComments: 256 },
-            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: 'https://via.placeholder.com/300x300/8B5CF6/ffffff?text=Good+4+U', totalComments: 234 },
-            { name: 'As It Was', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=As+It+Was', totalComments: 198 }
+            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/3B82F6/ffffff&text=${encodeURIComponent('Watermelon Sugar')}`, totalComments: 342, userAvatar: userAvatars[0], username: 'musiclover23' },
+            { name: 'Blinding Lights', artist: 'The Weeknd', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('Blinding Lights')}`, totalComments: 298, userAvatar: userAvatars[1], username: 'popfan99' },
+            { name: 'Levitating', artist: 'Dua Lipa', image: `https://dummyimage.com/300x300/EC4899/ffffff&text=${encodeURIComponent('Levitating')}`, totalComments: 256, userAvatar: userAvatars[2], username: 'harryfan2024' },
+            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: `https://dummyimage.com/300x300/8B5CF6/ffffff&text=${encodeURIComponent('Good 4 U')}`, totalComments: 234, userAvatar: userAvatars[3], username: 'olivia_stan' },
+            { name: 'As It Was', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('As It Was')}`, totalComments: 198, userAvatar: userAvatars[4], username: 'stylesforever' }
         ],
         'top-10-semana': [
-            { name: 'Levitating', artist: 'Dua Lipa', image: 'https://via.placeholder.com/300x300/EC4899/ffffff?text=Levitating', score: 95.5 },
-            { name: 'Blinding Lights', artist: 'The Weeknd', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=Blinding+Lights', score: 94.2 },
-            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/3B82F6/ffffff?text=Watermelon+Sugar', score: 93.8 },
-            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: 'https://via.placeholder.com/300x300/8B5CF6/ffffff?text=Good+4+U', score: 92.5 },
-            { name: 'As It Was', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=As+It+Was', score: 91.3 }
+            { name: 'Levitating', artist: 'Dua Lipa', image: `https://dummyimage.com/300x300/EC4899/ffffff&text=${encodeURIComponent('Levitating')}`, score: 95.5, userAvatar: userAvatars[0], username: 'musiclover23' },
+            { name: 'Blinding Lights', artist: 'The Weeknd', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('Blinding Lights')}`, score: 94.2, userAvatar: userAvatars[1], username: 'popfan99' },
+            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/3B82F6/ffffff&text=${encodeURIComponent('Watermelon Sugar')}`, score: 93.8, userAvatar: userAvatars[2], username: 'harryfan2024' },
+            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: `https://dummyimage.com/300x300/8B5CF6/ffffff&text=${encodeURIComponent('Good 4 U')}`, score: 92.5, userAvatar: userAvatars[3], username: 'olivia_stan' },
+            { name: 'As It Was', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('As It Was')}`, score: 91.3, userAvatar: userAvatars[4], username: 'stylesforever' }
         ],
         'top-50-mes': [
-            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: 'https://via.placeholder.com/300x300/8B5CF6/ffffff?text=Good+4+U', score: 92.3 },
-            { name: 'Blinding Lights', artist: 'The Weeknd', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=Blinding+Lights', score: 91.8 },
-            { name: 'Levitating', artist: 'Dua Lipa', image: 'https://via.placeholder.com/300x300/EC4899/ffffff?text=Levitating', score: 90.5 },
-            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/3B82F6/ffffff?text=Watermelon+Sugar', score: 89.7 },
-            { name: 'As It Was', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=As+It+Was', score: 88.9 }
+            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: `https://dummyimage.com/300x300/8B5CF6/ffffff&text=${encodeURIComponent('Good 4 U')}`, score: 92.3, userAvatar: userAvatars[0], username: 'musiclover23' },
+            { name: 'Blinding Lights', artist: 'The Weeknd', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('Blinding Lights')}`, score: 91.8, userAvatar: userAvatars[1], username: 'popfan99' },
+            { name: 'Levitating', artist: 'Dua Lipa', image: `https://dummyimage.com/300x300/EC4899/ffffff&text=${encodeURIComponent('Levitating')}`, score: 90.5, userAvatar: userAvatars[2], username: 'harryfan2024' },
+            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/3B82F6/ffffff&text=${encodeURIComponent('Watermelon Sugar')}`, score: 89.7, userAvatar: userAvatars[3], username: 'olivia_stan' },
+            { name: 'As It Was', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('As It Was')}`, score: 88.9, userAvatar: userAvatars[4], username: 'stylesforever' }
         ],
         'trending': [
-            { name: 'As It Was', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=As+It+Was', growthRate: 45, timeWindow: '48 horas' },
-            { name: 'Levitating', artist: 'Dua Lipa', image: 'https://via.placeholder.com/300x300/EC4899/ffffff?text=Levitating', growthRate: 38, timeWindow: '48 horas' },
-            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: 'https://via.placeholder.com/300x300/8B5CF6/ffffff?text=Good+4+U', growthRate: 32, timeWindow: '48 horas' },
-            { name: 'Blinding Lights', artist: 'The Weeknd', image: 'https://via.placeholder.com/300x300/7C3AED/ffffff?text=Blinding+Lights', growthRate: 28, timeWindow: '48 horas' },
-            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: 'https://via.placeholder.com/300x300/3B82F6/ffffff?text=Watermelon+Sugar', growthRate: 25, timeWindow: '48 horas' }
+            { name: 'As It Was', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('As It Was')}`, growthRate: 45, timeWindow: '48 horas', userAvatar: userAvatars[0], username: 'musiclover23' },
+            { name: 'Levitating', artist: 'Dua Lipa', image: `https://dummyimage.com/300x300/EC4899/ffffff&text=${encodeURIComponent('Levitating')}`, growthRate: 38, timeWindow: '48 horas', userAvatar: userAvatars[1], username: 'popfan99' },
+            { name: 'Good 4 U', artist: 'Olivia Rodrigo', image: `https://dummyimage.com/300x300/8B5CF6/ffffff&text=${encodeURIComponent('Good 4 U')}`, growthRate: 32, timeWindow: '48 horas', userAvatar: userAvatars[2], username: 'harryfan2024' },
+            { name: 'Blinding Lights', artist: 'The Weeknd', image: `https://dummyimage.com/300x300/7C3AED/ffffff&text=${encodeURIComponent('Blinding Lights')}`, growthRate: 28, timeWindow: '48 horas', userAvatar: userAvatars[3], username: 'olivia_stan' },
+            { name: 'Watermelon Sugar', artist: 'Harry Styles', image: `https://dummyimage.com/300x300/3B82F6/ffffff&text=${encodeURIComponent('Watermelon Sugar')}`, growthRate: 25, timeWindow: '48 horas', userAvatar: userAvatars[4], username: 'stylesforever' }
         ]
     };
     return mockContent[categoryId] || [];
@@ -1427,30 +1477,127 @@ function showCarouselContentModal(categoryId, categoryTitle, categoryText, categ
     loadCarouselContent(categoryId, categoryData).then(content => {
         if (contentListEl) {
             if (content && content.length > 0) {
+                console.log(`📋 Renderizando ${content.length} items para ${categoryId}:`, content);
                 // Renderizar lista de contenido
-                contentListEl.innerHTML = content.map(item => {
+                contentListEl.innerHTML = content.map((item, index) => {
                     const image = item.image || item.albumImage || item.artistImage || '../Assets/default-avatar.png';
                     const name = item.name || item.title || item.Name || item.Title || 'Sin nombre';
                     const artist = item.artist || item.artistName || item.ArtistName || 'Artista desconocido';
+                    const userAvatar = item.userAvatar || `https://i.pravatar.cc/150?img=${(index % 8) + 1}`;
+                    const username = item.username || `Usuario${index + 1}`;
+                    
+                    // Información adicional según la categoría
+                    let extraInfo = '';
+                    if (categoryId === 'lo-mas-recomendado') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">⭐ ${item.avgRating || 0} • ${item.totalReviews || 0} reseñas</span>`;
+                    } else if (categoryId === 'lo-mas-comentado') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">💬 ${item.totalComments || 0} comentarios</span>`;
+                    } else if (categoryId === 'top-10-semana' || categoryId === 'top-50-mes') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">📊 Score: ${item.score || 0}</span>`;
+                    } else if (categoryId === 'trending') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">📈 +${item.growthRate || 0}%</span>`;
+                    }
                     
                     return `
                         <div class="carousel-content-item" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 1rem; cursor: pointer;">
-                            <img src="${image}" alt="${name}" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;" onerror="this.src='../Assets/default-avatar.png'">
+                            <img src="${image}" alt="${name}" style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);" onerror="this.src='../Assets/default-avatar.png'">
                             <div style="flex: 1;">
-                                <h4 style="color: #fff; margin: 0 0 0.25rem 0; font-size: 1rem;">${name}</h4>
-                                <p style="color: rgba(255, 255, 255, 0.6); margin: 0; font-size: 0.9rem;">${artist}</p>
+                                <h4 style="color: #fff; margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 600;">${name}</h4>
+                                <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 0.25rem 0; font-size: 0.9rem;">${artist}</p>
+                                ${extraInfo}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <img src="${userAvatar}" alt="${username}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.3);" onerror="this.src='../Assets/default-avatar.png'">
+                                <span style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; font-weight: 500;">${username}</span>
                             </div>
                         </div>
                     `;
                 }).join('');
             } else {
-                contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.6);">No hay contenido disponible en esta categoría aún.</div>';
+                console.warn(`⚠️ No hay contenido para ${categoryId}, usando datos simulados...`);
+                // Si no hay contenido, usar datos simulados
+                const mockContent = generateMockCarouselContent(categoryId);
+                if (mockContent.length > 0) {
+                    contentListEl.innerHTML = mockContent.map((item, index) => {
+                        const image = item.image || '../Assets/default-avatar.png';
+                        const name = item.name || 'Sin nombre';
+                        const artist = item.artist || 'Artista desconocido';
+                        const userAvatar = item.userAvatar || `https://i.pravatar.cc/150?img=${(index % 8) + 1}`;
+                        const username = item.username || `Usuario${index + 1}`;
+                        
+                        let extraInfo = '';
+                        if (categoryId === 'lo-mas-recomendado') {
+                            extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">⭐ ${item.avgRating || 0} • ${item.totalReviews || 0} reseñas</span>`;
+                        } else if (categoryId === 'lo-mas-comentado') {
+                            extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">💬 ${item.totalComments || 0} comentarios</span>`;
+                        } else if (categoryId === 'top-10-semana' || categoryId === 'top-50-mes') {
+                            extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">📊 Score: ${item.score || 0}</span>`;
+                        } else if (categoryId === 'trending') {
+                            extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">📈 +${item.growthRate || 0}%</span>`;
+                        }
+                        
+                        return `
+                            <div class="carousel-content-item" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 1rem; cursor: pointer;">
+                                <img src="${image}" alt="${name}" style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);" onerror="this.src='../Assets/default-avatar.png'">
+                                <div style="flex: 1;">
+                                    <h4 style="color: #fff; margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 600;">${name}</h4>
+                                    <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 0.25rem 0; font-size: 0.9rem;">${artist}</p>
+                                    ${extraInfo}
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <img src="${userAvatar}" alt="${username}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.3);" onerror="this.src='../Assets/default-avatar.png'">
+                                    <span style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; font-weight: 500;">${username}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.6);">No hay contenido disponible en esta categoría aún.</div>';
+                }
             }
         }
     }).catch(error => {
         console.error('Error cargando contenido del modal:', error);
         if (contentListEl) {
-            contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ff6b6b;">Error al cargar el contenido. Por favor, intenta nuevamente.</div>';
+            // En caso de error, mostrar datos simulados
+            const mockContent = generateMockCarouselContent(categoryId);
+            if (mockContent.length > 0) {
+                contentListEl.innerHTML = mockContent.map((item, index) => {
+                    const image = item.image || '../Assets/default-avatar.png';
+                    const name = item.name || 'Sin nombre';
+                    const artist = item.artist || 'Artista desconocido';
+                    const userAvatar = item.userAvatar || `https://i.pravatar.cc/150?img=${(index % 8) + 1}`;
+                    const username = item.username || `Usuario${index + 1}`;
+                    
+                    let extraInfo = '';
+                    if (categoryId === 'lo-mas-recomendado') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">⭐ ${item.avgRating || 0} • ${item.totalReviews || 0} reseñas</span>`;
+                    } else if (categoryId === 'lo-mas-comentado') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">💬 ${item.totalComments || 0} comentarios</span>`;
+                    } else if (categoryId === 'top-10-semana' || categoryId === 'top-50-mes') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">📊 Score: ${item.score || 0}</span>`;
+                    } else if (categoryId === 'trending') {
+                        extraInfo = `<span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">📈 +${item.growthRate || 0}%</span>`;
+                    }
+                    
+                    return `
+                        <div class="carousel-content-item" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 1rem; cursor: pointer;">
+                            <img src="${image}" alt="${name}" style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);" onerror="this.src='../Assets/default-avatar.png'">
+                            <div style="flex: 1;">
+                                <h4 style="color: #fff; margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 600;">${name}</h4>
+                                <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 0.25rem 0; font-size: 0.9rem;">${artist}</p>
+                                ${extraInfo}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <img src="${userAvatar}" alt="${username}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.3);" onerror="this.src='../Assets/default-avatar.png'">
+                                <span style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; font-weight: 500;">${username}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                contentListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ff6b6b;">Error al cargar el contenido. Por favor, intenta nuevamente.</div>';
+            }
         }
     });
 
@@ -3067,6 +3214,47 @@ async function loadReviewDetailComments(reviewId, comments) {
             comments = await getCommentsByReview(reviewId);
         }
         
+        // Enriquecer comentarios con datos de usuario si no tienen username
+        comments = await Promise.all(comments.map(async (comment) => {
+            // Si ya tiene username, devolverlo tal cual
+            if (comment.UserName || comment.username) {
+                return comment;
+            }
+            
+            // Si no tiene username, obtenerlo del User Service
+            const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
+            if (userId) {
+                try {
+                    const userData = await getUser(userId);
+                    if (userData) {
+                        return {
+                            ...comment,
+                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                        };
+                    }
+                } catch (error) {
+                    console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
+                }
+            }
+            
+            // Fallback: usar el username del localStorage si es el comentario del usuario actual
+            const currentUserId = localStorage.getItem('userId');
+            if (userId && currentUserId && String(userId).trim() === String(currentUserId).trim()) {
+                const currentUsername = localStorage.getItem('username');
+                if (currentUsername) {
+                    return {
+                        ...comment,
+                        UserName: currentUsername,
+                        username: currentUsername
+                    };
+                }
+            }
+            
+            return comment;
+        }));
+        
         if (commentsCountEl) commentsCountEl.textContent = comments.length;
         
         const currentUserIdRaw = localStorage.getItem('userId');
@@ -3614,7 +3802,48 @@ async function loadCommentsIntoModal(reviewId) {
     
     try {
         // ¡LLAMADA A API REFACTORIZADA!
-        const comments = await getCommentsByReview(reviewId);
+        let comments = await getCommentsByReview(reviewId);
+        
+        // Enriquecer comentarios con datos de usuario si no tienen username
+        comments = await Promise.all(comments.map(async (comment) => {
+            // Si ya tiene username, devolverlo tal cual
+            if (comment.UserName || comment.username) {
+                return comment;
+            }
+            
+            // Si no tiene username, obtenerlo del User Service
+            const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
+            if (userId) {
+                try {
+                    const userData = await getUser(userId);
+                    if (userData) {
+                        return {
+                            ...comment,
+                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                        };
+                    }
+                } catch (error) {
+                    console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
+                }
+            }
+            
+            // Fallback: usar el username del localStorage si es el comentario del usuario actual
+            const currentUserId = localStorage.getItem('userId');
+            if (userId && currentUserId && String(userId).trim() === String(currentUserId).trim()) {
+                const currentUsername = localStorage.getItem('username');
+                if (currentUsername) {
+                    return {
+                        ...comment,
+                        UserName: currentUsername,
+                        username: currentUsername
+                    };
+                }
+            }
+            
+            return comment;
+        }));
         
         commentsCount.textContent = comments.length;
         

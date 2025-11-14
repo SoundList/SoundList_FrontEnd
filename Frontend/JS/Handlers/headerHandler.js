@@ -228,7 +228,6 @@ function navigateToContentView(type, id) {
     }
     let destinationUrl = '';
     
-    // CORREGIDO: "artist.html" a "artists.html" para que coincida con tu archivo
     switch(type) {
         case 'song':
             destinationUrl = `song.html?id=${id}`;
@@ -602,7 +601,7 @@ function getNotificationText(notification) {
     }
 }
 
-function formatNotificationTime(dateString) {
+export function formatNotificationTime(dateString) {
     if (!dateString) return 'Ahora';
     const date = new Date(dateString);
     const now = new Date();

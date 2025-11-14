@@ -388,9 +388,16 @@ async function loadUserReviews(userIdToLoad) {
                     // Obtener likes y comentarios
                     let likes = 0;
                     let comments = [];
-                    if (typeof getReviewReactionCount === 'function') {
-                        likes = await getReviewReactionCount(reviewId).catch(() => 0);
+                    
+                    // Intentar obtener likes desde diferentes fuentes
+                    const getReviewReactionCountFn = typeof getReviewReactionCount === 'function' 
+                        ? getReviewReactionCount 
+                        : (window.socialApi?.getReviewReactionCount || window.reviewApi?.getReviewReactionCount || (() => Promise.resolve(0)));
+                    
+                    if (getReviewReactionCountFn) {
+                        likes = await getReviewReactionCountFn(reviewId).catch(() => 0);
                     }
+                    
                     // Intentar obtener comentarios desde diferentes fuentes
                     if (typeof window.socialApi !== 'undefined' && window.socialApi.getCommentsByReview) {
                         comments = await window.socialApi.getCommentsByReview(reviewId).catch(() => []);
@@ -603,10 +610,18 @@ async function loadUserProfile(userIdToLoad) {
         if (featuredContainer && userReviews && userReviews.length > 0) {
             // Ordenar por likes (más populares primero) - igual que en homeAdmin.js
             const bestReviews = [...userReviews].sort((a, b) => {
-                const likesA = a.likes || 0;
-                const likesB = b.likes || 0;
+                const likesA = Number(a.likes) || 0;
+                const likesB = Number(b.likes) || 0;
+                // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
+                if (likesB === likesA) {
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return dateB - dateA;
+                }
                 return likesB - likesA; // Más likes primero
             });
+            
+            console.log('📊 Reseñas ordenadas por likes:', bestReviews.map(r => ({ id: r.id, likes: r.likes, title: r.title })));
             
             // Mostrar las top 5 reseñas con más likes
             const topReviews = bestReviews.slice(0, 5);
@@ -1150,6 +1165,57 @@ async function loadReviewDetailComments(reviewId, comments) {
             const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
             comments = await getCommentsByReviewFn(reviewId);
         }
+        
+        // Enriquecer comentarios con datos de usuario si no tienen username
+        const getUserFn = window.socialApi?.getUser || (async (userId) => {
+            try {
+                const response = await axios.get(`http://localhost:5000/api/gateway/users/${userId}`);
+                return response.data;
+            } catch (error) {
+                console.debug(`No se pudo obtener usuario ${userId}:`, error);
+                return null;
+            }
+        });
+        
+        comments = await Promise.all(comments.map(async (comment) => {
+            // Si ya tiene username, devolverlo tal cual
+            if (comment.UserName || comment.username) {
+                return comment;
+            }
+            
+            // Si no tiene username, obtenerlo del User Service
+            const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
+            if (userId) {
+                try {
+                    const userData = await getUserFn(userId);
+                    if (userData) {
+                        return {
+                            ...comment,
+                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                        };
+                    }
+                } catch (error) {
+                    console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
+                }
+            }
+            
+            // Fallback: usar el username del localStorage si es el comentario del usuario actual
+            const currentUserId = localStorage.getItem('userId');
+            if (userId && currentUserId && String(userId).trim() === String(currentUserId).trim()) {
+                const currentUsername = localStorage.getItem('username');
+                if (currentUsername) {
+                    return {
+                        ...comment,
+                        UserName: currentUsername,
+                        username: currentUsername
+                    };
+                }
+            }
+            
+            return comment;
+        }));
         
         const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
         const currentUserIdRaw = localStorage.getItem('userId');

@@ -6,20 +6,18 @@ if (typeof window !== 'undefined') {
     window.API_BASE_URL = API_BASE_URL;
 }
 
-// ¡¡ESTE ES EL ÚNICO DOMCONTENTLOADED!!
-// Espera a que todo el HTML de la página (home, album, artist, etc.) esté listo.
+
 document.addEventListener('DOMContentLoaded', () => {
     
-    // 1. Carga la lógica compartida (header, búsqueda, etc.)
-    // (Asegúrate de que initializeHeader NO tenga su propio DOMContentLoaded)
+
     initializeHeader();
 
-    // 2. Carga la lógica específica de CADA página
+
     const path = window.location.pathname;
     console.log("DOM Listo. Cargando scripts para la ruta:", path);
 
     if (path.endsWith('/') || path.endsWith('/home.html')) {
-        import('./Pages/homeAdmin.js') // (Usa /Admin/ o /Pages/ según tu carpeta)
+        import('./Pages/homeAdmin.js') 
             .then(module => module.initializeHomePage())
             .catch(err => console.error('Error al cargar homeAdmin.js:', err));
     

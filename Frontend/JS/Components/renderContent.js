@@ -80,8 +80,7 @@ export function createAlbumListItem(album, index) {
         }
     }
 
-    // (Asegúrate de que la navegación sea correcta,
-    //  si artists.html está en /HTML/, album.html también debería estarlo)
+
     const navigationUrl = `./album.html?id=${albumId}`;
 
     return `
@@ -94,3 +93,4 @@ export function createAlbumListItem(album, index) {
     </li>
     `;
 }
+

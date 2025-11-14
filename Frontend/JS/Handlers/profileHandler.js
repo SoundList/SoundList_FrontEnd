@@ -1,23 +1,8 @@
-// --- IMPORTS ---
-import { API_BASE_URL } from '../APIs/configApi.js';
-import {
-    getReviews,
-    getCommentsByReview,
-    getReviewReactionCount,
-    addReviewReaction,
-    deleteReviewReaction,
-    getUser,
-    updateReview,
-    deleteReview
-} from '../APIs/socialApi.js';
-import {
-    getSongByApiId,
-    getAlbumByApiId
-} from '../APIs/contentApi.js';
-import { showLoginRequiredModal } from './headerHandler.js';
-
+// --- IMPORTS Y VARIABLES GLOBALES ---
 // Variable global para almacenar el userId del perfil que se está viendo
 let profileUserId = null;
+
+// --- FUNCIONES DE RENDERIZADO DE RESEÑAS (FORMATO DE HOME) ---
 
 /**
  * Función auxiliar para renderizar estrellas (reutilizada de homeAdmin.js)
@@ -191,9 +176,11 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 likesSpan.textContent = Math.max(0, currentLikes - 1);
                 
                 const reactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-                deleteReviewReaction(reviewId, currentUserId, authToken, reactionId)
-                    .then(() => localStorage.removeItem(`like_${reviewId}_${currentUserId}`))
-                    .catch(err => console.warn('No se pudo eliminar like:', err));
+                if (typeof deleteReviewReaction === 'function') {
+                    deleteReviewReaction(reviewId, currentUserId, authToken, reactionId)
+                        .then(() => localStorage.removeItem(`like_${reviewId}_${currentUserId}`))
+                        .catch(err => console.warn('No se pudo eliminar like:', err));
+                }
             } else {
                 this.classList.add('liked');
                 icon.style.color = 'var(--magenta, #EC4899)';
@@ -201,14 +188,16 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 likesSpan.textContent = currentLikes + 1;
                 
                 localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
-                addReviewReaction(reviewId, currentUserId, authToken)
-                    .then(data => {
-                        const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-                        if (reactionId) {
-                            localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, reactionId);
-                        }
-                    })
-                    .catch(err => console.warn('No se pudo guardar like:', err));
+                if (typeof addReviewReaction === 'function') {
+                    addReviewReaction(reviewId, currentUserId, authToken)
+                        .then(data => {
+                            const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
+                            if (reactionId) {
+                                localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, reactionId);
+                            }
+                        })
+                        .catch(err => console.warn('No se pudo guardar like:', err));
+                }
             }
         });
     });
@@ -223,7 +212,6 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 const content = this.getAttribute('data-review-content') || '';
                 const rating = parseInt(this.getAttribute('data-review-rating')) || 0;
                 
-                // Llamar a función de editar (debe estar disponible globalmente o importarse)
                 if (typeof showEditReviewModal === 'function') {
                     showEditReviewModal(reviewId, title, content, rating);
                 } else {
@@ -311,21 +299,28 @@ function attachProfileReviewListeners(container, isOwnProfile) {
 async function loadUserReviews(userIdToLoad) {
     try {
         // Obtener todas las reseñas
-        const allReviews = await getReviews();
+        let allReviews = [];
+        if (typeof window.reviewApi !== 'undefined' && window.reviewApi.getReviewsByUser) {
+            allReviews = await window.reviewApi.getReviewsByUser(userIdToLoad);
+        } else if (typeof getReviews === 'function') {
+            const allReviewsData = await getReviews();
+            // Filtrar solo las reseñas del usuario
+            allReviews = allReviewsData.filter(review => {
+                const reviewUserId = review.UserId || review.userId;
+                return String(reviewUserId).trim() === String(userIdToLoad).trim();
+            });
+        } else {
+            console.warn('No se encontró método para obtener reseñas');
+            return [];
+        }
         
-        // Filtrar solo las reseñas del usuario
-        const userReviews = allReviews.filter(review => {
-            const reviewUserId = review.UserId || review.userId;
-            return String(reviewUserId).trim() === String(userIdToLoad).trim();
-        });
-
-        if (!userReviews || userReviews.length === 0) {
+        if (!allReviews || allReviews.length === 0) {
             return [];
         }
 
-        // Procesar cada reseña para obtener detalles completos (similar a loadReviewsFunction)
+        // Procesar cada reseña para obtener detalles completos
         const processedReviews = await Promise.all(
-            userReviews.map(async (review) => {
+            allReviews.map(async (review) => {
                 try {
                     let reviewId = review.ReviewId || review.reviewId || review.id || 
                                 review.Id_Review || review.id_Review;
@@ -345,20 +340,32 @@ async function loadUserReviews(userIdToLoad) {
                     // Obtener datos del usuario
                     try {
                         const userId = review.UserId || review.userId;
-                        const userData = await getUser(userId);
-                        if (userData) {
-                            username = userData.Username || userData.username || username;
-                            avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                        if (typeof getUser === 'function') {
+                            const userData = await getUser(userId);
+                            if (userData) {
+                                username = userData.Username || userData.username || username;
+                                avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                            }
+                        } else if (typeof window.userApi !== 'undefined' && window.userApi.getUserProfile) {
+                            const userData = await window.userApi.getUserProfile(userId);
+                            if (userData) {
+                                username = userData.Username || userData.username || username;
+                                avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                            }
                         }
                     } catch (e) {
                         console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
                     }
 
                     // Obtener likes y comentarios
-                    const [likes, comments] = await Promise.all([
-                        getReviewReactionCount(reviewId).catch(() => 0),
-                        getCommentsByReview(reviewId).catch(() => [])
-                    ]);
+                    let likes = 0;
+                    let comments = [];
+                    if (typeof getReviewReactionCount === 'function') {
+                        likes = await getReviewReactionCount(reviewId).catch(() => 0);
+                    }
+                    if (typeof getCommentsByReview === 'function') {
+                        comments = await getCommentsByReview(reviewId).catch(() => []);
+                    }
 
                     // Verificar si el usuario actual dio like
                     let userLiked = false;
@@ -368,7 +375,7 @@ async function loadUserReviews(userIdToLoad) {
                         userLiked = storedReactionId !== null || localLike === 'true';
                     }
 
-                    // Obtener datos del contenido desde localStorage o Content Service
+                    // Obtener datos del contenido
                     let songName = review.SongId ? 'Canción' : 'Álbum';
                     let albumName = 'Álbum';
                     let artistName = 'Artista';
@@ -399,7 +406,7 @@ async function loadUserReviews(userIdToLoad) {
 
                     // Si no hay datos en localStorage, intentar desde Content Service
                     if (!contentData || (!songName || songName === 'Canción') && (!albumName || albumName === 'Álbum')) {
-                        if (review.SongId) {
+                        if (review.SongId && typeof getSongByApiId === 'function') {
                             try {
                                 const songData = await getSongByApiId(String(review.SongId).trim());
                                 if (songData) {
@@ -409,12 +416,11 @@ async function loadUserReviews(userIdToLoad) {
                             } catch (e) {
                                 console.debug('No se pudo obtener canción:', e);
                             }
-                        } else if (review.AlbumId) {
+                        } else if (review.AlbumId && typeof getAlbumByApiId === 'function') {
                             try {
                                 const albumData = await getAlbumByApiId(String(review.AlbumId).trim());
                                 if (albumData) {
                                     albumName = albumData.Title || albumData.title || albumData.Name || albumName;
-                                    // Intentar obtener artista desde primera canción
                                     if (albumData.Songs && albumData.Songs.length > 0) {
                                         artistName = albumData.Songs[0].ArtistName || albumData.Songs[0].artistName || artistName;
                                     }
@@ -459,11 +465,12 @@ async function loadUserReviews(userIdToLoad) {
     }
 }
 
-/**
- * Carga el perfil completo de un usuario dado su ID, conectando a la API.
- * @param {string} userIdToLoad - El ID del usuario cuyo perfil se va a mostrar.
- */
+// --- FUNCIÓN PRINCIPAL DE CARGA DE PERFIL ---
+
 async function loadUserProfile(userIdToLoad) {
+
+    const loggedInUserId = localStorage.getItem("userId"); 
+    
     console.log(`👤 Cargando perfil para ID: ${userIdToLoad}...`);
 
     profileUserId = userIdToLoad; // Guardar para usar en otras funciones
@@ -475,28 +482,60 @@ async function loadUserProfile(userIdToLoad) {
     const userNameEl = document.querySelector(".username");
     const userQuoteEl = document.querySelector(".user-quote");
     const reviewCountEl = document.getElementById("user-reviews");
-    const followingCountEl = document.getElementById("user-following");
     const followerCountEl = document.getElementById("user-followers");
-    const defaultAvatar = "../../Assets/default-avatar.png";
+    const followingCountEl = document.getElementById("user-following");
+    const defaultAvatar ="../../Assets/default-avatar.png";
+
+    const editBtn = document.querySelector(".btn-edit");
+
+    if (editBtn) editBtn.style.display = 'none'; 
 
     const recentContainer = document.getElementById(recentContainerId);
     if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>Cargando reseñas...</p>";
 
+    let user = null;
+
     try {
-        const user = await window.userApi.getUserProfile(userIdToLoad); 
+        user = await window.userApi.getUserProfile(userIdToLoad);
+
+        if (userAvatarEl) userAvatarEl.src = user.imgProfile || defaultAvatar;
+        if (userNameEl) userNameEl.textContent = user.Username || "Usuario";
+        if (userQuoteEl) userQuoteEl.textContent = user.Bio || "Sin frase personal";
+
+        console.log("✅ Perfil principal cargado:", user);
+
+        const isOwner = (loggedInUserId === userIdToLoad);
+        if (isOwner && editBtn) {
+            editBtn.style.display = 'block';
+            editBtn.onclick = () => window.location.href = 'editProfile.html';
+        }
+    } catch (error) {
+        console.error("❌ Error al cargar el perfil principal:", error);
+
+        if (userAvatarEl) userAvatarEl.src = defaultAvatar;
+        if (userNameEl) userNameEl.textContent = "Error al cargar";
+        if (userQuoteEl) userQuoteEl.textContent = "No disponible";
+        return;
+    }
+
+
+
+    try {
         const followerCount = await window.userApi.getFollowerCount(userIdToLoad);
         const followingCount = await window.userApi.getFollowingCount(userIdToLoad);
         
-        console.log("✅ Perfil, seguidores y seguidos cargados de la API.");
+        if (followerCountEl) followerCountEl.textContent = followerCount || 0;
+        if (followingCountEl) followingCountEl.textContent = followingCount || 0;
+        
+    } catch (followError) {
+        console.warn("⚠️ Fallo al cargar contadores de Follows (esperado si no hay mock):", followError.message);
+        if (followerCountEl) followerCountEl.textContent = 0;
+        if (followingCountEl) followingCountEl.textContent = 0;
+    }
 
-        // Poblar Header de Perfil
-        if (userAvatarEl) userAvatarEl.src = user.image || defaultAvatar;
-        if (userNameEl) userNameEl.textContent = user.username || "Usuario";
-        if (userQuoteEl) userQuoteEl.textContent = user.quote || "Sin frase personal";
-        if (followerCountEl) followerCountEl.textContent = followerCount;
-        if (followingCountEl) followingCountEl.textContent = followingCount;
 
-        // Cargar y renderizar reseñas del usuario con el formato de home
+    // Cargar y renderizar reseñas del usuario con el formato de home
+    try {
         const userReviews = await loadUserReviews(userIdToLoad);
         
         if (recentContainer) {
@@ -508,18 +547,10 @@ async function loadUserProfile(userIdToLoad) {
         }
         if (reviewCountEl) reviewCountEl.textContent = userReviews.length || 0;
         
-    } catch (error) {
-        console.error("❌ Error al cargar el perfil completo:", error);
-        
-        if (userAvatarEl) userAvatarEl.src = defaultAvatar;
-        if (userNameEl) userNameEl.textContent = "Error al cargar";
-        if (userQuoteEl) userQuoteEl.textContent = "No disponible";
+    } catch (reviewError) {
+        console.error("❌ Error al cargar reseñas:", reviewError);
         if (recentContainer) recentContainer.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
-        if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
-        if (typeof window.showAlert === 'function') {
-                window.showAlert("Sesión caducada o perfil privado.", "Error");
-            }
-        }
+        if (reviewCountEl) reviewCountEl.textContent = 0;
     }
 }
 
@@ -631,7 +662,14 @@ async function deleteReviewLogic(reviewId) {
     }
     
     try {
-        await deleteReview(reviewId, userId, authToken);
+        // Intentar usar deleteReview si está disponible (puede venir de socialApi.js importado o window)
+        if (typeof deleteReview === 'function') {
+            await deleteReview(reviewId, userId, authToken);
+        } else if (typeof window.socialApi !== 'undefined' && window.socialApi.deleteReview) {
+            await window.socialApi.deleteReview(reviewId, userId, authToken);
+        } else {
+            throw new Error('Función deleteReview no disponible');
+        }
         alert('✅ Reseña eliminada exitosamente');
         
         // Recargar las reseñas del perfil

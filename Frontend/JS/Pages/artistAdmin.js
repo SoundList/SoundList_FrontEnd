@@ -39,10 +39,18 @@ async  function  loadPageData()  {
       const  loadingEl  =  document.getElementById('loadingSpinner');
       const  contentEl  =  document.getElementById('artistContent');
 
-      try  {
-            const  params  =  new  URLSearchParams(window.location.search);
-            const  apiArtistId  =  params.get('id');
-            if  (!apiArtistId)  throw  new  Error("No  se  proporcionó  un  ID  de  artista.");
+     try  {
+           const  params  =  new  URLSearchParams(window.location.search);
+           const  apiArtistId  =  params.get('id');
+        	  
+  		// Validación más estricta del ID
+  		if (!apiArtistId || apiArtistId.trim() === '' || 
+  			apiArtistId === 'undefined' || apiArtistId === 'null' ||
+  			apiArtistId.toLowerCase() === 'album' || apiArtistId.toLowerCase() === 'artist' || apiArtistId.toLowerCase() === 'song') {
+  			throw new Error("ID de artista inválido en la URL. Por favor, busca el artista nuevamente.");
+  		}
+  		
+  		console.log(`Cargando artista con ID: ${apiArtistId}`);
 
                 console.log(`Buscando  artista  con  ID:  ${apiArtistId}`);
             contentEl.style.display  =  'none';

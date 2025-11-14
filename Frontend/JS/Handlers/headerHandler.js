@@ -148,6 +148,38 @@ function displaySearchResults(results, query) {
     const artists = results.Artists || results.artists || [];
     const albums = results.Albums || results.albums || [];
     const songs = results.Songs || results.songs || [];
+    
+    // Debug: Log de los resultados para verificar la estructura
+    if (artists.length > 0) {
+        console.log('Artista de ejemplo:', {
+            objeto: artists[0],
+            APIArtistId: artists[0].APIArtistId,
+            apiArtistId: artists[0].apiArtistId,
+            Id: artists[0].Id,
+            id: artists[0].id,
+            todasLasKeys: Object.keys(artists[0])
+        });
+    }
+    if (albums.length > 0) {
+        console.log('Álbum de ejemplo:', {
+            objeto: albums[0],
+            APIAlbumId: albums[0].APIAlbumId,
+            apiAlbumId: albums[0].apiAlbumId,
+            Id: albums[0].Id,
+            id: albums[0].id,
+            todasLasKeys: Object.keys(albums[0])
+        });
+    }
+    if (songs.length > 0) {
+        console.log('Canción de ejemplo:', {
+            objeto: songs[0],
+            APISongId: songs[0].APISongId,
+            apiSongId: songs[0].apiSongId,
+            Id: songs[0].Id,
+            id: songs[0].id,
+            todasLasKeys: Object.keys(songs[0])
+        });
+    }
 
     if (artists.length === 0 && albums.length === 0 && songs.length === 0) {
         searchDropdown.innerHTML = `
@@ -166,9 +198,15 @@ function displaySearchResults(results, query) {
     if (artists.length > 0) {
         html += '<div class="search-section"><div class="search-section-title">Artistas</div>';
         artists.forEach(artist => {
-            const artistId = artist.APIArtistId || artist.apiArtistId || '';
+            const artistId = artist.APIArtistId || artist.apiArtistId || artist.Id || artist.id || '';
             const artistName = artist.Name || artist.name || '';
             const artistImage = artist.Imagen || artist.imagen || '../Assets/default-avatar.png';
+            
+            // Solo renderizar si tiene un ID válido
+            if (!artistId || artistId.trim() === '') {
+                console.warn('Artista sin ID válido, omitiendo:', artist);
+                return;
+            }
             
             html += `
                 <div class="search-dropdown-item" data-type="artist" data-id="${artistId}">
@@ -185,9 +223,15 @@ function displaySearchResults(results, query) {
     if (albums.length > 0) {
         html += '<div class="search-section"><div class="search-section-title">Álbumes</div>';
         albums.forEach(album => {
-            const albumId = album.APIAlbumId || album.apiAlbumId || '';
+            const albumId = album.APIAlbumId || album.apiAlbumId || album.Id || album.id || '';
             const albumTitle = album.Title || album.title || '';
             const albumImage = album.Image || album.image || '../Assets/default-avatar.png';
+            
+            // Solo renderizar si tiene un ID válido
+            if (!albumId || albumId.trim() === '') {
+                console.warn('Álbum sin ID válido, omitiendo:', album);
+                return;
+            }
             
             html += `
                 <div class="search-dropdown-item" data-type="album" data-id="${albumId}">
@@ -204,11 +248,17 @@ function displaySearchResults(results, query) {
     if (songs.length > 0) {
         html += '<div class="search-section"><div class="search-section-title">Canciones</div>';
         songs.forEach(song => {
-            const songId = song.APISongId || song.apiSongId || '';
+            const songId = song.APISongId || song.apiSongId || song.Id || song.id || '';
             const songTitle = song.Title || song.title || '';
             const songImage = song.Image || song.image || '../Assets/default-avatar.png';
             const artistName = song.ArtistName || song.artistName || '';
             const artistNameDisplay = artistName ? ` - ${artistName}` : '';
+            
+            // Solo renderizar si tiene un ID válido
+            if (!songId || songId.trim() === '') {
+                console.warn('Canción sin ID válido, omitiendo:', song);
+                return;
+            }
             
             html += `
                 <div class="search-dropdown-item" data-type="song" data-id="${songId}">
@@ -230,6 +280,16 @@ function displaySearchResults(results, query) {
             const id = this.getAttribute('data-id');
             const text = this.querySelector('.search-item-text').textContent;
             
+            // Validar que el ID existe y no está vacío
+            if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
+                console.error('Error: ID inválido en resultado de búsqueda', { type, id, text });
+                if (typeof showAlert === 'function') {
+                    showAlert('Error: No se pudo obtener el ID del contenido seleccionado.', 'danger');
+                }
+                return;
+            }
+            
+            console.log(`Navegando a ${type} con ID: ${id}`);
             searchInput.value = text;
             searchDropdown.style.display = 'none';
             
@@ -240,33 +300,76 @@ function displaySearchResults(results, query) {
 
 /**
  * Navega a la vista de contenido.
- * Asume que todos los HTML están en la misma carpeta (ej. /HTML/).
+ * Maneja rutas relativas correctamente desde cualquier ubicación.
  */
 function navigateToContentView(type, id) {
-    if (!id || id.trim() === '' || id === '00000000-0000-0000-0000-000000000000') {
-        console.error('Error: El ID del contenido está vacío o es inválido.');
-        showAlert('Error: El ID del contenido es inválido.', 'danger');
-        return;
-    }
-    let destinationUrl = '';
+    // Validación más estricta del ID
+    if (!id || typeof id !== 'string' || id.trim() === '' || 
+        id === '00000000-0000-0000-0000-000000000000' ||
+        id === 'undefined' || id === 'null' ||
+        id.toLowerCase() === 'album' || id.toLowerCase() === 'artist' || id.toLowerCase() === 'song') {
+        console.error('Error: El ID del contenido está vacío o es inválido.', { type, id });
+        if (typeof showAlert === 'function') {
+            showAlert('Error: El ID del contenido es inválido. Por favor, intenta buscar nuevamente.', 'danger');
+        }
+        return;
+    }
     
-    switch(type) {
-        case 'song':
-            destinationUrl = `song.html?id=${id}`;
-            break;
-        case 'album':
-            destinationUrl = `album.html?id=${id}`;
-            break;
-        case 'artist':
-            destinationUrl = `artist.html?id=${id}`; 
-            break;
-        default:
-            console.warn('Tipo de contenido desconocido:', type);
-            return;
-    }
+    // Validar que el tipo sea válido
+    if (!type || !['song', 'album', 'artist'].includes(type)) {
+        console.error('Error: Tipo de contenido inválido.', { type, id });
+        if (typeof showAlert === 'function') {
+            showAlert('Error: Tipo de contenido inválido.', 'danger');
+        }
+        return;
+    }
+    
+    const currentPath = window.location.pathname;
+    const currentFile = currentPath.split('/').pop() || '';
+    let destinationUrl = '';
+    
+    // Determinar el nombre del archivo según el tipo
+    let fileName = '';
+    switch(type) {
+        case 'song':
+            fileName = 'song.html';
+            break;
+        case 'album':
+            fileName = 'album.html';
+            break;
+        case 'artist':
+            fileName = 'artist.html'; 
+            break;
+        default:
+            console.warn('Tipo de contenido desconocido:', type);
+            return;
+    }
+    
+    // Codificar el ID para la URL (por si tiene caracteres especiales)
+    const encodedId = encodeURIComponent(id.trim());
+    
+    // Determinar la ruta correcta según dónde estemos
+    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+        // Estamos en Pages/, necesitamos subir un nivel para llegar a HTML/
+        destinationUrl = `../${fileName}?id=${encodedId}`;
+    } else if (currentPath.includes('/HTML/') || 
+               currentFile === 'home.html' || 
+               currentFile === 'album.html' || 
+               currentFile === 'song.html' || 
+               currentFile === 'artist.html' ||
+               currentFile === 'rankings.html' ||
+               currentFile === 'amigos.html' ||
+               currentFile === 'login.html' ||
+               currentFile === 'register.html') {
+        // Ya estamos en HTML/, solo necesitamos el nombre del archivo
+        destinationUrl = `${fileName}?id=${encodedId}`;
+    } else {
+        // Fallback: asumir que estamos en el mismo directorio
+        destinationUrl = `${fileName}?id=${encodedId}`;
+    }
 
-    console.log(`Navegando a: ${destinationUrl}`);
-    window.location.href = destinationUrl;
+    console.log(`Navegando a: ${destinationUrl} (desde: ${currentFile}, tipo: ${type}, id: ${id})`);
+    window.location.href = destinationUrl;
 }
 
 // --- 5. SECCIÓN DE PERFIL, NAVEGACIÓN Y SESIÓN ---

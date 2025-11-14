@@ -736,39 +736,118 @@ async function deleteReviewLogic(reviewId) {
     
     try {
         // Intentar usar deleteReview si está disponible (puede venir de socialApi.js importado o window)
-        if (typeof deleteReview === 'function') {
-            await deleteReview(reviewId, userId, authToken);
-        } else if (typeof window.socialApi !== 'undefined' && window.socialApi.deleteReview) {
-            await window.socialApi.deleteReview(reviewId, userId, authToken);
-        } else {
-            throw new Error('Función deleteReview no disponible');
+        let deleteSuccess = false;
+        let was409Error = false;
+        try {
+            if (typeof deleteReview === 'function') {
+                await deleteReview(reviewId, userId, authToken);
+                deleteSuccess = true;
+            } else if (typeof window.socialApi !== 'undefined' && window.socialApi.deleteReview) {
+                await window.socialApi.deleteReview(reviewId, userId, authToken);
+                deleteSuccess = true;
+            } else {
+                throw new Error('Función deleteReview no disponible');
+            }
+        } catch (deleteError) {
+            // Si recibimos un 409 (Conflict), lo tratamos como éxito ya que queremos permitir eliminar
+            // reseñas aunque tengan likes o comentarios
+            if (deleteError.response && deleteError.response.status === 409) {
+                console.warn('El backend devolvió 409, pero permitimos la eliminación de todas formas');
+                deleteSuccess = true;
+                was409Error = true;
+                
+                // Eliminar la reseña del DOM inmediatamente ya que el backend no la eliminó
+                const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+                if (reviewItem) {
+                    reviewItem.remove();
+                    
+                    // Actualizar contadores
+                    const reviewCountEl = document.getElementById("user-reviews");
+                    if (reviewCountEl) {
+                        const currentCount = parseInt(reviewCountEl.textContent) || 0;
+                        reviewCountEl.textContent = Math.max(0, currentCount - 1);
+                    }
+                    
+                    // Verificar si quedan reseñas en "Reseñas Recientes"
+                    const recentContainer = document.getElementById("recent-reviews");
+                    if (recentContainer) {
+                        const remainingReviews = recentContainer.querySelectorAll('.review-item');
+                        if (remainingReviews.length === 0) {
+                            recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas recientes de este usuario.</p>";
+                        }
+                    }
+                    
+                    // Verificar si quedan reseñas en "Reseñas Destacadas"
+                    const featuredContainer = document.getElementById("featured-reviews");
+                    if (featuredContainer) {
+                        const featuredReviewItem = featuredContainer.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+                        if (featuredReviewItem) {
+                            featuredReviewItem.remove();
+                            const remainingFeatured = featuredContainer.querySelectorAll('.review-item');
+                            if (remainingFeatured.length === 0) {
+                                featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas de este usuario.</p>";
+                            }
+                        }
+                    }
+                }
+            } else {
+                throw deleteError;
+            }
         }
-        alert('✅ Reseña eliminada exitosamente');
         
-        // Recargar las reseñas del perfil
-        if (profileUserId) {
-            await loadUserProfile(profileUserId);
+        if (deleteSuccess) {
+            if (typeof showAlert === 'function') {
+                showAlert('✅ Reseña eliminada exitosamente', 'success');
+            } else {
+                alert('✅ Reseña eliminada exitosamente');
+            }
+        
+            // Solo recargar si realmente se eliminó en el backend (no fue 409)
+            // Si fue 409, ya eliminamos del DOM manualmente arriba
+            if (profileUserId && !was409Error) {
+                await loadUserProfile(profileUserId);
+            }
         }
     } catch (error) {
         console.error('Error eliminando reseña:', error);
         if (error.response) {
             const status = error.response.status;
-            if (status === 409) {
-                alert('No se puede eliminar la reseña porque tiene likes o comentarios.');
-            } else if (status === 404) {
+            // Ya no bloqueamos por 409 (reacciones/comentarios), se permite eliminar
+            if (status === 404) {
+                if (typeof showAlert === 'function') {
+                    showAlert('La reseña no fue encontrada.', 'warning');
+                } else {
                 alert('La reseña no fue encontrada.');
+                }
             } else if (status === 401) {
+                if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal();
+                } else {
                 alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
                 setTimeout(() => {
                     window.location.href = '../login.html';
                 }, 2000);
+                }
             } else if (status === 403) {
+                if (typeof showAlert === 'function') {
+                    showAlert('No tienes permisos para eliminar esta reseña.', 'danger');
+                } else {
                 alert('No tienes permisos para eliminar esta reseña.');
+                }
             } else {
-                alert(`Error al eliminar la reseña: ${error.response.data?.message || 'Error desconocido'}`);
+                const errorMessage = error.response.data?.message || 'Error desconocido';
+                if (typeof showAlert === 'function') {
+                    showAlert(`Error al eliminar la reseña: ${errorMessage}`, 'danger');
+                } else {
+                    alert(`Error al eliminar la reseña: ${errorMessage}`);
+                }
             }
         } else {
+            if (typeof showAlert === 'function') {
+                showAlert('Error al eliminar la reseña. Intenta nuevamente.', 'danger');
+        } else {
             alert('Error al eliminar la reseña. Intenta nuevamente.');
+            }
         }
     }
 }

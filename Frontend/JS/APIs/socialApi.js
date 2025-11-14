@@ -85,30 +85,63 @@ export async function createComment(reviewId, text, userId, authToken) {
  */
 export async function updateComment(commentId, newText, authToken) {
     try {
-        const response = await axios.put(
-            `${API_BASE_URL}/api/gateway/comments/${commentId}`,
-            { Text: newText }, // El body según tu OpenAPI (Social)
-            {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 5000
+        // Intentar primero con PATCH (método más común para actualizaciones parciales)
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/api/gateway/comments/${commentId}`,
+                { Text: newText },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 5000
+                }
+            );
+            return response.data;
+        } catch (patchError) {
+            // Si PATCH falla con 405, intentar con PUT
+            if (patchError.response?.status === 405) {
+                const response = await axios.put(
+                    `${API_BASE_URL}/api/gateway/comments/${commentId}`,
+                    { Text: newText },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 5000
+                    }
+                );
+                return response.data;
             }
-        );
-        return response.data;
+            throw patchError;
+        }
     } catch (error) {
         console.error(`Error en updateComment (ID: ${commentId}):`, error);
         // Si falla el gateway, probamos la ruta directa (lógica de home.js)
         try {
             console.warn('Fallback: Intentando ruta directa de SocialAPI para updateComment');
             const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            const response = await axios.put(
-                `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
-                { Text: newText },
-                { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
-            );
-            return response.data;
+            try {
+                const response = await axios.patch(
+                    `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
+                    { Text: newText },
+                    { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
+                );
+                return response.data;
+            } catch (patchError) {
+                // Si PATCH falla, intentar PUT
+                if (patchError.response?.status === 405) {
+                    const response = await axios.put(
+                        `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
+                        { Text: newText },
+                        { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
+                    );
+                    return response.data;
+                }
+                throw patchError;
+            }
         } catch (directError) {
             console.error('Error en updateComment (Fallback):', directError);
             throw directError; // Lanzamos el segundo error
@@ -121,8 +154,19 @@ export async function updateComment(commentId, newText, authToken) {
  * Ruta: DELETE /api/gateway/comments/{commentId}
  */
 export async function deleteComment(commentId, authToken) {
+    if (!commentId) {
+        throw new Error('Comment ID es requerido');
+    }
+    
+    // Normalizar el commentId (asegurarse de que sea string)
+    const normalizedCommentId = String(commentId).trim();
+    
+    if (!normalizedCommentId || normalizedCommentId === 'null' || normalizedCommentId === 'undefined') {
+        throw new Error('Comment ID inválido');
+    }
+    
     try {
-        await axios.delete(`${API_BASE_URL}/api/gateway/comments/${commentId}`, {
+        await axios.delete(`${API_BASE_URL}/api/gateway/comments/${normalizedCommentId}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
@@ -130,17 +174,29 @@ export async function deleteComment(commentId, authToken) {
             timeout: 5000
         });
     } catch (error) {
-        console.error(`Error en deleteComment (ID: ${commentId}):`, error);
-        // Fallback a ruta directa
+        console.error(`Error en deleteComment (ID: ${normalizedCommentId}):`, error);
+        
+        // Si es 404, el comentario no existe - no intentar fallback
+        if (error.response?.status === 404) {
+            throw new Error('El comentario no fue encontrado. Puede que ya haya sido eliminado.');
+        }
+        
+        // Fallback a ruta directa solo para otros errores
         try {
             console.warn('Fallback: Intentando ruta directa de SocialAPI para deleteComment');
             const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            await axios.delete(`${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`, {
+            await axios.delete(`${SOCIAL_API_BASE_URL}/api/Comments/${normalizedCommentId}`, {
                 headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
                 timeout: 5000
             });
         } catch (directError) {
             console.error('Error en deleteComment (Fallback):', directError);
+            
+            // Si el fallback también da 404, el comentario no existe
+            if (directError.response?.status === 404) {
+                throw new Error('El comentario no fue encontrado. Puede que ya haya sido eliminado.');
+            }
+            
             throw directError;
         }
     }

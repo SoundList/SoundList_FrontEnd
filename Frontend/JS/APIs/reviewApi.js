@@ -1,7 +1,7 @@
 
 (function() {
 
-    const GATEWAY_BASE_URL = "http://localhost:5/api/gateway";
+    const GATEWAY_BASE_URL = "http://localhost:5000/api/gateway";
 
     const API_BASE = `${GATEWAY_BASE_URL}/reviews`; 
 
@@ -80,7 +80,8 @@
     }
 
     async function getReviewsByUser(userId) { 
-        console.warn("API: getReviewsByUser usando GET /api/gateway/reviews como fallback.");
+        // Usar fallback silencioso: obtener todas las reseñas y filtrar por usuario
+        // Esto es esperado si el endpoint específico no existe aún
         const allReviews = await getAllReviews();
         return allReviews.filter(r => r.userId === userId);
     }

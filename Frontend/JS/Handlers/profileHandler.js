@@ -2,6 +2,34 @@
 // Variable global para almacenar el userId del perfil que se está viendo
 let profileUserId = null;
 
+// Importar funciones necesarias si están disponibles como módulos
+// (Si no están disponibles, se usarán desde window)
+let fetchSearchResults = null;
+let getOrCreateSong = null;
+let getOrCreateAlbum = null;
+let createReview = null;
+
+// Intentar importar funciones si están disponibles
+if (typeof window !== 'undefined') {
+    // fetchSearchResults puede estar en window.searchApi o como función global
+    if (window.searchApi && window.searchApi.search) {
+        fetchSearchResults = (query) => window.searchApi.search(query);
+    }
+    
+    // getOrCreateSong y getOrCreateAlbum pueden estar en window.contentApi
+    if (window.contentApi) {
+        getOrCreateSong = window.contentApi.getOrCreateSong;
+        getOrCreateAlbum = window.contentApi.getOrCreateAlbum;
+    }
+    
+    // createReview puede estar en window.socialApi o window.reviewApi
+    if (window.socialApi && window.socialApi.createReview) {
+        createReview = window.socialApi.createReview;
+    } else if (window.reviewApi && window.reviewApi.createReview) {
+        createReview = window.reviewApi.createReview;
+    }
+}
+
 // --- FUNCIONES DE RENDERIZADO DE RESEÑAS (FORMATO DE HOME) ---
 
 /**
@@ -363,7 +391,10 @@ async function loadUserReviews(userIdToLoad) {
                     if (typeof getReviewReactionCount === 'function') {
                         likes = await getReviewReactionCount(reviewId).catch(() => 0);
                     }
-                    if (typeof getCommentsByReview === 'function') {
+                    // Intentar obtener comentarios desde diferentes fuentes
+                    if (typeof window.socialApi !== 'undefined' && window.socialApi.getCommentsByReview) {
+                        comments = await window.socialApi.getCommentsByReview(reviewId).catch(() => []);
+                    } else if (typeof getCommentsByReview === 'function') {
                         comments = await getCommentsByReview(reviewId).catch(() => []);
                     }
 
@@ -493,15 +524,35 @@ async function loadUserProfile(userIdToLoad) {
     const recentContainer = document.getElementById(recentContainerId);
     if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>Cargando reseñas...</p>";
 
-    let user = null;
+    let user = null; 
 
     try {
-        user = await window.userApi.getUserProfile(userIdToLoad);
+        user = await window.userApi.getUserProfile(userIdToLoad); 
 
-        if (userAvatarEl) userAvatarEl.src = user.imgProfile || defaultAvatar;
-        if (userNameEl) userNameEl.textContent = user.Username || "Usuario";
-        if (userQuoteEl) userQuoteEl.textContent = user.Bio || "Sin frase personal";
-
+        // Cargar datos del usuario desde el backend (como Spotify)
+        if (userAvatarEl) {
+            userAvatarEl.src = user.imgProfile || user.Image || user.image || defaultAvatar;
+            userAvatarEl.onerror = function() { this.src = defaultAvatar; };
+        }
+        
+        // Usar el nombre de usuario del backend (Username, UserName, o name)
+        const username = user.Username || user.UserName || user.username || user.name || "Usuario";
+        if (userNameEl) {
+            userNameEl.textContent = username;
+        }
+        
+        // Mostrar la bio/descripción del usuario
+        const bio = user.Bio || user.bio || user.description || user.Description || "";
+        if (userQuoteEl) {
+            if (bio && bio.trim() !== "") {
+                userQuoteEl.textContent = bio;
+                userQuoteEl.style.display = "block";
+            } else {
+                userQuoteEl.textContent = "";
+                userQuoteEl.style.display = "none";
+            }
+        }
+        
         console.log("✅ Perfil principal cargado:", user);
 
         const isOwner = (loggedInUserId === userIdToLoad);
@@ -515,7 +566,7 @@ async function loadUserProfile(userIdToLoad) {
         if (userAvatarEl) userAvatarEl.src = defaultAvatar;
         if (userNameEl) userNameEl.textContent = "Error al cargar";
         if (userQuoteEl) userQuoteEl.textContent = "No disponible";
-        return;
+        return; 
     }
 
 
@@ -546,6 +597,26 @@ async function loadUserProfile(userIdToLoad) {
             }
         }
         if (reviewCountEl) reviewCountEl.textContent = userReviews.length || 0;
+        
+        // Cargar mejores reseñas (ordenadas por likes, igual que populares)
+        const featuredContainer = document.getElementById('featured-reviews-list-best');
+        if (featuredContainer && userReviews && userReviews.length > 0) {
+            // Ordenar por likes (más populares primero) - igual que en homeAdmin.js
+            const bestReviews = [...userReviews].sort((a, b) => {
+                const likesA = a.likes || 0;
+                const likesB = b.likes || 0;
+                return likesB - likesA; // Más likes primero
+            });
+            
+            // Mostrar las top 5 reseñas con más likes
+            const topReviews = bestReviews.slice(0, 5);
+            
+            if (topReviews.length > 0) {
+                renderProfileReviews(topReviews, 'featured-reviews-list-best', isOwnProfile);
+            } else {
+                featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas.</p>";
+            }
+        }
         
     } catch (reviewError) {
         console.error("❌ Error al cargar reseñas:", reviewError);
@@ -633,7 +704,9 @@ function showDeleteReviewModal(reviewId, reviewTitle) {
         return;
     }
     
-    // Intentar usar el modal de home si está disponible
+    deletingReviewId = reviewId;
+    
+    // Intentar usar el modal si está disponible
     const modal = document.getElementById('deleteReviewModalOverlay');
     if (modal) {
         const messageElement = document.getElementById('deleteReviewMessage');
@@ -642,7 +715,7 @@ function showDeleteReviewModal(reviewId, reviewTitle) {
         }
         modal.style.display = 'flex';
     } else {
-        // Si no hay modal, usar confirm
+        // Si no hay modal, usar confirm como fallback
         if (confirm(`¿Estás seguro de que quieres eliminar la reseña "${reviewTitle}"? Esta acción no se puede deshacer.`)) {
             deleteReviewLogic(reviewId);
         }
@@ -748,52 +821,1547 @@ function showReportModal(id, type) {
 }
 
 /**
- * Muestra el modal de comentarios (usa el modal de Bootstrap si está disponible)
+ * Muestra el modal de comentarios - usa el modal de detalles de reseña que ya incluye comentarios
  */
 async function showCommentsModal(reviewId) {
-    // Intentar usar el modal de Bootstrap de profile.html
-    const bootstrapModal = document.getElementById('commentsModal');
-    if (bootstrapModal && typeof window.commentsModalInstance !== 'undefined' && window.commentsModalInstance) {
-        window.commentsModalInstance.show();
-        const modalList = document.getElementById('modalCommentsList');
-        if (modalList) {
-            modalList.innerHTML = '<p class="text-center p-4">Cargando comentarios...</p>';
-            try {
-                const comments = await getCommentsByReview(reviewId);
-                // TODO: Renderizar comentarios en el modal
-                modalList.innerHTML = comments.length > 0 
-                    ? '<p class="text-center p-4">Comentarios cargados</p>' 
-                    : '<p class="text-center p-4">No hay comentarios aún.</p>';
-            } catch (error) {
-                console.error('Error cargando comentarios:', error);
-                modalList.innerHTML = '<p class="text-center p-4 text-danger">Error al cargar comentarios.</p>';
-            }
-        }
+    // Usar el modal de detalles de reseña que ya tiene la funcionalidad de comentarios
+    if (typeof showReviewDetailModal === 'function') {
+        await showReviewDetailModal(reviewId);
     } else {
-        // Si no hay modal de Bootstrap, intentar usar el modal de home
-        const modal = document.getElementById('commentsModalOverlay');
+        // Fallback: intentar abrir directamente el modal de detalles
+        const modal = document.getElementById('reviewDetailModalOverlay');
         if (modal) {
             modal.setAttribute('data-review-id', reviewId);
             modal.style.display = 'flex';
+            // Cargar la reseña y comentarios
+            if (typeof showReviewDetailModal === 'function') {
+                await showReviewDetailModal(reviewId);
+            }
         } else {
-            console.warn('Modal de comentarios no disponible');
+            console.warn('Modal de detalles de reseña no disponible');
         }
     }
 }
 
 /**
- * Muestra el modal de vista detallada de reseña (usa el modal de home si está disponible)
+ * Muestra el modal de vista detallada de reseña (igual que en home)
  */
 async function showReviewDetailModal(reviewId) {
     const modal = document.getElementById('reviewDetailModalOverlay');
-    if (modal) {
+    if (!modal) return;
+    
+    // Establecer el reviewId en el modal para que submitReviewDetailComment pueda obtenerlo
         modal.setAttribute('data-review-id', reviewId);
         modal.style.display = 'flex';
-        // El modal de home se encargará de cargar el contenido
+    const contentDiv = document.getElementById('reviewDetailContent');
+    if (contentDiv) {
+        contentDiv.innerHTML = '<div class="review-detail-loading">Cargando reseña...</div>';
+    }
+    
+    try {
+        // Obtener funciones de API disponibles
+        const getReviewsByUserFn = window.reviewApi?.getReviewsByUser || window.socialApi?.getReviewsByUser;
+        const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
+        const getReviewReactionCountFn = window.socialApi?.getReviewReactionCount || window.reviewApi?.getReviewReactionCount || (() => Promise.resolve(0));
+        const getUserFn = window.userApi?.getUserProfile || window.userApi?.getUser || (() => Promise.resolve(null));
+        const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
+        
+        // Primero intentar obtener la reseña de las reseñas del usuario del perfil
+        let review = null;
+        let allReviews = [];
+        
+        if (profileUserId && getReviewsByUserFn) {
+            try {
+                allReviews = await getReviewsByUserFn(profileUserId);
+                if (allReviews && allReviews.length > 0) {
+                    review = allReviews.find(r => {
+                        const rId = r.ReviewId || r.reviewId || r.id || r.Id_Review;
+                        return String(rId).trim() === String(reviewId).trim();
+                    });
+                }
+            } catch (err) {
+                console.debug('Error obteniendo reseñas del usuario:', err);
+            }
+        }
+        
+        // Si no encontramos la reseña, intentar obtener todas las reseñas
+        if (!review) {
+            const getReviewsFn = window.socialApi?.getReviews || window.reviewApi?.getReviews || (() => Promise.resolve([]));
+            try {
+                allReviews = await getReviewsFn();
+                if (allReviews && allReviews.length > 0) {
+                    review = allReviews.find(r => {
+                        const rId = r.ReviewId || r.reviewId || r.id || r.Id_Review;
+                        return String(rId).trim() === String(reviewId).trim();
+                    });
+                }
+            } catch (err) {
+                console.debug('Error obteniendo todas las reseñas:', err);
+            }
+        }
+        
+        // Si aún no encontramos la reseña, mostrar error
+        if (!review) {
+            console.warn('⚠️ No se pudo obtener la reseña con ID:', reviewId, '- Puede que la reseña haya sido eliminada o no exista.');
+            if (contentDiv) {
+                contentDiv.innerHTML = '<div class="review-detail-loading" style="color: #ff6b6b; padding: 2rem; text-align: center;">No se pudo cargar la reseña. Puede que haya sido eliminada.</div>';
+            }
+            return;
+        }
+        
+        // Obtener comentarios y likes
+        const [commentsResult, likesResult] = await Promise.allSettled([
+            getCommentsByReviewFn(reviewId).catch(err => {
+                console.warn('Error obteniendo comentarios:', err);
+                return [];
+            }),
+            getReviewReactionCountFn(reviewId).catch(err => {
+                console.warn('Error obteniendo likes:', err);
+                return 0;
+            })
+        ]);
+        
+        const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
+        const likes = likesResult.status === 'fulfilled' ? likesResult.value : 0;
+        
+        // Obtener datos del usuario
+        let username = `Usuario ${String(review.UserId || review.userId || '').substring(0, 8)}`;
+        let avatar = '../../Assets/default-avatar.png';
+        
+        if (review.UserId || review.userId) {
+            try {
+                const userId = review.UserId || review.userId;
+                const userData = await getUserFn(userId);
+                if (userData) {
+                    username = userData.Username || userData.username || userData.UserName || username;
+                    avatar = userData.imgProfile || userData.ImgProfile || userData.image || avatar;
+                }
+            } catch (userError) {
+                console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+            }
+        }
+        
+        const storageKey = `review_content_${reviewId}`;
+        const storedContentData = localStorage.getItem(storageKey);
+        let contentData = null;
+        if (storedContentData) {
+            try { contentData = JSON.parse(storedContentData); } catch (e) {}
+        }
+        
+        let songName = 'Canción', albumName = 'Álbum', artistName = 'Artista', contentType = 'song';
+        
+        if (contentData) {
+            contentType = contentData.type || 'song';
+            if (contentData.type === 'song') songName = contentData.name || songName;
+            else albumName = contentData.name || albumName;
+            artistName = contentData.artist || artistName;
+        } else if (review.song) {
+            songName = review.song.Title || review.song.title || songName;
+            artistName = review.song.ArtistName || review.song.artistName || artistName;
+        } else if (review.album) {
+            albumName = review.album.Title || review.album.title || albumName;
+            artistName = review.album.ArtistName || review.album.artistName || artistName;
+        }
+        
+        const reviewTitle = review.Title || review.title || '';
+        const reviewContent = review.Content || review.content || review.comment || '';
+        const reviewRating = review.Rating || review.rating || 0;
+        const createdAt = review.CreatedAt || review.Created || new Date();
+        const timeAgo = formatNotificationTimeFn(createdAt); 
+        
+        const currentUserId = localStorage.getItem('userId');
+        const reviewUserId = review.UserId || review.userId || '';
+        
+        let userLiked = false;
+        if (currentUserId) {
+            const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
+            const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
+            userLiked = storedReactionId !== null || localLike === 'true';
+        }
+        
+        const contentName = contentType === 'song' ? songName : albumName;
+        
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="review-detail-main">
+                    <div class="review-detail-user">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar" onerror="this.src='../../Assets/default-avatar.png'">
+                        <div class="review-detail-user-info">
+                            <span class="review-detail-username">${username}</span>
+                            <span class="review-detail-time">${timeAgo}</span>
+                        </div>
+                    </div>
+                    <div class="review-detail-meta">
+                        <span class="review-detail-content-type">${contentType === 'song' ? 'Canción' : 'Álbum'}</span>
+                        <span class="review-detail-separator">-</span>
+                        <span class="review-detail-content-name">${contentName}</span>
+                        <span class="review-detail-separator">-</span>
+                        <span class="review-detail-artist">${artistName}</span>
+                    </div>
+                    ${reviewTitle ? `<h2 class="review-detail-title">${reviewTitle}</h2>` : ''}
+                    <p class="review-detail-text">${reviewContent}</p>
+                    <div class="review-detail-rating">
+                        <div class="review-detail-stars">${renderStars(reviewRating)}</div>
+                    </div>
+                    <div class="review-detail-interactions">
+                        <button class="review-detail-interaction-btn ${userLiked ? 'liked' : ''}" 
+                                data-review-id="${reviewId}" id="reviewDetailLikeBtn">
+                            <i class="fas fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'};"></i>
+                            <span class="review-detail-likes-count">${likes}</span>
+                        </button>
+                        <span class="review-detail-comments-icon">
+                            <i class="fas fa-comment"></i>
+                            <span class="review-detail-comments-count">${comments.length}</span>
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        await loadReviewDetailComments(reviewId, comments);
+        
+        const likeBtn = document.getElementById('reviewDetailLikeBtn');
+        if (likeBtn) {
+            likeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!localStorage.getItem('authToken')) {
+                    if (typeof showLoginRequiredModal === 'function') {
+                        showLoginRequiredModal();
+                    }
+                    return;
+                }
+                toggleReviewLikeInDetail(reviewId, this);
+            });
+        }
+        
+        const inputAvatar = document.getElementById('reviewDetailInputAvatar');
+        if (inputAvatar) {
+            inputAvatar.src = localStorage.getItem('userAvatar') || '../../Assets/default-avatar.png';
+        }
+        
+    } catch (error) {
+        console.error('Error cargando vista detallada:', error);
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="review-detail-loading" style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.7);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem; color: #ff6b6b;"></i>
+                    <p style="margin: 0;">Error al cargar la reseña. Por favor, intenta nuevamente.</p>
+                </div>
+            `;
+        }
+        // Aún así, cargar los comentarios si es posible
+        try {
+            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
+            const comments = await getCommentsByReviewFn(reviewId).catch(() => []);
+            await loadReviewDetailComments(reviewId, comments);
+        } catch (commentError) {
+            console.warn('No se pudieron cargar los comentarios:', commentError);
+        }
+    }
+}
+
+async function loadReviewDetailComments(reviewId, comments) {
+    const commentsList = document.getElementById('reviewDetailCommentsList');
+    const commentsCountEl = document.getElementById('reviewDetailCommentsCount');
+    if (!commentsList) return;
+    
+    try {
+        // Si no nos pasan los comentarios, los buscamos
+        if (!comments) {
+            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
+            comments = await getCommentsByReviewFn(reviewId);
+        }
+        
+        const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
+        const currentUserIdRaw = localStorage.getItem('userId');
+        const currentUserId = currentUserIdRaw ? String(currentUserIdRaw).trim() : null;
+        
+        if (commentsCountEl) commentsCountEl.textContent = comments.length;
+        
+        if (comments.length === 0) {
+            commentsList.innerHTML = `
+                <div class="review-detail-comment-empty">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                </div>
+            `;
     } else {
-        // Si no hay modal, redirigir a home
-        if (confirm('Para ver los detalles de la reseña, serás redirigido a la página principal. ¿Continuar?')) {
-            window.location.href = '../home.html';
+            commentsList.innerHTML = comments.map(comment => {
+                const timeAgo = formatNotificationTimeFn(comment.Created || comment.CreatedAt || comment.date);
+                const username = comment.UserName || comment.username || 'Usuario';
+                const text = comment.Text || comment.text || '';
+                let commentId = comment.Id_Comment || comment.id_Comment || comment.IdComment || comment.idComment || comment.id || comment.Id || '';
+                if (commentId) {
+                    commentId = String(commentId).trim();
+                }
+                const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
+                const likes = comment.Likes || comment.likes || 0;
+                const userLiked = comment.userLiked || false;
+                
+                const normalizedCommentUserId = commentUserId ? String(commentUserId).trim() : '';
+                const normalizedCurrentUserId = currentUserId ? String(currentUserId).trim() : '';
+                const isOwnComment = normalizedCurrentUserId && normalizedCommentUserId && 
+                    normalizedCommentUserId.toLowerCase() === normalizedCurrentUserId.toLowerCase();
+                
+                let actionButtons = '';
+                if (isOwnComment) {
+                    actionButtons = `
+                        <div class="review-detail-comment-actions">
+                            <button class="review-detail-comment-action-btn comment-edit-btn" data-comment-id="${commentId}" title="Editar">
+                                <i class="fas fa-pencil"></i>
+                            </button>
+                            <button class="review-detail-comment-action-btn comment-delete-btn" data-comment-id="${commentId}" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                      </div>
+                    `;
+                } else if (currentUserId) {
+                    // Si no es propio, mostrar botón de reportar
+                    actionButtons = `
+                        <div class="review-detail-comment-actions">
+                            <button class="review-detail-comment-action-btn comment-report-btn" data-comment-id="${commentId}" title="Reportar">
+                                <i class="fas fa-flag"></i>
+                            </button>
+                      </div>
+                    `;
+                }
+                
+                return `
+                    <div class="review-detail-comment-item" data-comment-id="${commentId}">
+                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar" onerror="this.src='../../Assets/default-avatar.png'">
+                        <div class="review-detail-comment-content">
+                            <div class="review-detail-comment-header">
+                                <span class="review-detail-comment-username">${username}</span>
+                                <span class="review-detail-comment-time">${timeAgo}</span>
+                            </div>
+                            <p class="review-detail-comment-text">${text}</p>
+                            <div class="review-detail-comment-footer">
+                                <button class="review-detail-comment-like-btn ${userLiked ? 'liked' : ''}" 
+                                        data-comment-id="${commentId}">
+                                    <i class="fa-solid fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.6)'};"></i>
+                                    <span class="review-detail-comment-likes-count">${likes}</span>
+                                </button>
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        attachReviewDetailCommentListeners(reviewId);
+    } catch (error) {
+        console.error('Error cargando comentarios en vista detallada:', error);
+        commentsList.innerHTML = '<div class="review-detail-comment-empty">Error al cargar comentarios.</div>';
+    }
+}
+
+function attachReviewDetailCommentListeners(reviewId) {
+    document.querySelectorAll('.review-detail-comment-like-btn').forEach(btn => {
+        // Verificar si ya tiene un listener (usando un atributo de datos)
+        if (!btn.hasAttribute('data-listener-attached')) {
+            btn.setAttribute('data-listener-attached', 'true');
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const commentId = this.getAttribute('data-comment-id');
+                if (commentId) {
+                    toggleCommentLikeInDetail(commentId, this, reviewId);
+                }
+            });
+        }
+    });
+    
+    // Botones de editar
+    document.querySelectorAll('.review-detail-comment-item .comment-edit-btn').forEach(btn => {
+        // Verificar si ya tiene un listener
+        if (!btn.hasAttribute('data-listener-attached')) {
+            btn.setAttribute('data-listener-attached', 'true');
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const commentId = this.getAttribute('data-comment-id');
+                if (commentId) {
+                    editCommentInDetail(commentId, reviewId);
+                }
+            });
+        }
+    });
+    
+    // Botones de eliminar
+    document.querySelectorAll('.review-detail-comment-item .comment-delete-btn').forEach(btn => {
+        // Verificar si ya tiene un listener
+        if (!btn.hasAttribute('data-listener-attached')) {
+            btn.setAttribute('data-listener-attached', 'true');
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const commentId = this.getAttribute('data-comment-id');
+                if (commentId && reviewId) {
+                    deleteCommentInDetail(commentId, reviewId);
+                }
+            });
+        }
+    });
+    
+    // Botones de reportar
+    document.querySelectorAll('.review-detail-comment-item .comment-report-btn').forEach(btn => {
+        // Verificar si ya tiene un listener
+        if (!btn.hasAttribute('data-listener-attached')) {
+            btn.setAttribute('data-listener-attached', 'true');
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const commentId = this.getAttribute('data-comment-id');
+                if (commentId) {
+                    showReportCommentModal(commentId);
+                }
+            });
+        }
+    });
+}
+
+function showReportCommentModal(commentId) {
+    showReportModal(commentId, 'comment');
+}
+
+async function toggleReviewLikeInDetail(reviewId, btn) {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        if (typeof showLoginRequiredModal === 'function') {
+            showLoginRequiredModal();
+        }
+        return;
+    }
+    
+    const icon = btn.querySelector('i');
+    const likesSpan = btn.querySelector('.review-detail-likes-count');
+    const isLiked = btn.classList.contains('liked');
+    const currentLikes = parseInt(likesSpan.textContent) || 0;
+    const currentUserId = localStorage.getItem('userId');
+    
+    // Actualizar visualmente
+    if (isLiked) {
+        btn.classList.remove('liked');
+        icon.style.color = 'rgba(255,255,255,0.7)';
+        likesSpan.textContent = Math.max(0, currentLikes - 1);
+        
+        const reactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
+        if (reactionId && typeof deleteReviewReaction === 'function') {
+            try {
+                await deleteReviewReaction(reviewId, currentUserId, authToken, reactionId);
+                localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
+                localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
+            } catch (err) {
+                console.warn('Error eliminando like:', err);
+            }
+        }
+    } else {
+        btn.classList.add('liked');
+        icon.style.color = 'var(--magenta, #EC4899)';
+        likesSpan.textContent = currentLikes + 1;
+        
+        localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
+        if (typeof addReviewReaction === 'function') {
+            try {
+                const data = await addReviewReaction(reviewId, currentUserId, authToken);
+                const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
+                if (reactionId) {
+                    localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, reactionId);
+                }
+            } catch (err) {
+                console.warn('Error agregando like:', err);
+            }
+        }
+    }
+}
+
+async function toggleCommentLikeInDetail(commentId, btn, reviewId) {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        if (typeof showLoginRequiredModal === 'function') {
+            showLoginRequiredModal();
+        }
+        return;
+    }
+    
+    const icon = btn.querySelector('i');
+    const likesSpan = btn.querySelector('.review-detail-comment-likes-count');
+    const isLiked = btn.classList.contains('liked');
+    const currentLikes = parseInt(likesSpan.textContent) || 0;
+    
+    // Actualizar visualmente
+    if (isLiked) {
+        btn.classList.remove('liked');
+        icon.style.color = 'rgba(255,255,255,0.6)';
+        likesSpan.textContent = Math.max(0, currentLikes - 1);
+    } else {
+        btn.classList.add('liked');
+        icon.style.color = 'var(--magenta, #EC4899)';
+        likesSpan.textContent = currentLikes + 1;
+    }
+    
+    // TODO: Enviar like al backend cuando esté disponible
+}
+
+function editCommentInDetail(commentId, reviewId) {
+    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+    const commentTextElement = commentItem?.querySelector('.review-detail-comment-text');
+    
+    if (!commentItem || !commentTextElement) {
+        console.error('No se encontró commentItem o commentTextElement en vista detallada');
+        return;
+    }
+    
+    // Si ya está en modo edición, no hacer nada
+    if (commentItem.classList.contains('editing')) {
+        return;
+    }
+    
+    // Guardar el texto original
+    const originalText = commentTextElement.textContent.trim();
+    
+    // Crear textarea para edición
+    const textarea = document.createElement('textarea');
+    textarea.className = 'comment-text-edit';
+    textarea.value = originalText;
+    textarea.maxLength = 500;
+    textarea.rows = 3;
+    
+    // Crear contenedor de botones
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'comment-edit-buttons';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'comment-edit-action-btn comment-edit-cancel';
+    cancelBtn.textContent = 'Cancelar';
+    cancelBtn.type = 'button';
+    cancelBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelEditCommentInDetail(commentId, originalText);
+    });
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'comment-edit-action-btn comment-edit-confirm';
+    confirmBtn.textContent = 'Guardar';
+    confirmBtn.type = 'button';
+    confirmBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const newText = textarea.value.trim();
+        if (newText && newText !== originalText) {
+            saveCommentEditInDetail(commentId, newText, reviewId);
+        } else {
+            cancelEditCommentInDetail(commentId, originalText);
+        }
+    });
+    
+    buttonsContainer.appendChild(cancelBtn);
+    buttonsContainer.appendChild(confirmBtn);
+    
+    // Reemplazar el texto con el textarea
+    commentTextElement.style.display = 'none';
+    commentItem.classList.add('editing');
+    commentTextElement.parentNode.insertBefore(textarea, commentTextElement);
+    commentTextElement.parentNode.insertBefore(buttonsContainer, commentTextElement.nextSibling);
+    
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+}
+
+function cancelEditCommentInDetail(commentId, originalText) {
+    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+    if (!commentItem) return;
+    
+    const textarea = commentItem.querySelector('.comment-text-edit');
+    const buttonsContainer = commentItem.querySelector('.comment-edit-buttons');
+    const commentTextElement = commentItem.querySelector('.review-detail-comment-text');
+    
+    if (textarea) textarea.remove();
+    if (buttonsContainer) buttonsContainer.remove();
+    if (commentTextElement) {
+        commentTextElement.textContent = originalText;
+        commentTextElement.style.display = 'block';
+    }
+    
+    commentItem.classList.remove('editing');
+}
+
+async function saveCommentEditInDetail(commentId, newText, reviewId) {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        if (typeof showLoginRequiredModal === 'function') {
+            showLoginRequiredModal();
+        }
+        return;
+    }
+    
+    try {
+        const updateCommentFn = window.socialApi?.updateComment || window.reviewApi?.updateComment;
+        if (updateCommentFn) {
+            await updateCommentFn(commentId, newText, authToken);
+            
+            // Actualizar el texto en el DOM
+            const commentTextElement = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"] .review-detail-comment-text`);
+            if (commentTextElement) {
+                commentTextElement.textContent = newText;
+            }
+            
+            cancelEditCommentInDetail(commentId, newText);
+            
+            if (typeof showAlert === 'function') {
+                showAlert('Comentario actualizado', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error actualizando comentario:', error);
+        if (typeof showAlert === 'function') {
+            showAlert('Error al actualizar el comentario', 'danger');
+        }
+    }
+}
+
+// Variable global para almacenar el ID del comentario a eliminar
+let deletingCommentId = null;
+let deletingCommentReviewId = null;
+
+function showDeleteCommentModal(commentId, reviewId) {
+    deletingCommentId = commentId;
+    deletingCommentReviewId = reviewId;
+    
+    const modal = document.getElementById('deleteCommentModalOverlay');
+    if (modal) {
+        // Asegurar que el modal tenga el z-index más alto
+        modal.style.display = 'flex';
+        modal.style.zIndex = '10005';
+        // Asegurar que el modal esté visible
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+    } else {
+        // Fallback a confirm si no hay modal
+        if (confirm('¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.')) {
+            confirmDeleteComment();
+        }
+    }
+}
+
+function hideDeleteCommentModal() {
+    const modal = document.getElementById('deleteCommentModalOverlay');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    deletingCommentId = null;
+    deletingCommentReviewId = null;
+}
+
+async function confirmDeleteComment() {
+    if (!deletingCommentId) return;
+    
+    const commentId = deletingCommentId;
+    const reviewId = deletingCommentReviewId;
+    
+    hideDeleteCommentModal();
+    
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        if (typeof showLoginRequiredModal === 'function') {
+            showLoginRequiredModal();
+        }
+        return;
+    }
+    
+    try {
+        const deleteCommentFn = window.socialApi?.deleteComment || window.reviewApi?.deleteComment;
+        if (deleteCommentFn) {
+            await deleteCommentFn(commentId, authToken);
+            
+            // Remover el comentario del DOM
+            const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+            if (commentItem) {
+                commentItem.remove();
+            }
+            
+            // Actualizar el contador de comentarios en el modal de detalles
+            const commentsCountEl = document.getElementById('reviewDetailCommentsCount');
+            if (commentsCountEl) {
+                const currentCount = parseInt(commentsCountEl.textContent) || 0;
+                commentsCountEl.textContent = Math.max(0, currentCount - 1);
+            }
+            
+            // Actualizar el contador de comentarios en la tarjeta de reseña del perfil
+            const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+            if (reviewItem) {
+                const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
+                if (reviewCommentsCount) {
+                    const currentCardCount = parseInt(reviewCommentsCount.textContent) || 0;
+                    reviewCommentsCount.textContent = Math.max(0, currentCardCount - 1);
+                }
+            }
+            
+            // Si no hay más comentarios, mostrar mensaje vacío
+            const commentsList = document.getElementById('reviewDetailCommentsList');
+            if (commentsList && commentsList.querySelectorAll('.review-detail-comment-item').length === 0) {
+                commentsList.innerHTML = `
+                    <div class="review-detail-comment-empty">
+                        <i class="fas fa-comment-slash"></i>
+                        <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                    </div>
+                `;
+            }
+            
+            if (typeof showAlert === 'function') {
+                showAlert('Comentario eliminado', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error eliminando comentario:', error);
+        if (typeof showAlert === 'function') {
+            showAlert('Error al eliminar el comentario', 'danger');
+        }
+    }
+}
+
+async function deleteCommentInDetail(commentId, reviewId) {
+    showDeleteCommentModal(commentId, reviewId);
+}
+
+function hideReviewDetailModal() {
+    const modal = document.getElementById('reviewDetailModalOverlay');
+    if (modal) modal.style.display = 'none';
+}
+
+// Variable global para almacenar el ID de la reseña a eliminar
+let deletingReviewId = null;
+
+function initializeDeleteModalsLogic() {
+    // Modal de Borrar Comentario
+    const cancelDeleteCommentBtn = document.getElementById('cancelDeleteCommentBtn');
+    const confirmDeleteCommentBtn = document.getElementById('confirmDeleteCommentBtn');
+    const deleteCommentModalOverlay = document.getElementById('deleteCommentModalOverlay');
+    
+    if (cancelDeleteCommentBtn) {
+        cancelDeleteCommentBtn.addEventListener('click', hideDeleteCommentModal);
+    }
+    if (confirmDeleteCommentBtn) {
+        confirmDeleteCommentBtn.addEventListener('click', confirmDeleteComment);
+    }
+    if (deleteCommentModalOverlay) {
+        deleteCommentModalOverlay.addEventListener('click', (e) => {
+            if (e.target === deleteCommentModalOverlay) hideDeleteCommentModal();
+        });
+    }
+    
+    // Modal de Borrar Reseña
+    const cancelDeleteReviewBtn = document.getElementById('cancelDeleteReviewBtn');
+    const confirmDeleteReviewBtn = document.getElementById('confirmDeleteReviewBtn');
+    const deleteReviewModalOverlay = document.getElementById('deleteReviewModalOverlay');
+    
+    if (cancelDeleteReviewBtn) {
+        cancelDeleteReviewBtn.addEventListener('click', hideDeleteReviewModal);
+    }
+    if (confirmDeleteReviewBtn) {
+        confirmDeleteReviewBtn.addEventListener('click', confirmDeleteReview);
+    }
+    if (deleteReviewModalOverlay) {
+        deleteReviewModalOverlay.addEventListener('click', (e) => {
+            if (e.target === deleteReviewModalOverlay) hideDeleteReviewModal();
+        });
+    }
+}
+
+function hideDeleteReviewModal() {
+    const modal = document.getElementById('deleteReviewModalOverlay');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    deletingReviewId = null;
+}
+
+async function confirmDeleteReview() {
+    if (!deletingReviewId) return;
+    
+    const reviewId = deletingReviewId;
+    hideDeleteReviewModal();
+    await deleteReviewLogic(reviewId);
+}
+
+function initializeReviewDetailModalLogic() {
+    const closeReviewDetailModal = document.getElementById('closeReviewDetailModal');
+    const reviewDetailModalOverlay = document.getElementById('reviewDetailModalOverlay');
+    const reviewDetailSubmitCommentBtn = document.getElementById('reviewDetailSubmitCommentBtn');
+    const reviewDetailCommentInput = document.getElementById('reviewDetailCommentInput');
+    
+    if (closeReviewDetailModal) {
+        closeReviewDetailModal.addEventListener('click', hideReviewDetailModal);
+    }
+    
+    if (reviewDetailModalOverlay) {
+        reviewDetailModalOverlay.addEventListener('click', (e) => {
+            if (e.target === reviewDetailModalOverlay) {
+                hideReviewDetailModal();
+            }
+        });
+    }
+    
+    if (reviewDetailSubmitCommentBtn) {
+        reviewDetailSubmitCommentBtn.addEventListener('click', submitReviewDetailComment);
+    }
+    
+    if (reviewDetailCommentInput) {
+        reviewDetailCommentInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitReviewDetailComment();
+            }
+        });
+    }
+}
+
+async function submitReviewDetailComment() {
+    const modal = document.getElementById('reviewDetailModalOverlay');
+    if (!modal || modal.style.display !== 'flex') return;
+    
+    const reviewId = modal.getAttribute('data-review-id');
+    const commentInput = document.getElementById('reviewDetailCommentInput');
+    
+    if (!reviewId || !commentInput) {
+        console.warn('No se pudo obtener reviewId o commentInput en modal de detalle');
+        return;
+    }
+    
+    const commentText = commentInput.value.trim();
+    if (!commentText) {
+        if (typeof showAlert === 'function') {
+            showAlert('Por favor, escribe un comentario', 'warning');
+        }
+        return;
+    }
+    
+    try {
+        const authToken = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        
+        if (!authToken) {
+            if (typeof showLoginRequiredModal === 'function') {
+                showLoginRequiredModal();
+            }
+            return;
+        }
+        
+        // Crear comentario usando la API - intentar múltiples fuentes
+        let createCommentFn = null;
+        
+        // Intentar desde socialApi (importado como módulo)
+        if (typeof window.socialApi !== 'undefined' && window.socialApi.createComment) {
+            createCommentFn = window.socialApi.createComment;
+        } else if (typeof window.reviewApi !== 'undefined' && window.reviewApi.createComment) {
+            createCommentFn = window.reviewApi.createComment;
+        } else if (typeof createComment === 'function') {
+            // Intentar función global directa
+            createCommentFn = createComment;
+        } else {
+            // Intentar importar dinámicamente
+            try {
+                const socialApiModule = await import('../../APIs/socialApi.js');
+                if (socialApiModule && socialApiModule.createComment) {
+                    createCommentFn = socialApiModule.createComment;
+                    // Guardar para uso futuro
+                    if (typeof window !== 'undefined') {
+                        if (!window.socialApi) window.socialApi = {};
+                        window.socialApi.createComment = socialApiModule.createComment;
+                    }
+                }
+            } catch (importError) {
+                console.warn('No se pudo importar socialApi dinámicamente:', importError);
+            }
+        }
+        
+        if (createCommentFn) {
+            await createCommentFn(reviewId, commentText, userId, authToken);
+        } else {
+            console.error('No se encontró función createComment en ninguna fuente disponible');
+            if (typeof showAlert === 'function') {
+                showAlert('Error: No se pudo encontrar la función para crear comentarios', 'danger');
+            }
+            return;
+        }
+        
+        // Limpiar input
+        commentInput.value = '';
+        
+        // Recargar comentarios en el modal de detalle
+        await loadReviewDetailComments(reviewId);
+        
+        // Actualizar contador en el modal de detalles
+        const commentsCount = document.getElementById('reviewDetailCommentsCount');
+        if (commentsCount) {
+            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
+            const comments = await getCommentsByReviewFn(reviewId);
+            commentsCount.textContent = comments.length;
+            
+            // Actualizar también el contador en la tarjeta de reseña del perfil
+            const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+            if (reviewItem) {
+                const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
+                if (reviewCommentsCount) {
+                    reviewCommentsCount.textContent = comments.length;
+                }
+            }
+        }
+        
+        if (typeof showAlert === 'function') {
+            showAlert('Comentario agregado exitosamente', 'success');
+        }
+    } catch (error) {
+        console.error('Error agregando comentario en vista detallada:', error);
+        if (typeof showAlert === 'function') {
+            showAlert('Error al agregar el comentario', 'danger');
+        }
+    }
+}
+
+// --- FUNCIONES PARA CREAR RESEÑA DESDE EL PERFIL ---
+
+let currentReviewData = null; // Almacena datos del contenido para el modal "Crear Reseña"
+
+/**
+ * Inicializa el modal de crear reseña en el perfil
+ */
+function initializeCreateReviewModal() {
+    const addReviewBtn = document.getElementById('addReviewBtn');
+    const closeCreateReviewModal = document.getElementById('closeCreateReviewModal');
+    const createReviewModalOverlay = document.getElementById('createReviewModalOverlay');
+    const submitCreateReviewBtn = document.getElementById('submitCreateReviewBtn');
+    const createReviewStars = document.getElementById('createReviewStars');
+    const contentSearchInput = document.getElementById('contentSearchInput');
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+    const changeContentBtn = document.getElementById('changeContentBtn');
+    
+    if (closeCreateReviewModal) {
+        closeCreateReviewModal.addEventListener('click', hideCreateReviewModal);
+    }
+    if (createReviewModalOverlay) {
+        createReviewModalOverlay.addEventListener('click', (e) => {
+            if (e.target === createReviewModalOverlay) hideCreateReviewModal();
+        });
+    }
+    
+    if (submitCreateReviewBtn) {
+        submitCreateReviewBtn.addEventListener('click', (e) => {
+            console.log('🔘 Botón de crear reseña clickeado desde perfil');
+            e.preventDefault();
+            submitCreateReview();
+        });
+    }
+    
+    if (changeContentBtn) {
+        changeContentBtn.addEventListener('click', () => {
+            const contentSelector = document.getElementById('createReviewContentSelector');
+            const contentInfo = document.getElementById('createReviewContentInfo');
+            if (contentSelector) contentSelector.style.display = 'block';
+            if (contentInfo) contentInfo.style.display = 'none';
+            currentReviewData = null;
+        });
+    }
+    
+    // Búsqueda de contenido (igual que en homeAdmin.js)
+    if (contentSearchInput) {
+        let searchTimeout;
+        let currentSearchController = null;
+        
+        contentSearchInput.addEventListener('input', function() {
+            if (currentSearchController) {
+                currentSearchController.abort();
+            }
+            clearTimeout(searchTimeout);
+            
+            if (this.value.length > 0) {
+                currentSearchController = new AbortController();
+                searchTimeout = setTimeout(() => {
+                    performContentSearch(this.value.trim(), currentSearchController.signal);
+                }, 500);
+            } else {
+                if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+            }
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (contentSearchInput && contentSearchDropdown && !contentSearchInput.contains(e.target) && !contentSearchDropdown.contains(e.target)) {
+                if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+            }
+        });
+    }
+    
+    // Estrellas
+    if (createReviewStars) {
+        let currentRating = 0;
+        const stars = createReviewStars.querySelectorAll('.star-input');
+        
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                currentRating = parseInt(star.getAttribute('data-rating'));
+                stars.forEach((s, i) => {
+                    s.classList.toggle('active', i < currentRating);
+                });
+            });
+            
+            star.addEventListener('mouseenter', () => {
+                const hoverRating = parseInt(star.getAttribute('data-rating'));
+                stars.forEach((s, i) => {
+                    s.style.opacity = i < hoverRating ? '1' : '0.5';
+                });
+            });
+        });
+        
+        createReviewStars.addEventListener('mouseleave', () => {
+            stars.forEach((s, i) => {
+                s.style.opacity = i < currentRating ? '1' : '0.5';
+            });
+        });
+    }
+}
+
+/**
+ * Muestra el modal de crear reseña
+ */
+function showCreateReviewModal(contentData = null) {
+    const modal = document.getElementById('createReviewModalOverlay');
+    const contentSelector = document.getElementById('createReviewContentSelector');
+    const contentInfo = document.getElementById('createReviewContentInfo');
+    const contentSearchInput = document.getElementById('contentSearchInput');
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+    
+    if (!modal) {
+        console.warn('Modal de crear reseña no encontrado');
+        return;
+    }
+    
+    if (contentData && contentData.type === 'artist') {
+        if (typeof showAlert === 'function') {
+            showAlert('No se pueden crear reseñas de artistas. Por favor, selecciona una canción o un álbum.', 'warning');
+        } else {
+            alert('No se pueden crear reseñas de artistas.');
+        }
+        return;
+    }
+    
+    if (contentData) {
+        setSelectedContent(contentData);
+    } else {
+        currentReviewData = null;
+        if (contentSelector) contentSelector.style.display = 'block';
+        if (contentInfo) contentInfo.style.display = 'none';
+        if (contentSearchInput) contentSearchInput.value = '';
+        if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+    }
+    
+    const titleInput = document.getElementById('createReviewTitleInput');
+    const textInput = document.getElementById('createReviewTextInput');
+    if (titleInput) titleInput.value = '';
+    if (textInput) textInput.value = '';
+    
+    const stars = document.querySelectorAll('#createReviewStars .star-input');
+    stars.forEach(star => star.classList.remove('active'));
+    
+    modal.style.display = 'flex';
+}
+
+function hideCreateReviewModal() {
+    const modal = document.getElementById('createReviewModalOverlay');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentReviewData = null;
+}
+
+function setSelectedContent(contentData) {
+    currentReviewData = contentData;
+    const contentSelector = document.getElementById('createReviewContentSelector');
+    const contentInfo = document.getElementById('createReviewContentInfo');
+    const contentInfoImage = document.getElementById('contentInfoImage');
+    const contentInfoName = document.getElementById('contentInfoName');
+    const contentInfoType = document.getElementById('contentInfoType');
+    
+    if (contentSelector) contentSelector.style.display = 'none';
+    if (contentInfo) contentInfo.style.display = 'flex';
+    if (contentInfoImage) contentInfoImage.src = contentData.image || '../../Assets/default-avatar.png';
+    if (contentInfoName) contentInfoName.textContent = contentData.name || '';
+    if (contentInfoType) contentInfoType.textContent = contentData.type === 'song' ? 'CANCIÓN' : 'ÁLBUM';
+}
+
+/**
+ * Busca contenido usando la API de búsqueda (igual que en homeAdmin.js)
+ */
+async function performContentSearch(query, signal) {
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+    if (!query || query.length === 0) {
+        if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+        return;
+    }
+    
+    if (contentSearchDropdown) {
+        contentSearchDropdown.innerHTML = '<div class="search-loading">Buscando...</div>';
+        contentSearchDropdown.style.display = 'block';
+    }
+    
+    try {
+        let results = null;
+        
+        // Intentar usar fetchSearchResults si está disponible (desde headerHandler o window)
+        if (typeof window.fetchSearchResults === 'function') {
+            results = await window.fetchSearchResults(query, signal);
+        } else if (typeof fetchSearchResults === 'function') {
+            results = await fetchSearchResults(query, signal);
+        } else {
+            // Usar la API directamente
+            const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+            const axiosInstance = window.axios || axios;
+            const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/contents/search`, {
+                params: { query: query },
+                signal: signal,
+                timeout: 5000
+            });
+            results = response.data;
+        }
+        
+        if (results === null) return; // Búsqueda cancelada
+        displayContentSearchResults(results, query);
+    } catch (error) {
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+            return; // Búsqueda cancelada, no es un error
+        }
+        console.error('Error en la búsqueda del modal:', error);
+        if (contentSearchDropdown) {
+            contentSearchDropdown.innerHTML = `
+                <div class="search-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Error al buscar. Intenta nuevamente.</span>
+                </div>
+            `;
+            contentSearchDropdown.style.display = 'block';
+        }
+    }
+}
+
+/**
+ * Muestra los resultados de búsqueda en el dropdown del modal (igual que en homeAdmin.js)
+ */
+function displayContentSearchResults(results, query) {
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+    
+    const albums = results.Albums || results.albums || [];
+    const songs = results.Songs || results.songs || [];
+    
+    if (albums.length === 0 && songs.length === 0) {
+        if (contentSearchDropdown) {
+            contentSearchDropdown.innerHTML = `
+                <div class="search-no-results">
+                    <i class="fas fa-search"></i>
+                    <span>No se encontraron resultados para "${query}"</span>
+                </div>
+            `;
+            contentSearchDropdown.style.display = 'block';
+        }
+        return;
+    }
+    
+    let html = '';
+    
+    // Canciones primero (como en Spotify)
+    if (songs.length > 0) {
+        songs.forEach(song => {
+            const songId = song.apiSongId || song.APISongId || song.APIId || song.apiId || song.Id || song.id || song.SongId || song.songId || '';
+            const songTitle = song.Title || song.title || song.Name || song.name || '';
+            const songImage = song.Image || song.image || song.AlbumImage || song.albumImage || '../../Assets/default-avatar.png';
+            const artistName = song.ArtistName || song.artistName || song.Artist || song.artist || '';
+            const subtitle = artistName ? `Canción • ${artistName}` : 'Canción';
+            
+            if (!songId) {
+                console.warn('⚠️ Canción sin ID:', song);
+            }
+            
+            html += `
+                <div class="content-search-item" data-type="song" data-id="${songId}" data-name="${songTitle}" data-image="${songImage}" data-artist="${artistName}">
+                    <img src="${songImage}" alt="${songTitle}" class="content-search-item-image" onerror="this.src='../../Assets/default-avatar.png'">
+                    <div class="content-search-item-text">
+                        <div class="content-search-item-name">${songTitle}</div>
+                        <div class="content-search-item-type">${subtitle}</div>
+                    </div>
+                    <i class="fas fa-plus content-search-item-icon"></i>
+                </div>
+            `;
+        });
+    }
+    
+    // Álbumes después
+    if (albums.length > 0) {
+        albums.forEach(album => {
+            const albumId = album.apiAlbumId || album.APIAlbumId || album.Id || album.id || album.AlbumId || album.albumId || '';
+            const albumTitle = album.Title || album.title || album.Name || album.name || '';
+            const albumImage = album.Image || album.image || '../../Assets/default-avatar.png';
+            const artistName = album.ArtistName || album.artistName || album.Artist || album.artist || '';
+            const subtitle = artistName ? `Álbum • ${artistName}` : 'Álbum';
+            
+            if (!albumId) {
+                console.warn('⚠️ Álbum sin ID:', album);
+            }
+            
+            html += `
+                <div class="content-search-item" data-type="album" data-id="${albumId}" data-name="${albumTitle}" data-image="${albumImage}" data-artist="${artistName}">
+                    <img src="${albumImage}" alt="${albumTitle}" class="content-search-item-image" onerror="this.src='../../Assets/default-avatar.png'">
+                    <div class="content-search-item-text">
+                        <div class="content-search-item-name">${albumTitle}</div>
+                        <div class="content-search-item-type">${subtitle}</div>
+                    </div>
+                    <i class="fas fa-plus content-search-item-icon"></i>
+                </div>
+            `;
+        });
+    }
+    
+    if (contentSearchDropdown) {
+        contentSearchDropdown.innerHTML = html;
+        contentSearchDropdown.style.display = 'block';
+        
+        contentSearchDropdown.querySelectorAll('.content-search-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const contentType = this.getAttribute('data-type');
+                
+                if (contentType === 'artist') {
+                    if (typeof showAlert === 'function') {
+                        showAlert('No se pueden crear reseñas de artistas. Por favor, selecciona una canción o un álbum.', 'warning');
+                    } else {
+                        alert('No se pueden crear reseñas de artistas.');
+                    }
+                    return;
+                }
+                
+                const contentId = this.getAttribute('data-id');
+                const contentName = this.getAttribute('data-name');
+                const contentImage = this.getAttribute('data-image');
+                const contentArtist = this.getAttribute('data-artist') || '';
+                
+                console.log('🎵 Contenido seleccionado:', { type: contentType, id: contentId, name: contentName, image: contentImage, artist: contentArtist });
+                
+                if (!contentId || contentId === '00000000-0000-0000-0000-000000000000' || contentId.trim() === '') {
+                    console.error('❌ Error: El ID del contenido está vacío o es un GUID vacío');
+                    if (typeof showAlert === 'function') {
+                        showAlert('Error: No se pudo obtener el ID del contenido. El backend no está devolviendo un ID válido.', 'warning');
+                    } else {
+                        alert('Error: No se pudo obtener el ID del contenido.');
+                    }
+                    return;
+                }
+                
+                const contentData = {
+                    type: contentType,
+                    id: contentId,
+                    name: contentName,
+                    image: contentImage,
+                    artist: contentArtist
+                };
+                
+                setSelectedContent(contentData);
+                const contentSearchInput = document.getElementById('contentSearchInput');
+                if (contentSearchInput) contentSearchInput.value = contentName;
+            });
+        });
+    }
+}
+
+/**
+ * Envía la reseña al backend y actualiza el perfil (igual que en homeAdmin.js)
+ */
+async function submitCreateReview() {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        if (typeof showAlert === 'function') {
+            showAlert('Debes iniciar sesión para crear una reseña', 'warning');
+        } else {
+            alert('Debes iniciar sesión para crear una reseña');
+        }
+        return;
+    }
+    
+    const titleInput = document.getElementById('createReviewTitleInput');
+    const textInput = document.getElementById('createReviewTextInput');
+    const createReviewStars = document.getElementById('createReviewStars');
+    
+    const title = titleInput ? titleInput.value.trim() : '';
+    const content = textInput ? textInput.value.trim() : '';
+    
+    let rating = 0;
+    if (createReviewStars) {
+        const activeStars = createReviewStars.querySelectorAll('.star-input.active');
+        rating = activeStars.length;
+    }
+    
+    if (!title) {
+        if (typeof showAlert === 'function') {
+            showAlert('Por favor, ingresa un título para la reseña', 'warning');
+        } else {
+            alert('Por favor, ingresa un título para la reseña');
+        }
+        return;
+    }
+    if (!content) {
+        if (typeof showAlert === 'function') {
+            showAlert('Por favor, escribe tu reseña', 'warning');
+        } else {
+            alert('Por favor, escribe tu reseña');
+        }
+        return;
+    }
+    if (rating === 0) {
+        if (typeof showAlert === 'function') {
+            showAlert('Por favor, selecciona una calificación', 'warning');
+        } else {
+            alert('Por favor, selecciona una calificación');
+        }
+        return;
+    }
+    
+    const userId = localStorage.getItem('userId');
+    const modal = document.getElementById('createReviewModalOverlay');
+    const editReviewId = modal ? modal.getAttribute('data-edit-review-id') : null;
+    const isEdit = !!editReviewId;
+    
+    // --- Lógica de Edición (igual que en homeAdmin.js) ---
+    if (isEdit) {
+        console.log('✏️ Modo edición detectado. ReviewId:', editReviewId);
+        try {
+            const reviewData = {
+                UserId: String(userId).trim(),
+                Rating: rating,
+                Title: title,
+                Content: content
+            };
+            
+            // Intentar usar updateReview si está disponible
+            if (typeof window.socialApi !== 'undefined' && window.socialApi.updateReview) {
+                await window.socialApi.updateReview(editReviewId, reviewData, authToken);
+            } else if (typeof updateReview === 'function') {
+                await updateReview(editReviewId, reviewData, authToken);
+            } else {
+                // Usar axios directamente
+                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                const axiosInstance = window.axios || axios;
+                await axiosInstance.put(`${API_BASE_URL}/api/gateway/reviews/${editReviewId}`, reviewData, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 10000
+                });
+            }
+            
+            console.log('✅ Reseña editada exitosamente');
+            if (typeof showAlert === 'function') {
+                showAlert('✅ Reseña editada exitosamente', 'success');
+            } else {
+                alert('✅ Reseña editada exitosamente');
+            }
+            hideCreateReviewModal();
+            if (modal) modal.removeAttribute('data-edit-review-id');
+            
+            // Recargar las reseñas del perfil
+            if (profileUserId && typeof loadUserProfile === 'function') {
+                await loadUserProfile(profileUserId);
+            }
+        } catch (error) {
+            console.error('❌ Error editando reseña:', error);
+            if (error.response) {
+                const status = error.response.status;
+                const message = error.response.data?.message || error.response.data?.Message || 'Error desconocido';
+                if (status === 401) {
+                    if (typeof showAlert === 'function') {
+                        showAlert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
+                    } else {
+                        alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+                    }
+                    setTimeout(() => { window.location.href = '../login.html'; }, 2000);
+                } else if (status === 403) {
+                    if (typeof showAlert === 'function') {
+                        showAlert('No tienes permisos para editar esta reseña.', 'danger');
+                    } else {
+                        alert('No tienes permisos para editar esta reseña.');
+                    }
+                } else if (status === 404) {
+                    if (typeof showAlert === 'function') {
+                        showAlert('La reseña no fue encontrada.', 'danger');
+                    } else {
+                        alert('La reseña no fue encontrada.');
+                    }
+                } else {
+                    if (typeof showAlert === 'function') {
+                        showAlert(`Error al editar la reseña: ${message}`, 'danger');
+                    } else {
+                        alert(`Error al editar la reseña: ${message}`);
+                    }
+                }
+            } else {
+                if (typeof showAlert === 'function') {
+                    showAlert('Error al editar la reseña. Intenta nuevamente.', 'danger');
+                } else {
+                    alert('Error al editar la reseña. Intenta nuevamente.');
+                }
+            }
+        }
+        return;
+    }
+    
+    // --- Lógica de Creación ---
+    if (!currentReviewData || !currentReviewData.id) {
+        if (typeof showAlert === 'function') {
+            showAlert('Error: No se seleccionó contenido.', 'warning');
+        } else {
+            alert('Error: No se seleccionó contenido.');
+        }
+        return;
+    }
+    
+    try {
+        // Obtener el GUID del contenido
+        let contentGuid = null;
+        
+        try {
+            const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+            const axiosInstance = window.axios || axios;
+            
+            if (currentReviewData.type === 'song') {
+                // Intentar POST primero (create), luego GET si falla
+                try {
+                    const response = await axiosInstance.post(`${API_BASE_URL}/api/gateway/contents/song`, {
+                        APISongId: currentReviewData.id
+                    }, {
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 10000
+                    });
+                    contentGuid = response.data?.SongId || response.data?.songId;
+                } catch (postError) {
+                    // Si POST falla, intentar GET
+                    const getResponse = await axiosInstance.get(`${API_BASE_URL}/api/gateway/contents/song/${currentReviewData.id}`, {
+                        timeout: 10000
+                    });
+                    contentGuid = getResponse.data?.SongId || getResponse.data?.songId;
+                }
+            } else if (currentReviewData.type === 'album') {
+                const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/contents/album/${currentReviewData.id}`, {
+                    timeout: 10000
+                });
+                contentGuid = response.data?.AlbumId || response.data?.albumId;
+            }
+        } catch (apiError) {
+            console.error('Error obteniendo GUID del contenido:', apiError);
+            // Intentar métodos alternativos
+            if (typeof window.contentApi !== 'undefined') {
+                if (currentReviewData.type === 'song' && window.contentApi.getOrCreateSong) {
+                    const songData = await window.contentApi.getOrCreateSong(currentReviewData.id);
+                    contentGuid = songData.songId || songData.SongId;
+                } else if (currentReviewData.type === 'album' && window.contentApi.getOrCreateAlbum) {
+                    const albumData = await window.contentApi.getOrCreateAlbum(currentReviewData.id);
+                    contentGuid = albumData.albumId || albumData.AlbumId;
+                }
+            } else if (typeof getOrCreateSong === 'function' || typeof getOrCreateAlbum === 'function') {
+                if (currentReviewData.type === 'song' && typeof getOrCreateSong === 'function') {
+                    const songData = await getOrCreateSong(currentReviewData.id);
+                    contentGuid = songData.songId || songData.SongId;
+                } else if (currentReviewData.type === 'album' && typeof getOrCreateAlbum === 'function') {
+                    const albumData = await getOrCreateAlbum(currentReviewData.id);
+                    contentGuid = albumData.albumId || albumData.AlbumId;
+                }
+            }
+        }
+        
+        if (!contentGuid) {
+            if (typeof showAlert === 'function') {
+                showAlert('Error: No se pudo obtener el ID del contenido.', 'warning');
+            } else {
+                alert('Error: No se pudo obtener el ID del contenido.');
+            }
+            return;
+        }
+        
+        const reviewData = {
+            UserId: String(userId).trim(),
+            Rating: rating,
+            Title: title,
+            Content: content,
+            SongId: null,
+            AlbumId: null
+        };
+        
+        if (currentReviewData.type === 'song') {
+            reviewData.SongId = String(contentGuid).trim();
+        } else if (currentReviewData.type === 'album') {
+            reviewData.AlbumId = String(contentGuid).trim();
+        }
+        
+        // Crear la reseña
+        let response = null;
+        const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+        
+        try {
+            // Intentar usar la función createReview si está disponible
+            if (typeof window.socialApi !== 'undefined' && window.socialApi.createReview) {
+                response = await window.socialApi.createReview(reviewData, authToken);
+            } else if (typeof createReview === 'function') {
+                response = await createReview(reviewData, authToken);
+            } else if (typeof window.reviewApi !== 'undefined' && window.reviewApi.createReview) {
+                response = await window.reviewApi.createReview(reviewData, authToken);
+            } else {
+                // Usar axios directamente
+                const axiosInstance = window.axios || axios;
+                const axiosResponse = await axiosInstance.post(`${API_BASE_URL}/api/gateway/reviews`, reviewData, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 10000
+                });
+                response = axiosResponse.data;
+            }
+        } catch (createError) {
+            console.error('Error creando reseña:', createError);
+            throw createError;
+        }
+        
+        console.log('✅ Reseña creada exitosamente:', response);
+        
+        // Guardar datos del contenido en localStorage para uso futuro
+        const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
+        if (reviewId) {
+            const storageKey = `review_content_${String(reviewId).trim()}`;
+            localStorage.setItem(storageKey, JSON.stringify({
+                type: currentReviewData.type,
+                id: currentReviewData.id,
+                name: currentReviewData.name,
+                artist: currentReviewData.artist,
+                image: currentReviewData.image
+            }));
+        }
+        
+        hideCreateReviewModal();
+        
+        if (typeof showAlert === 'function') {
+            showAlert('✅ Reseña creada exitosamente', 'success');
+        } else {
+            alert('✅ Reseña creada exitosamente');
+        }
+        
+        // Recargar las reseñas del perfil
+        if (profileUserId && typeof loadUserProfile === 'function') {
+            await loadUserProfile(profileUserId);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error creando reseña:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+        if (typeof showAlert === 'function') {
+            showAlert(`Error al crear la reseña: ${errorMessage}`, 'danger');
+        } else {
+            alert(`Error al crear la reseña: ${errorMessage}`);
         }
     }
 }
@@ -805,3 +2373,6 @@ window.showReportModal = showReportModal;
 window.reportReview = reportReview;
 window.showCommentsModal = showCommentsModal;
 window.showReviewDetailModal = showReviewDetailModal;
+window.initializeReviewDetailModalLogic = initializeReviewDetailModalLogic;
+window.showCreateReviewModal = showCreateReviewModal;
+window.initializeCreateReviewModal = initializeCreateReviewModal;

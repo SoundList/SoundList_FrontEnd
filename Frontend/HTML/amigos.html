@@ -3,33 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Perfil - Soundlist</title>
+    <title>SoundList - Amigos</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
-    
-    <!-- CSS (Igual que home.html) -->
+    <link rel="shortcut icon" type="image/png" href="../Assets/default-avatar.png">
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="../../CSS/home.css"> 
-    <link rel="stylesheet" href="../../CSS/editProfile.css"> 
-    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../CSS/home.css">
+    <link rel="stylesheet" href="../CSS/amigos.css">
 </head>
-<body class="edit-profile-body">
-
-    <div class="home-container">
-
+<body>
+    <div class="amigos-container">
+        <!-- Header/Navigation Bar -->
         <header class="top-header">
             <div class="header-content container-fluid">
+                <!-- Mobile Menu Toggle -->
                 <button class="mobile-menu-toggle d-lg-none" id="mobileMenuToggle" aria-label="Toggle menu">
                     <i class="fas fa-bars"></i>
                 </button>
 
+                <!-- Left Side: Logo and Search -->
                 <div class="header-left">
-                    <img src="../../Assets/default-avatar.png"  alt="SoundList Logo" class="logo-icon d-none d-md-block"> 
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon d-none d-md-block">
                     <div class="search-container">
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, album">
@@ -38,30 +40,33 @@
                         </button>
                     </div>
                     <div class="search-dropdown" id="searchDropdown" style="display: none;">
-
+                        <!-- Search results will be populated here -->
                     </div>
                 </div>
 
+                <!-- Center: Navigation Buttons -->
                 <div class="header-center d-none d-lg-flex">
-                    <button class="nav-btn active" data-page="inicio">INICIO</button>
+                    <button class="nav-btn" data-page="inicio">INICIO</button>
                     <button class="nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="nav-btn active" data-page="amigos">AMIGOS</button>
                 </div>
 
+                <!-- Mobile Navigation Menu -->
                 <div class="mobile-nav-menu" id="mobileNavMenu">
-                    <button class="mobile-nav-btn active" data-page="inicio">INICIO</button>
+                    <button class="mobile-nav-btn" data-page="inicio">INICIO</button>
                     <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="mobile-nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="mobile-nav-btn active" data-page="amigos">AMIGOS</button>
                 </div>
 
+                <!-- Right Side: Notifications and Profile/Login -->
                 <div class="header-right">
-
+                    <!-- Notifications Dropdown (shown when logged in) -->
                     <div class="notifications-dropdown-container" id="notificationsContainer" style="display: none;">
                         <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
                             <i class="fas fa-bell"></i>
                         </button>
                         <div class="notifications-dropdown" id="notificationsDropdown" style="display: none;">
-                             <div class="notifications-dropdown-header">
+                            <div class="notifications-dropdown-header">
                                 <h3>Notificaciones</h3>
                             </div>
                             <div class="notifications-list" id="notificationsList">
@@ -72,21 +77,21 @@
                             </div>
                         </div>
                     </div>
-
+                    <!-- Login Button (shown when not logged in) -->
                     <div class="login-container" id="loginContainer" style="display: none;">
                         <button class="login-btn" id="loginBtn">
-                            <img src="../../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon"> 
+                            <img src="../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon">
                             <span class="login-text">Iniciar Sesion</span>
                         </button>
                     </div>
-
+                    <!-- Profile Dropdown (shown when logged in) -->
                     <div class="profile-dropdown-container" id="profileContainer" style="display: none;">
                         <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
-                            <img src="../../Assets/logo_perfil.png" alt="Perfil" class="profile-icon"> 
+                            <img src="../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
                         </button>
                         <div class="profile-dropdown" id="profileDropdown" style="display: none;">
                             <div class="profile-dropdown-header">
-                                <img src="../../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small"> 
+                                <img src="../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small">
                                 <span id="usernameDisplay">Usuario</span>
                             </div>
                             <button class="profile-dropdown-item" id="verPerfilBtn">
@@ -100,7 +105,7 @@
                             </button>
                         </div>
                     </div>
-
+                    <!-- Add Review Button (shown when logged in) -->
                     <div class="add-review-container" id="addReviewContainer" style="display: none;">
                         <button class="icon-btn add-review-btn" id="addReviewBtn" title="Crear reseña">
                             <i class="fas fa-plus"></i>
@@ -110,71 +115,77 @@
             </div>
         </header>
 
+        <!-- Main Content -->
         <main class="main-content">
-
-            <div class="settings-container">
-                <div class="sidebar">
-                    <div class="profile-section-edit">
-                        <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit"> 
-                        <span class="text-white">CUENTA <i class="fa-solid fa-check-circle text-success"></i></span>
-                    </div>
-                    
-                    <button id="btn-edit-description" data-section="description" class="active">
-                        <i class="fa-solid fa-file-alt me-2"></i> Editar Descripción
-                    </button>
-                    <button id="btn-edit-image" data-section="image">
-                        <i class="fa-solid fa-image me-2"></i> Editar Imagen
-                    </button>
-                </div>
-
-                <div class="settings-content"> 
-                
-                    <div id="section-description" class="setting-section">
-                        <div class="setting-box">
-                            <h3>Editar Descripción </h3>
-                            <form id="form-edit-description">
-                                <div class="mb-4">
-                                    <label for="current-description">Descripción Actual</label>
-                                    <textarea id="current-description" class="form-control" readonly disabled></textarea>
-                                </div>
-                                <div class="mb-4">
-                                    <label for="new-description">Nueva Descripcion (Máx. 160 caracteres)</label>
-                                    <textarea id="new-description" class="form-control" maxlength="160"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-confirm w-100">
-                                    Confirmar
-                                </button>
-                            </form>
+            <!-- User Search Section -->
+            <section class="user-search-section">
+                <div class="container-fluid">
+                    <div class="user-search-container">
+                        <h2 class="section-title">
+                            <i class="fas fa-user-plus"></i> Buscar y Seguir Usuarios
+                        </h2>
+                        <div class="user-search-box">
+                            <i class="fas fa-search user-search-icon"></i>
+                            <input type="text" 
+                                   class="user-search-input" 
+                                   id="userSearchInput" 
+                                   placeholder="Buscar por nombre de usuario...">
+                            <button class="user-search-clear" id="userSearchClear" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                    </div>
-
-                    <div id="section-image" class="setting-section hidden">
-                        <div class="setting-box">
-                            <h3>Cambiar Imagen de Perfil</h3>
-                            <form id="form-edit-image">
-                                <div class="mb-4 text-center">
-                                    <img id="image-upload-preview" src="../../Assets/default-avatar.png" alt="Nueva Imagen" class="profile-avatar-edit large-avatar">
-                                    <input type="file" id="avatar-input" accept="image/*">
-                                    <label for="avatar-input" class="file-upload-label mt-3">
-                                        Seleccionar Nueva Imagen
-                                    </label>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-confirm w-100" disabled id="confirm-image-btn">
-                                    Confirmar Cambio de Imagen
-                                </button>
-                            </form>
+                        <div class="user-search-results" id="userSearchResults" style="display: none;">
+                            <!-- User search results will be populated here -->
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- Reviews Filter Section -->
+            <section class="reviews-filter-section">
+                <div class="container-fluid">
+                    <div class="reviews-filter-container">
+                        <h2 class="section-title">
+                            <i class="fas fa-comments"></i> Reseñas
+                        </h2>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="amigos" id="filterAmigos">
+                                <i class="fas fa-user-friends"></i> Amigos
+                            </button>
+                            <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
+                                <i class="fas fa-heart"></i> Seguidos
+                            </button>
+                            <button class="filter-btn" data-filter="random" id="filterRandom">
+                                <i class="fas fa-random"></i> Descubrir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reviews List Section -->
+            <section class="reviews-list-section">
+                <div class="container-fluid">
+                    <div class="reviews-list-container">
+                        <div class="reviews-list" id="reviewsList">
+                            <!-- Reviews will be populated here -->
+                        </div>
+                        <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
+                            <i class="fas fa-comment-slash"></i>
+                            <p>No hay reseñas para mostrar</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
-        
-    </div> 
+    </div>
+
+    <!-- Login Required Modal -->
     <div class="login-required-modal-overlay" id="loginRequiredModalOverlay" style="display: none;">
         <div class="login-required-modal">
             <div class="login-required-modal-content">
                 <div class="login-required-modal-logo">
-                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="login-required-logo-img">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="login-required-logo-img">
                 </div>
                 <h2 class="login-required-modal-title">Inicia sesión</h2>
                 <p class="login-required-modal-message">Debes iniciar sesión para realizar esta acción.</p>
@@ -186,28 +197,37 @@
         </div>
     </div>
 
-    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
-        <div class="logout-modal">
-            <div class="logout-modal-content">
-                <div class="logout-modal-logo">
-                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="logout-logo-img">
+    <!-- Review Detail Modal -->
+    <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
+        <div class="review-detail-modal">
+            <div class="review-detail-modal-content">
+                <div class="review-detail-header">
+                    <button class="review-detail-close" id="closeReviewDetailModal">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
-                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
-                <div class="logout-modal-buttons">
-                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
-                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                <div class="review-detail-scrollable">
+                    <div class="review-detail-content" id="reviewDetailContent">
+                        <!-- Review content will be populated here -->
+                    </div>
+                    <div class="review-detail-comments-section">
+                        <div class="review-detail-comments-header">
+                            <h3 class="review-detail-comments-title">Comentarios <span id="reviewDetailCommentsCount">0</span></h3>
+                        </div>
+                        <div class="review-detail-comments-list" id="reviewDetailCommentsList">
+                            <!-- Comments will be populated here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
-    <script type="module" src="../../JS/main.js"></script> 
-    <script src="../../JS/APIs/userApi.js"></script>
-    <script src="../../JS/Pages/editProfile.js"></script>
-    
+    <script type="module" src="../JS/main.js"></script>
 </body>
 </html>
+

@@ -1,7 +1,7 @@
 
 .profile-main-content {
     display: flex;
-    flex-direction: column; /* ¡CLAVE! Apilado por defecto */
+    flex-direction: column; 
     gap: 2rem;
     margin-top: 2rem;
 }

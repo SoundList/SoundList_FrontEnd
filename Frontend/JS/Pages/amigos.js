@@ -302,39 +302,47 @@ function searchUsers(query) {
     userSearchResults.style.display = 'block';
 }
 
-function toggleFollow(userId, username, buttonElement) {
+async function toggleFollow(userId, username, buttonElement) {
     const isFollowing = followingUsers.has(userId);
     
-    if (isFollowing) {
-        // Dejar de seguir
-        followingUsers.delete(userId);
-        mutualFriends.delete(userId);
-        buttonElement.classList.remove('following');
-        buttonElement.classList.add('follow');
-        buttonElement.innerHTML = `
-            <i class="fas fa-user-plus"></i>
-            Seguir
-        `;
-        console.log(`Dejaste de seguir a ${username}`);
-    } else {
-        // Seguir
-        followingUsers.add(userId);
-        // Check if it's a mutual friend (mock logic)
-        const user = mockUsers.find(u => u.id === userId);
-        if (user && user.isMutualFriend) {
-            mutualFriends.add(userId);
+    try {
+        if (isFollowing) {
+            // Dejar de seguir
+            await window.userApi.unfollowUser(userId);
+            followingUsers.delete(userId);
+            mutualFriends.delete(userId);
+            buttonElement.classList.remove('following');
+            buttonElement.classList.add('follow');
+            buttonElement.innerHTML = `
+                <i class="fas fa-user-plus"></i>
+                Seguir
+            `;
+            console.log(`✅ Dejaste de seguir a ${username}`);
+        } else {
+            // Seguir
+            await window.userApi.followUser(userId);
+            followingUsers.add(userId);
+            // Check if it's a mutual friend (mock logic - podría mejorarse con API real)
+            const user = mockUsers.find(u => u.id === userId);
+            if (user && user.isMutualFriend) {
+                mutualFriends.add(userId);
+            }
+            buttonElement.classList.remove('follow');
+            buttonElement.classList.add('following');
+            buttonElement.innerHTML = `
+                <i class="fas fa-user-check"></i>
+                Siguiendo
+            `;
+            console.log(`✅ Ahora sigues a ${username}`);
         }
-        buttonElement.classList.remove('follow');
-        buttonElement.classList.add('following');
-        buttonElement.innerHTML = `
-            <i class="fas fa-user-check"></i>
-            Siguiendo
-        `;
-        console.log(`Ahora sigues a ${username}`);
+        
+        // Reload reviews to reflect follow status
+        loadReviews();
+    } catch (error) {
+        console.error(`❌ Error al ${isFollowing ? 'dejar de seguir' : 'seguir'} a ${username}:`, error);
+        // Mostrar mensaje de error al usuario
+        alert(`Error al ${isFollowing ? 'dejar de seguir' : 'seguir'} a ${username}. Por favor, intenta de nuevo.`);
     }
-    
-    // Reload reviews to reflect follow status
-    loadReviews();
 }
 
 // Review Filters
@@ -675,7 +683,9 @@ function initializeProfileDropdown() {
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('userId');
                 localStorage.removeItem('username');
-                window.location.reload();
+                localStorage.removeItem('userAvatar');
+                // Redirigir a login.html (estamos en HTML/, así que la ruta es directa)
+                window.location.href = 'login.html';
             });
         }
     }

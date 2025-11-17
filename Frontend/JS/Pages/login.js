@@ -41,44 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showAlert('Funcionalidad de login con Google en desarrollo', 'info');
     });
 
-    // TEMPORAL: Botón para simular login sin backend (solo para desarrollo)
-    // Esto permite ver la vista de inicio cuando el backend no funciona
-    function addDevLoginButton() {
-        const form = document.querySelector('.login-form');
-        if (!form) return;
-
-        const devButton = document.createElement('button');
-        devButton.type = 'button';
-        devButton.className = 'btn btn-secondary mt-3';
-        devButton.style.cssText = 'width: 100%; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.7);';
-        devButton.innerHTML = '🔧 Modo Desarrollo: Simular Login (sin backend)';
-        devButton.addEventListener('click', function() {
-            // Simular datos de login (usando formato GUID para userId)
-            // Generar un GUID simulado
-            function generateGuid() {
-                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                    const r = Math.random() * 16 | 0;
-                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                });
-            }
-            
-            localStorage.setItem('authToken', 'dev-token-' + Date.now());
-            localStorage.setItem('userId', generateGuid()); // GUID válido para simulación
-            localStorage.setItem('username', 'Usuario Demo');
-            
-            showAlert('¡Login simulado exitoso! Redirigiendo...', 'success');
-            setTimeout(() => {
-                window.location.href = 'home.html';
-            }, 1000);
-        });
-        
-        form.appendChild(devButton);
-    }
-    
-    // Agregar botón de desarrollo
-    addDevLoginButton();
-
     function showFieldError(field, message) {
         clearFieldError(field);
         field.classList.add('is-invalid');

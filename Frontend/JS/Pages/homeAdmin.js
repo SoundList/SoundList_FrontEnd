@@ -13,7 +13,6 @@
 // --- IMPORTACIONES DE MÓDULOS REFACTORIZADOS ---
 import { initializeCarousel } from '../Components/carousel/carouselManager.js';
 import { renderStars, showAlert } from '../Utils/reviewHelpers.js';
-import { initializeSampleComments } from '../Utils/sampleData.js';
 import { initializeReviews } from '../Components/reviews/reviewFeed.js';
 import { setReviewFilter } from '../Components/reviews/reviewUtils.js';
 import { initializeCreateReviewModal, showCreateReviewModal, showEditReviewModal } from '../Components/modals/createReviewModal.js';
@@ -59,7 +58,6 @@ export function initializeHomePage() {
         
         // Inicializar modals con el estado compartido
         initializeCreateReviewModal(modalsState); 
-        initializeSampleComments(commentsData);
         initializeCommentsModalLogic(modalsState);
         initializeReviewDetailModalLogic(modalsState);
         initializeDeleteModalsLogic(modalsState);
@@ -91,6 +89,3 @@ export function initializeHomePage() {
 
 // --- 8. FUNCIONES DE UTILIDAD (Alerts) ---
 // showAlert ahora se importa de Utils/reviewHelpers.js
-
-// --- 9. DATOS DE EJEMPLO ---
-// initializeSampleComments ahora se importa de Utils/sampleData.js

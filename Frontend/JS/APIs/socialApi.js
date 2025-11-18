@@ -462,3 +462,23 @@ export async function getUser(userId) {
         throw error;
     }
 }
+
+    async function getAverageRating(contentId, type) {
+    // contentId debe ser el GUID interno (SongId o AlbumId de la base de datos)
+    // type debe ser 'song' o 'album'
+        try {
+            let queryString = '';
+            if (type === 'song') {
+                queryString = `songId=${contentId}`;
+            } else {
+                queryString = `albumId=${contentId}`;
+            }
+
+            // Asegúrate de que la ruta coincida con tu ReviewController [HttpGet("reviews/average")]
+            const response = await axios.get(`${API_BASE}/reviews/average?${queryString}`, getAuthHeaders());
+            return response.data; // Debería ser un int (ej: 4)
+        } catch (error) {
+            console.error("❌ Error obteniendo promedio:", error);
+            return 0; // Fallback
+        }
+    }

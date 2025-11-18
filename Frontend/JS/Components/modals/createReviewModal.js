@@ -27,11 +27,20 @@ export function initializeCreateReviewModal(state) {
         addReviewBtn.addEventListener('click', () => showCreateReviewModal(null, state));
     }
     if (closeCreateReviewModal) {
-        closeCreateReviewModal.addEventListener('click', () => hideCreateReviewModal(state));
+        closeCreateReviewModal.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            hideCreateReviewModal(state);
+        });
     }
     if (createReviewModalOverlay) {
         createReviewModalOverlay.addEventListener('click', (e) => {
-            if (e.target === createReviewModalOverlay) hideCreateReviewModal(state);
+            // Cerrar solo si se hace click directamente en el overlay, no en sus hijos
+            if (e.target === createReviewModalOverlay) {
+                e.preventDefault();
+                e.stopPropagation();
+                hideCreateReviewModal(state);
+            }
         });
     }
     
@@ -85,9 +94,13 @@ export function initializeCreateReviewModal(state) {
     
     // Inicializar estrellas del modal
     if (createReviewStars) {
+        // Guardar referencia al estado de rating en el objeto state
+        if (!state.currentRating) {
+            state.currentRating = 0;
+        }
+        
         const stars = createReviewStars.querySelectorAll('.star-input');
-        let currentRating = 0;
-
+        
         function highlightStars(rating) {
             stars.forEach((star, index) => {
                 star.classList.toggle('active', (index + 1) <= rating);
@@ -95,20 +108,26 @@ export function initializeCreateReviewModal(state) {
         }
         
         function updateStarRating(rating) {
-            currentRating = rating;
+            state.currentRating = rating;
             highlightStars(rating);
         }
             
         stars.forEach((star) => {
-            star.addEventListener('click', function() {
-                updateStarRating(parseInt(this.getAttribute('data-rating')));
+            star.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const rating = parseInt(this.getAttribute('data-rating')) || 0;
+                updateStarRating(rating);
             });
             star.addEventListener('mouseenter', function() {
-                highlightStars(parseInt(this.getAttribute('data-rating')));
+                const rating = parseInt(this.getAttribute('data-rating')) || 0;
+                highlightStars(rating);
             });
         });
         
-        createReviewStars.addEventListener('mouseleave', () => highlightStars(currentRating));
+        createReviewStars.addEventListener('mouseleave', () => {
+            highlightStars(state.currentRating || 0);
+        });
     }
 }
 
@@ -122,6 +141,8 @@ async function performContentSearch(query, signal, state) {
         return;
     }
     
+    console.log('🔍 Buscando contenido:', query);
+    
     if (contentSearchDropdown) {
         contentSearchDropdown.innerHTML = '<div class="search-loading">Buscando...</div>';
         contentSearchDropdown.style.display = 'block';
@@ -129,10 +150,14 @@ async function performContentSearch(query, signal, state) {
     
     try {
         const results = await fetchSearchResults(query, signal);
-        if(results === null) return; // Búsqueda cancelada
+        if(results === null) {
+            console.log('🔍 Búsqueda cancelada');
+            return; // Búsqueda cancelada
+        }
+        console.log('🔍 Resultados de búsqueda:', results);
         displayContentSearchResults(results, query, state);
     } catch (error) {
-        console.error('Error en la búsqueda del modal:', error);
+        console.error('❌ Error en la búsqueda del modal:', error);
         if (contentSearchDropdown) {
             contentSearchDropdown.innerHTML = `
                 <div class="search-error">
@@ -295,8 +320,12 @@ export function showCreateReviewModal(contentData = null, state) {
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
     
+    // Resetear estrellas
     const stars = document.querySelectorAll('#createReviewStars .star-input');
     stars.forEach(star => star.classList.remove('active'));
+    if (state) {
+        state.currentRating = 0;
+    }
     
     modal.style.display = 'flex';
 }
@@ -381,7 +410,11 @@ async function submitCreateReview(state) {
     const content = textInput ? textInput.value.trim() : '';
     
     let rating = 0;
-    if (createReviewStars) {
+    // Primero intentar obtener el rating del estado
+    if (state && state.currentRating) {
+        rating = state.currentRating;
+    } else if (createReviewStars) {
+        // Fallback: contar estrellas activas
         const activeStars = createReviewStars.querySelectorAll('.star-input.active');
         rating = activeStars.length;
     }

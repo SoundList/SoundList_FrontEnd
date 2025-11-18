@@ -3,7 +3,10 @@ import { API_BASE_URL } from './configApi.js';
 
 export async function fetchSearchResults(query, signal) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/search`, {
+        // Usar axios global o importarlo
+        const axiosInstance = typeof axios !== 'undefined' ? axios : (await import('axios')).default;
+        
+        const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/contents/search`, {
             params: { query: query },
             signal: signal,
             timeout: 5000

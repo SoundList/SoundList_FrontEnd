@@ -463,22 +463,31 @@ export async function getUser(userId) {
     }
 }
 
-    async function getAverageRating(contentId, type) {
+/**
+ * Obtiene el promedio de calificaciones de un contenido (canción o álbum).
+ * Ruta: GET /api/gateway/reviews/average?{songId|albumId}={contentId}
+ * @param {string} contentId - El GUID interno (SongId o AlbumId de la base de datos)
+ * @param {string} type - 'song' o 'album'
+ * @returns {Promise<number>} - El promedio de calificaciones (0 si hay error)
+ */
+export async function getAverageRating(contentId, type) {
     // contentId debe ser el GUID interno (SongId o AlbumId de la base de datos)
     // type debe ser 'song' o 'album'
-        try {
-            let queryString = '';
-            if (type === 'song') {
-                queryString = `songId=${contentId}`;
-            } else {
-                queryString = `albumId=${contentId}`;
-            }
-
-            // Asegúrate de que la ruta coincida con tu ReviewController [HttpGet("reviews/average")]
-            const response = await axios.get(`${API_BASE}/reviews/average?${queryString}`, getAuthHeaders());
-            return response.data; // Debería ser un int (ej: 4)
-        } catch (error) {
-            console.error("❌ Error obteniendo promedio:", error);
-            return 0; // Fallback
+    try {
+        let queryString = '';
+        if (type === 'song') {
+            queryString = `songId=${contentId}`;
+        } else {
+            queryString = `albumId=${contentId}`;
         }
+
+        // Usar la ruta del gateway
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/reviews/average?${queryString}`, {
+            timeout: 5000
+        });
+        return response.data || 0; // Debería ser un int (ej: 4)
+    } catch (error) {
+        console.error("❌ Error obteniendo promedio:", error);
+        return 0; // Fallback
     }
+}

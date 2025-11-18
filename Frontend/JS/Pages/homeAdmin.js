@@ -1,18 +1,6 @@
-/*
- * JavaScript/Admin/homeAdmin.js
- *
- * Responsabilidad: Manejar toda la lógica Específica de la página de inicio (home.html).
- * - Controla el carrusel de rankings.
- * - Controla el feed principal de reseñas.
- * - Maneja todos los modals relacionados con reseñas (Crear, Editar, Comentarios, etc.)
- */
 
-// --- 1. IMPORTACIONES DE API Y COMPONENTES ---
-// Las APIs y funciones auxiliares ahora se importan directamente en los módulos correspondientes
-
-// --- IMPORTACIONES DE MÓDULOS REFACTORIZADOS ---
 import { initializeCarousel } from '../Components/carousel/carouselManager.js';
-import { renderStars, showAlert } from '../Utils/reviewHelpers.js';
+import { renderStars, showAlert,enrichReviewsWithSocialStatus} from '../Utils/reviewHelpers.js';
 import { initializeReviews } from '../Components/reviews/reviewFeed.js';
 import { setReviewFilter } from '../Components/reviews/reviewUtils.js';
 import { initializeCreateReviewModal, showCreateReviewModal, showEditReviewModal } from '../Components/modals/createReviewModal.js';
@@ -53,7 +41,8 @@ export function initializeHomePage() {
                 modalsState.loadReviews = fn;
             },
             () => currentReviewFilter,
-            (filter) => { currentReviewFilter = filter; }
+            (filter) => { currentReviewFilter = filter; },
+            enrichReviewsWithSocialStatus
         );
         
         // Inicializar modals con el estado compartido

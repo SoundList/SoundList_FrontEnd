@@ -5,7 +5,7 @@ import { renderAmigoCard } from '../Components/reviews/amigoCard.js';
 import { renderReviewCard } from '../Components/reviews/reviewCard.js'; 
 
 export const AmigosHandler = {
-    
+
     init: () => {
         const searchInput = document.getElementById('userSearchInput');
         const searchResults = document.getElementById('userSearchResults');
@@ -51,18 +51,22 @@ export const AmigosHandler = {
             });
         });
     },
+
+// BUSCADOR DE PERSONAS (Muestra Usuarios)
+
     handleSearch: async (query) => {
         const resultsContainer = document.getElementById('userSearchResults');
+
         if (!query) {
             resultsContainer.style.display = 'none';
             return;
         }
-
         resultsContainer.style.display = 'block';
         resultsContainer.innerHTML = '<div class="p-3 text-center text-white">Buscando usuarios...</div>';
 
         const rawUsers = await AmigosApi.searchUsers(query);
         const rawFollowing = await AmigosApi.getFollowing();
+
         const users = Array.isArray(rawUsers) ? rawUsers : [];
         const myFollowing = Array.isArray(rawFollowing) ? rawFollowing : [];
 
@@ -77,6 +81,7 @@ export const AmigosHandler = {
         }).join('');
     },
 
+    // Acción de Seguir/Dejar de Seguir
     toggleFollow: async (userId, isUnfollowing, btnElement) => {
         btnElement.disabled = true;
         const originalHTML = btnElement.innerHTML;
@@ -100,28 +105,34 @@ export const AmigosHandler = {
         }
         btnElement.disabled = false;
     },
+
     loadReviewFeed: async (type) => { 
         const listContainer = document.getElementById('reviewsList'); 
         const emptyState = document.getElementById('reviewsEmpty');
         
+        // Loader
         listContainer.innerHTML = '<div class="text-center text-white mt-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
         if (emptyState) emptyState.style.display = 'none';
 
-        let rawReviews = [];
+        let reviews = [];
+        let myFollowing = []; 
+
         try {
-            if (type === 'seguidos') {
-                console.log("Cargando reseñas de seguidos...");
-                rawReviews = await ReviewApi.getReviewsByFollowing();
-            } else {
-                console.log("Cargando reseñas de seguidores...");
-                rawReviews = await ReviewApi.getReviewsByFollowers();
-            }
+            // OBTENER RESEÑAS
+            reviews = (type === 'seguidos') 
+                ? await ReviewApi.getReviewsByFollowing()
+                : await ReviewApi.getReviewsByFollowers();
+
+            // OBTENER LISTA DE MIS SEGUIDOS (Para botones en la tarjeta de reseña)
+            const rawFollowing = await AmigosApi.getFollowing();
+            myFollowing = Array.isArray(rawFollowing) ? rawFollowing : [];
+
         } catch (e) {
             console.warn("Error cargando reseñas:", e);
-            rawReviews = [];
+            reviews = [];
         }
 
-        const reviews = Array.isArray(rawReviews) ? rawReviews : [];
+        if (!Array.isArray(reviews)) reviews = [];
 
         listContainer.innerHTML = '';
 
@@ -134,12 +145,19 @@ export const AmigosHandler = {
             }
             return;
         }
+
         const cardsHTML = reviews.map(review => {
-            return renderReviewCard(review); 
+            const authorId = review.userId || review.authorId; 
+            const isFollowingAuthor = myFollowing.some(u => u.id === authorId);
+
+            return renderReviewCard({ 
+                ...review, 
+                isFollowingAuthor: isFollowingAuthor,
+                authorId: authorId
+            });
         }).join('');
 
         listContainer.innerHTML = cardsHTML;
     },
-    
     loadUserList: (type) => AmigosHandler.loadReviewFeed(type)
 };

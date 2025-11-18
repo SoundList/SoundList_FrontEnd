@@ -1,7 +1,4 @@
-/**
- * Módulo de feed de reseñas
- * Funciones para inicializar, cargar y filtrar reseñas
- */
+
 
 import { API_BASE_URL } from '../../APIs/configApi.js';
 import { renderReviews } from './reviewRenderer.js';
@@ -14,7 +11,8 @@ import { setReviewFilter } from './reviewUtils.js';
  * @param {Function} setLoadReviews - Función para establecer la función loadReviews globalmente
  * @param {Function} getCurrentFilter - Función para obtener el filtro actual
  * @param {Function} setCurrentFilter - Función para actualizar el filtro actual
- */
+* @param {Function} enrichReviewsUtility -  Función para añadir el estado social 
+*/
 export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter, setCurrentFilter) {
     const reviewsList = document.getElementById('reviewsList');
     if (!reviewsList) return;
@@ -86,13 +84,19 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                 renderReviews([]);
                 return;
             }
-            
-            // 2. Para cada reseña, obtener detalles completos (usuario, likes, comentarios)
+            if (enrichReviewsUtility) {
+                // La utilidad añade la bandera isFollowingAuthor a cada review
+                reviews = await enrichReviewsUtility(reviews); 
+            } else {
+                console.warn("⚠️ Utilidad social (enrichReviewsUtility) no definida. Los botones 'Seguir' no aparecerán.");
+                // Si la utilidad no existe, agregamos la propiedad isFollowingAuthor como false por defecto
+                reviews = reviews.map(review => ({ ...review, isFollowingAuthor: false }));
+            }
+
             const reviewsWithDetails = await Promise.all(
                 reviews.map(async (review) => {
                     try {
-                        // Validar que ReviewId existe (puede venir como ReviewId, reviewId, o id)
-                        // También verificar variantes con guiones bajos (Id_Review, id_review)
+
                         let reviewId = review.ReviewId || review.reviewId || review.id || 
                                     review.Id_Review || review.id_Review || review.Id_Review;
                         
@@ -423,7 +427,8 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                             userId: review.UserId || review.userId,
                             songId: review.SongId || review.songId,
                             albumId: review.AlbumId || review.albumId,
-                            createdAt: createdAtDate
+                            createdAt: createdAtDate,
+                            isFollowingAuthor: review.isFollowingAuthor || false
                         };
                     } catch (error) {
                         // Validar que ReviewId existe

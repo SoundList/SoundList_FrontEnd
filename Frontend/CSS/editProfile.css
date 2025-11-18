@@ -31,6 +31,13 @@
     width: 100%;
 }
 
+.adjustments-account-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+}
+
 .profile-avatar-edit {
     width: 100px;
     height: 100px;
@@ -130,6 +137,10 @@
     color: var(--blanco);
     font-size: 0.95rem;
     transition: all 0.3s ease;
+}
+
+.setting-box .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .setting-box .form-control:focus {

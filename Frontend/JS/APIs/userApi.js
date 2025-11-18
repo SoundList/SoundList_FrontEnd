@@ -61,6 +61,41 @@
         }
     }
 
+    async function updateUserEmail(userId, currentEmail, newEmail) {
+        try {
+            const payload = {
+                currentEmail,
+                newEmail,
+                email: newEmail,
+                Email: newEmail
+            };
+
+            const response = await axios.patch(`${USER_GATEWAY_ROUTE}/${userId}`, payload, getAuthHeaders());
+            console.log("📧 Email actualizado:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ Error en updateUserEmail:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    async function updateUserPassword(userId, currentPassword, newPassword) {
+        try {
+            const payload = {
+                currentPassword,
+                newPassword,
+                Password: newPassword
+            };
+
+            const response = await axios.patch(`${USER_GATEWAY_ROUTE}/${userId}`, payload, getAuthHeaders());
+            console.log("🔐 Contraseña actualizada:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ Error en updateUserPassword:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     // --- FOLLOWS ---
     async function getFollowerList(userId) {
         try {
@@ -180,6 +215,8 @@
     window.userApi = {
         updateUserProfile,
         getUserProfile,
+        updateUserEmail,
+        updateUserPassword,
         getFollowerList,
         getFollowerCount,
         getFollowingCount,

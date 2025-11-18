@@ -45,13 +45,13 @@
                 <div class="header-center d-none d-lg-flex">
                     <button class="nav-btn active" data-page="inicio">INICIO</button>
                     <button class="nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="nav-btn" data-page="amigos">EXPLORAR</button>
                 </div>
 
                 <div class="mobile-nav-menu" id="mobileNavMenu">
                     <button class="mobile-nav-btn active" data-page="inicio">INICIO</button>
                     <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="mobile-nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="mobile-nav-btn" data-page="amigos">EXPLORAR</button>
                 </div>
 
                 <div class="header-right">
@@ -116,7 +116,10 @@
                 <div class="sidebar">
                     <div class="profile-section-edit">
                         <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit"> 
-                        <span class="text-white">CUENTA <i class="fa-solid fa-check-circle text-success"></i></span>
+                        <div class="adjustments-account-name">
+                            <span id="edit-profile-username">Cuenta</span>
+                            <small class="text-success fw-semibold"><i class="fa-solid fa-check me-1"></i>Verificada</small>
+                        </div>
                     </div>
                     
                     <button id="btn-edit-description" data-section="description" class="active">

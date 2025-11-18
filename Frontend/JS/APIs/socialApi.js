@@ -463,22 +463,32 @@ export async function getUser(userId) {
     }
 }
 
-    async function getAverageRating(contentId, type) {
-    // contentId debe ser el GUID interno (SongId o AlbumId de la base de datos)
-    // type debe ser 'song' o 'album'
-        try {
-            let queryString = '';
-            if (type === 'song') {
-                queryString = `songId=${contentId}`;
-            } else {
-                queryString = `albumId=${contentId}`;
-            }
-
-            // Asegúrate de que la ruta coincida con tu ReviewController [HttpGet("reviews/average")]
-            const response = await axios.get(`${API_BASE}/reviews/average?${queryString}`, getAuthHeaders());
-            return response.data; // Debería ser un int (ej: 4)
-        } catch (error) {
-            console.error("❌ Error obteniendo promedio:", error);
-            return 0; // Fallback
+export async function getAverageRating(contentId, type) {
+    try {
+        // Construimos la URL. Asumo que usas API_BASE_URL importado en este archivo
+        // Si no tienes API_BASE_URL, usa la URL completa: 'http://localhost:5000/api/gateway'
+        
+        // Asegúrate de que esta variable exista o defínela aquí:
+        const baseUrl = 'http://localhost:5000/api/gateway'; // O usa import { API_BASE_URL } ...
+        
+        let queryString = '';
+        if (type === 'song') {
+            queryString = `songId=${contentId}`;
+        } else {
+            queryString = `albumId=${contentId}`;
         }
+
+        const url = `${baseUrl}/reviews/average?${queryString}`;
+        
+        const token = localStorage.getItem('authToken');
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
+        // Asumo que usas axios (como en tus otros archivos)
+        const response = await axios.get(url, config);
+        return response.data; // Retorna el int (ej: 4)
+        
+    } catch (error) {
+        console.error("❌ Error obteniendo promedio:", error);
+        return 0; // Si falla, asumimos 0 para no romper el flujo
     }
+}

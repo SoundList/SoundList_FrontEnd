@@ -526,29 +526,35 @@ async function submitCreateReview(state) {
         const response = await createReview(reviewData, authToken);
         
         // === NUEVO CÓDIGO: ACTUALIZACIÓN DE PROMEDIO ===
+        // === LÓGICA DE SINCRONIZACIÓN ===
         try {
+            console.log("🔄 1. Iniciando cálculo de promedio...");
             
-            // 1. Obtener el nuevo promedio desde Social (Usando el GUID interno)
-            // Necesitas importar getAverageRating de socialApi.js al principio del archivo
-            const newAverage = await getAverageRating(contentGuid, state.currentReviewData.type);
+            // A. Pedir promedio a Social
+            // IMPORTANTE: contentGuid es el ID interno (Guid)
+            const rawAverage = await getAverageRating(contentGuid, state.currentReviewData.type);
+            
+            // Aseguramos que sea un entero
+            const newAverage = parseInt(rawAverage); 
+            
+            console.log(`⭐ 2. Promedio recibido de Social: ${rawAverage} -> Convertido: ${newAverage}`);
 
             if (newAverage > 0) {
-                // 2. Enviar el PATCH a Content (Usando el ID de Spotify)
-                // state.currentReviewData.id tiene el ID de Spotify (APISongId/APIAlbumId)
-                const spotifyId = state.currentReviewData.id;
+                // B. Enviar a Content
+                const spotifyId = state.currentReviewData.id; // ID de Spotify (String corto)
+                console.log(`📤 3. Enviando PATCH a Content. ID: ${spotifyId}, Rating: ${newAverage}`);
 
                 if (state.currentReviewData.type === 'song') {
-                    // Necesitas importar updateSongRating de contentApi.js
                     await updateSongRating(spotifyId, newAverage);
                 } else {
-                    // Necesitas importar updateAlbumRating de contentApi.js
                     await updateAlbumRating(spotifyId, newAverage);
                 }
+                console.log("✅ 4. Content Service actualizado con éxito.");
+            } else {
+                console.warn("⚠️ El promedio calculado fue 0, no se actualizó Content.");
             }
-        } catch (ratingError) {
-            // No bloqueamos el flujo si falla la actualización del promedio, 
-            // la reseña ya se creó y eso es lo importante para el usuario.
-            console.error("⚠️ Advertencia: La reseña se creó, pero falló la actualización del promedio.", ratingError);
+        } catch (syncError) {
+            console.error("❌ Error en la sincronización de calificación:", syncError);
         }
         
         let reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id || 'N/A';

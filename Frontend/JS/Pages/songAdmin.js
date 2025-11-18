@@ -2,7 +2,7 @@
 import {
     getSongByApiId,
     getOrCreateSong,
-    
+    updateSongRating
 } from './../APIs/contentApi.js'; 
 
 import { 
@@ -24,6 +24,7 @@ import {
     getReviewReactionCount,
     addReviewReaction,
     deleteReviewReaction,
+    getAverageRating,
     getUser
 } from './../APIs/socialApi.js';
 import { showAlert, showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
@@ -318,6 +319,24 @@ async function handleSubmitReview() {
 
         // ¡LLAMADA A API CORREGIDA!
         await createReview(reviewData, authToken); 
+
+        // --- NUEVA LÓGICA DE SINCRONIZACIÓN ---
+        try {
+            console.log("🔄 Calculando promedio para actualizar Content...");
+            
+            // A. Pedimos el nuevo promedio a Social (Usando el GUID)
+            const newAverage = await getAverageRating(currentSongData.songId, 'song');
+            
+            if (newAverage > 0) {
+                // B. Enviamos el PATCH a Content (Usando el ID de Spotify)
+                // currentSongData.apiSongId es "0W3TCDzYM7xFrZSaXnQvs4"
+                await updateSongRating(currentSongData.apiSongId, newAverage);
+                console.log(`✅ Calificación actualizada a ${newAverage} en Content Service.`);
+            }
+        } catch (syncError) {
+            console.error("⚠️ Advertencia: La reseña se creó, pero falló el cálculo de promedio.", syncError);
+        }
+        // ---------------------------------------
         
         showAlert('¡Reseña de canción enviada!', 'success');
         hideCreateReviewModal();

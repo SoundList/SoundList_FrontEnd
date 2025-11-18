@@ -14,6 +14,15 @@ import { setReviewFilter } from '../reviews/reviewUtils.js';
  * @param {Object} state - Objeto con estado compartido (currentReviewData, loadReviews)
  */
 export function initializeCreateReviewModal(state) {
+    // Validar que state existe, si no crear uno por defecto
+    if (!state) {
+        console.warn('⚠️ initializeCreateReviewModal: state no proporcionado, creando uno por defecto');
+        state = {
+            currentReviewData: null,
+            currentRating: 0
+        };
+    }
+    
     const addReviewBtn = document.getElementById('addReviewBtn');
     const closeCreateReviewModal = document.getElementById('closeCreateReviewModal');
     const createReviewModalOverlay = document.getElementById('createReviewModalOverlay');
@@ -78,7 +87,7 @@ export function initializeCreateReviewModal(state) {
             if (this.value.length > 0) {
                 currentSearchController = new AbortController();
                 searchTimeout = setTimeout(() => {
-                    performContentSearch(this.value.trim(), currentSearchController.signal, state);
+                    performContentSearch(this.value.trim(), currentSearchController.signal, state || {});
                 }, 500);
             } else {
                 if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
@@ -95,11 +104,18 @@ export function initializeCreateReviewModal(state) {
     // Inicializar estrellas del modal
     if (createReviewStars) {
         // Guardar referencia al estado de rating en el objeto state
-        if (!state.currentRating) {
+        if (state && !state.currentRating) {
             state.currentRating = 0;
         }
         
         const stars = createReviewStars.querySelectorAll('.star-input');
+        
+        if (stars.length === 0) {
+            console.warn('⚠️ No se encontraron estrellas con la clase .star-input');
+            return;
+        }
+        
+        let currentRating = 0; // Variable local como fallback si state no existe
         
         function highlightStars(rating) {
             stars.forEach((star, index) => {
@@ -108,7 +124,10 @@ export function initializeCreateReviewModal(state) {
         }
         
         function updateStarRating(rating) {
-            state.currentRating = rating;
+            currentRating = rating;
+            if (state) {
+                state.currentRating = rating;
+            }
             highlightStars(rating);
         }
             
@@ -126,7 +145,7 @@ export function initializeCreateReviewModal(state) {
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
-            highlightStars(state.currentRating || 0);
+            highlightStars(state ? (state.currentRating || 0) : currentRating);
         });
     }
 }
@@ -306,9 +325,13 @@ export function showCreateReviewModal(contentData = null, state) {
     }
     
     if (contentData) {
-        setSelectedContent(contentData, state);
+        if (state) {
+            setSelectedContent(contentData, state);
+        }
     } else {
-        state.currentReviewData = null;
+        if (state) {
+            state.currentReviewData = null;
+        }
         if (contentSelector) contentSelector.style.display = 'block';
         if (contentInfo) contentInfo.style.display = 'none';
         if (contentSearchInput) contentSearchInput.value = '';
@@ -322,7 +345,9 @@ export function showCreateReviewModal(contentData = null, state) {
     
     // Resetear estrellas
     const stars = document.querySelectorAll('#createReviewStars .star-input');
-    stars.forEach(star => star.classList.remove('active'));
+    if (stars.length > 0) {
+        stars.forEach(star => star.classList.remove('active'));
+    }
     if (state) {
         state.currentRating = 0;
     }
@@ -339,7 +364,9 @@ function setSelectedContent(contentData, state) {
         return;
     }
     
-    state.currentReviewData = contentData;
+    if (state) {
+        state.currentReviewData = contentData;
+    }
     
     const contentSelector = document.getElementById('createReviewContentSelector');
     const contentInfo = document.getElementById('createReviewContentInfo');
@@ -387,7 +414,9 @@ function hideCreateReviewModal(state) {
             modalTitle.textContent = 'Crear Reseña';
         }
     }
-    state.currentReviewData = null;
+    if (state) {
+        state.currentReviewData = null;
+    }
 }
     
 /**

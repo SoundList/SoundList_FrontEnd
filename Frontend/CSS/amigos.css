@@ -1,15 +1,10 @@
-/* Amigos Page Styles - Based on home.css with additions */
-/* Note: This file includes only the styles specific to amigos page */
-/* The header and common styles should be shared from home.css or included separately */
 
-/* Override container class name */
 .amigos-container {
     background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
     min-height: 100vh;
     padding-bottom: 2rem;
 }
 
-/* User Search Section */
 .user-search-section {
     padding: 2rem 0;
     margin-top: 2rem;
@@ -280,7 +275,6 @@
     font-size: 1rem;
 }
 
-/* Reviews List Section */
 .reviews-list-section {
     padding: 2rem 0;
 }
@@ -315,7 +309,6 @@
     font-weight: 500;
 }
 
-/* Review Item with Follow Button */
 .review-item {
     background: rgba(13, 17, 32, 0.6);
     -webkit-backdrop-filter: blur(10px);

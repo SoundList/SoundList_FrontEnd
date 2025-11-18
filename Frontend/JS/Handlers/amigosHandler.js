@@ -1,155 +1,145 @@
-import { searchUsers } from '../APIs/AmigosApi.js';
-import { renderAmigoCard } from '../Components/amigoCard.js';
-import { loadReviews, followingUsers, mutualFriends } from '../Pages/amigos.js'; 
 
-// UTILIDAD: FUNCIÓN DE DEBOUNCE
+import { AmigosApi } from '../APIs/AmigosApi.js';
+import { ReviewApi } from '../APIs/reviewApi.js'; 
+import { renderAmigoCard } from '../Components/reviews/amigoCard.js'; 
+import { renderReviewCard } from '../Components/reviews/reviewCard.js'; 
 
-let searchTimeout;
-const DEBOUNCE_DELAY = 300;
+export const AmigosHandler = {
+    
+    init: () => {
+        const searchInput = document.getElementById('userSearchInput');
+        const searchResults = document.getElementById('userSearchResults');
+        const searchClear = document.getElementById('userSearchClear');
+        const filterBtns = document.querySelectorAll('.filter-btn');
 
-function debounce(func, delay = DEBOUNCE_DELAY) {
-    return (...args) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            func(...args);
-        }, delay);
-    };
-}
-
-// LÓGICA DE SEGUIMIENTO 
-export async function toggleFollow(userId, username, buttonElement) {
-    const isFollowing = followingUsers.has(userId);
-
-    if (!window.userApi || !window.userApi.unfollowUser || !window.userApi.followUser) {
-        alert('Error: La API de usuario no está disponible.');
-        return;
-    }
-
-    buttonElement.disabled = true;
-
-    try {
-        if (isFollowing) {
-            await window.userApi.unfollowUser(userId);
-            followingUsers.delete(userId);
-            mutualFriends.delete(userId); 
-            buttonElement.classList.remove('following');
-            buttonElement.classList.add('follow');
-            buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
-            
-        } else {
-            await window.userApi.followUser(userId);
-            followingUsers.add(userId);
-            buttonElement.classList.remove('follow');
-            buttonElement.classList.add('following');
-            buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
+        let timeoutId;
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                if (searchClear) searchClear.style.display = query ? 'block' : 'none';
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => { 
+                    AmigosHandler.handleSearch(query); 
+                }, 500);
+            });
         }
 
-        loadReviews();
+        if (searchClear) {
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                searchResults.style.display = 'none';
+                searchClear.style.display = 'none';
+            });
+        }
 
-    } catch (error) {
-        console.error(`❌ Error al ${isFollowing ? 'dejar de seguir' : 'seguir'} a ${username}:`, error.response?.data || error.message);
-        alert(`Error al ${isFollowing ? 'dejar de seguir' : 'seguir'} a ${username}. Por favor, intenta de nuevo.`);
-    } finally {
-        buttonElement.disabled = false;
-    }
-}
-
-// LÓGICA DE BÚSQUEDA (searchUsers)
-
-async function executeUserSearch(query) {
-    const userSearchResults = document.getElementById('userSearchResults');
-    if (!userSearchResults) return;
-
-    userSearchResults.style.display = 'block';
-    userSearchResults.innerHTML = `<div class="user-search-loading"><p class="text-center text-light mt-3"><i class="fas fa-spinner fa-spin me-2"></i> Buscando...</p></div>`;
-
-    let users = [];
-    try {
-        users = await searchUsers(query); 
-    } catch (err) {
-        console.error("❌ Error buscando usuarios:", err);
-        userSearchResults.innerHTML = '<p class="text-danger text-center mt-4">Hubo un error al cargar los resultados.</p>';
-        return;
-    }
-
-    if (users.length === 0) {
-        userSearchResults.innerHTML = `
-            <div class="user-search-empty">
-                <i class="fas fa-user-slash"></i>
-                <p>No se encontraron usuarios</p>
-            </div>
-        `;
-    } else {
-        userSearchResults.innerHTML = users.map(renderAmigoCard).join('');
-        attachFollowButtonListeners(userSearchResults);
-    }
-}
-
-function attachFollowButtonListeners(container) {
-    container.querySelectorAll('.follow-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const userId = this.getAttribute('data-user-id');
-            const username = this.getAttribute('data-username');
-            toggleFollow(userId, username, this); 
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.follow-btn');
+            if (btn) {
+                e.preventDefault();
+                const userId = btn.dataset.userId;
+                const isFollowing = btn.classList.contains('following');
+                await AmigosHandler.toggleFollow(userId, isFollowing, btn);
+            }
         });
-    });
-}
 
-export function initializeUserSearch() {
-    const userSearchInput = document.getElementById('userSearchInput');
-    const userSearchClear = document.getElementById('userSearchClear');
-    const userSearchResults = document.getElementById('userSearchResults');
-    
-    if (!userSearchInput) return;
-
-    userSearchInput.addEventListener('input', function() {
-        const query = this.value.trim().toLowerCase();
-        
-        if (query.length === 0) {
-            userSearchResults.style.display = 'none';
-            userSearchClear.style.display = 'none';
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                AmigosHandler.loadReviewFeed(btn.dataset.filter); 
+            });
+        });
+    },
+    handleSearch: async (query) => {
+        const resultsContainer = document.getElementById('userSearchResults');
+        if (!query) {
+            resultsContainer.style.display = 'none';
             return;
         }
-        
-        userSearchClear.style.display = 'block';
-        
-        debounce(() => executeUserSearch(query))(); 
-    });
 
-    if (userSearchClear) {
-        userSearchClear.addEventListener('click', function() {
-            userSearchInput.value = '';
-            userSearchResults.style.display = 'none';
-            this.style.display = 'none';
-            userSearchInput.dispatchEvent(new Event('input')); 
-        });
-    }
+        resultsContainer.style.display = 'block';
+        resultsContainer.innerHTML = '<div class="p-3 text-center text-white">Buscando usuarios...</div>';
 
-    document.addEventListener('click', function(e) {
-        const isInput = userSearchInput.contains(e.target);
-        const isResult = userSearchResults.contains(e.target);
-        const isClear = userSearchClear && userSearchClear.contains(e.target);
-        
-        if (!isInput && !isResult && !isClear) {
-            if (userSearchInput.value.trim().length === 0) {
-                userSearchResults.style.display = 'none';
-            }
+        const rawUsers = await AmigosApi.searchUsers(query);
+        const rawFollowing = await AmigosApi.getFollowing();
+        const users = Array.isArray(rawUsers) ? rawUsers : [];
+        const myFollowing = Array.isArray(rawFollowing) ? rawFollowing : [];
+
+        if (users.length === 0) {
+            resultsContainer.innerHTML = '<div class="p-3 text-center text-white">No se encontraron usuarios.</div>';
+            return;
         }
-    });
-}
 
-export function initializeReviewFilters() {
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    
-    filterButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            filterButtons.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
+        resultsContainer.innerHTML = users.map(user => {
+            const isFollowing = myFollowing.some(u => u.id === user.id);
+            return renderAmigoCard({ ...user, isFollowing });
+        }).join('');
+    },
 
-            if (typeof loadReviews === 'function') { 
-                loadReviews(this.getAttribute('data-filter')); 
+    toggleFollow: async (userId, isUnfollowing, btnElement) => {
+        btnElement.disabled = true;
+        const originalHTML = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        let success = isUnfollowing 
+            ? await AmigosApi.unfollowUser(userId) 
+            : await AmigosApi.followUser(userId);
+
+        if (success) {
+            if (isUnfollowing) {
+                btnElement.className = 'follow-btn follow';
+                btnElement.innerHTML = '<i class="fas fa-user-plus"></i> Seguir';
+            } else {
+                btnElement.className = 'follow-btn following';
+                btnElement.innerHTML = '<i class="fas fa-user-check"></i> Siguiendo';
             }
-        });
-    });
-}
+        } else {
+            alert('Error al realizar la acción. Intenta de nuevo.');
+            btnElement.innerHTML = originalHTML;
+        }
+        btnElement.disabled = false;
+    },
+    loadReviewFeed: async (type) => { 
+        const listContainer = document.getElementById('reviewsList'); 
+        const emptyState = document.getElementById('reviewsEmpty');
+        
+        listContainer.innerHTML = '<div class="text-center text-white mt-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+        if (emptyState) emptyState.style.display = 'none';
+
+        let rawReviews = [];
+        try {
+            if (type === 'seguidos') {
+                console.log("Cargando reseñas de seguidos...");
+                rawReviews = await ReviewApi.getReviewsByFollowing();
+            } else {
+                console.log("Cargando reseñas de seguidores...");
+                rawReviews = await ReviewApi.getReviewsByFollowers();
+            }
+        } catch (e) {
+            console.warn("Error cargando reseñas:", e);
+            rawReviews = [];
+        }
+
+        const reviews = Array.isArray(rawReviews) ? rawReviews : [];
+
+        listContainer.innerHTML = '';
+
+        if (reviews.length === 0) {
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+                emptyState.querySelector('p').textContent = type === 'seguidos' 
+                    ? 'Las personas que sigues aún no han escrito reseñas.' 
+                    : 'Tus seguidores aún no han escrito reseñas.';
+            }
+            return;
+        }
+        const cardsHTML = reviews.map(review => {
+            return renderReviewCard(review); 
+        }).join('');
+
+        listContainer.innerHTML = cardsHTML;
+    },
+    
+    loadUserList: (type) => AmigosHandler.loadReviewFeed(type)
+};

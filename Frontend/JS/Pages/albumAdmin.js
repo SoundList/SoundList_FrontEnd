@@ -35,7 +35,6 @@ let editingCommentId = null;
 let originalCommentText = null;
 let deletingReviewId = null;
 let deletingCommentId = null;
-let reportingCommentId = null;
 
 //  ---  INICIO  DE  LA  APLICACIÓN  ---
 // ¡CORREGIDO! Esta es la función que main.js llama.
@@ -48,7 +47,6 @@ export function initializeAlbumPage() {
     // Inicializar modals de esta página
     initializeCommentsModalLogic();
     initializeDeleteModalsLogic();
-    initializeReportModalLogic();
 };
 
 //  ---  FUNCIONES  PRINCIPALES  ---
@@ -302,14 +300,7 @@ function attachReviewActionListeners(reviewsListElement) {
         });
     });
     
-    reviewsListElement.querySelectorAll('.btn-report').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const reviewId = this.getAttribute('data-review-id');
-            reportReview(reviewId);
-        });
-    });
-    
-    reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
+    reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation(); 
             const authToken = localStorage.getItem('authToken');
@@ -325,7 +316,7 @@ function attachReviewActionListeners(reviewsListElement) {
     
     reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
         element.addEventListener('click', function(e) {
-            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-report') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
+            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
                 return;
             }
             
@@ -590,13 +581,9 @@ async function loadCommentsIntoModal(reviewId) {
                             <button class="comment-action-btn comment-delete-btn" data-comment-id="${commentId}" title="Eliminar"><i class="fas fa-trash"></i></button>
                         </div>
                     `;
-                } else {
-                    actionButtons = `
-                        <div class="comment-actions">
-                            <button class="comment-action-btn comment-report-btn" data-comment-id="${commentId}" title="Reportar"><i class="fas fa-flag"></i></button>
-                        </div>
-                    `;
-                }
+                } else {
+                    actionButtons = '';
+                }
                 
                 return `
                 <div class="comment-item" data-comment-id="${commentId}">
@@ -692,14 +679,7 @@ function attachCommentActionListeners() {
         });
     });
     
-    document.querySelectorAll('.comment-report-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const commentId = this.getAttribute('data-comment-id');
-            reportComment(commentId);
-        });
-    });
-    
-    document.querySelectorAll('.comment-like-btn').forEach(btn => {
+    document.querySelectorAll('.comment-like-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const commentId = this.getAttribute('data-comment-id');
@@ -1054,99 +1034,6 @@ async function deleteReviewLogic(reviewId) {
         }
     }
 }
-    
-// --- MODAL DE REPORTAR ---
-
-function initializeReportModalLogic() {
-    const cancelReportCommentBtn = document.getElementById('cancelReportCommentBtn');
-    const confirmReportCommentBtn = document.getElementById('confirmReportCommentBtn');
-    const reportCommentModalOverlay = document.getElementById('reportCommentModalOverlay');
-    const reportRadios = document.querySelectorAll('.report-radio');
-    const reportCommentTextarea = document.getElementById('reportCommentTextarea');
-    
-    if (cancelReportCommentBtn) {
-        cancelReportCommentBtn.addEventListener('click', hideReportCommentModal);
-   }
-    if (confirmReportCommentBtn) {
-        confirmReportCommentBtn.addEventListener('click', confirmReportComment);
-    }
-    if (reportCommentModalOverlay) {
-        reportCommentModalOverlay.addEventListener('click', (e) => {
-            if (e.target === reportCommentModalOverlay) hideReportCommentModal();
-        });
-    }
-    
-    if (reportRadios.length > 0) {
-        reportRadios.forEach(radio => {
-         radio.addEventListener('change', function() {
-                const confirmBtn = document.getElementById('confirmReportCommentBtn');
-                if (confirmBtn) confirmBtn.disabled = false;
-                
-                if (this.value === 'other' && reportCommentTextarea) {
-                  reportCommentTextarea.style.display = 'block';
-               } else if (reportCommentTextarea) {
-                    reportCommentTextarea.style.display = 'none';
-                }
-            });
-        });
-    }
-}
-
-function reportComment(commentId) {
-    showReportCommentModal(commentId);
-}
-function reportReview(reviewId) {
-    // TODO: Podríamos adaptar este modal para reportar reseñas también
-    showAlert('Funcionalidad de reportar reseña en desarrollo.', 'info');
-}
-
-function showReportCommentModal(commentId) {
-   reportingCommentId = commentId; // O 'reviewId' si adaptamos
-    const modal = document.getElementById('reportCommentModalOverlay');
-    const textarea = document.getElementById('reportCommentTextarea');
-    const confirmBtn = document.getElementById('confirmReportCommentBtn');
-    
-    document.querySelectorAll('.report-radio').forEach(radio => radio.checked = false);
-    if (textarea) {
-        textarea.value = '';
-        textarea.style.display = 'none';
-    }
-    if (confirmBtn) confirmBtn.disabled = true;
-    if (modal) modal.style.display = 'flex';
-}
-    
-function hideReportCommentModal() {
-    const modal = document.getElementById('reportCommentModalOverlay');
-   if(modal) modal.style.display = 'none';
-    reportingCommentId = null;
-}
-    
-async function confirmReportComment() {
-    if (!reportingCommentId) return;
-    
-    const selectedReason = document.querySelector('.report-radio:checked');
-    if (!selectedReason) {
-        showAlert('Por favor, selecciona un motivo para el reporte', 'warning');
-        return;
-    }
-    
-    const reason = selectedReason.value;
-    const textarea = document.getElementById('reportCommentTextarea');
-    const additionalInfo = textarea ? textarea.value.trim() : '';
-    
-    // TODO: Implementar 'reportComment' en socialApi.js
-    const reportData = {
-        commentId: reportingCommentId,
-        reason: reason,
-        additionalInfo: additionalInfo
-    };
-    
-    console.log('Reportar comentario:', reportData);
-    
-    hideReportCommentModal();
-    showAlert('Comentario reportado. Gracias por tu reporte.', 'success');
-}
-
 
 // --- 9. DATOS DE EJEMPLO ---
 function initializeSampleComments() {

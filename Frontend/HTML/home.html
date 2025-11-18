@@ -47,14 +47,14 @@
                 <div class="header-center d-none d-lg-flex">
                     <button class="nav-btn active" data-page="inicio">INICIO</button>
                     <button class="nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="nav-btn" data-page="amigos">EXPLORAR</button>
                 </div>
 
                 <!-- Mobile Navigation Menu -->
                 <div class="mobile-nav-menu" id="mobileNavMenu">
                     <button class="mobile-nav-btn active" data-page="inicio">INICIO</button>
                     <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="mobile-nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="mobile-nav-btn" data-page="amigos">EXPLORAR</button>
                 </div>
 
                 <!-- Right Side: Notifications and Profile/Login -->
@@ -126,18 +126,6 @@
                     
                     <div class="carousel-wrapper" id="carouselWrapper">
                         <!-- Carousel items will be dynamically generated -->
-                        <div class="carousel-item active" data-top="lo-mas-recomendado">
-                            <div class="carousel-card">
-                                <div class="carousel-album-art">
-                                    <img src="../Assets/default-avatar.png" alt="Album Art" class="album-image">
-                                </div>
-                                <div class="carousel-content">
-                                    <h3 class="carousel-title">LO MÁS RECOMENDADO</h3>
-                                    <p class="carousel-description">20000 personas le gusto le gusto esto</p>
-                                    <p class="carousel-text">Texto del párrafo</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <button class="carousel-nav-btn carousel-next" id="carouselNext">
@@ -387,50 +375,6 @@
                 <div class="delete-review-buttons">
                     <button class="delete-review-btn delete-review-cancel" id="cancelDeleteReviewBtn">Cancelar</button>
                     <button class="delete-review-btn delete-review-confirm" id="confirmDeleteReviewBtn">Eliminar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report Comment Modal -->
-    <div class="report-comment-modal-overlay" id="reportCommentModalOverlay" style="display: none;">
-        <div class="report-comment-modal">
-            <div class="report-comment-modal-content">
-                <div class="report-comment-icon">
-                    <i class="fas fa-flag"></i>
-                </div>
-                <h2 class="report-comment-title">Reportar comentario</h2>
-                <p class="report-comment-message">¿Por qué quieres reportar este comentario?</p>
-                <div class="report-comment-options">
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="spam" class="report-radio">
-                        <span class="report-option-text">Spam o contenido no deseado</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="harassment" class="report-radio">
-                        <span class="report-option-text">Acoso o discurso de odio</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="inappropriate" class="report-radio">
-                        <span class="report-option-text">Contenido inapropiado</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="misinformation" class="report-radio">
-                        <span class="report-option-text">Información falsa</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="other" class="report-radio">
-                        <span class="report-option-text">Otro</span>
-                    </label>
-                </div>
-                <textarea class="report-comment-textarea" 
-                          id="reportCommentTextarea" 
-                          placeholder="Describe el problema (opcional)..."
-                          maxlength="500"
-                          style="display: none;"></textarea>
-                <div class="report-comment-buttons">
-                    <button class="report-comment-btn report-comment-cancel" id="cancelReportCommentBtn">Cancelar</button>
-                    <button class="report-comment-btn report-comment-confirm" id="confirmReportCommentBtn">Reportar</button>
                 </div>
             </div>
         </div>

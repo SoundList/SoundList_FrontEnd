@@ -146,24 +146,55 @@ async function loadPageData() {
 // --- FUNCIONES DE RENDERIZADO ---
 
 function renderSongHeader(song) {
-    document.getElementById('songCover').src = song.image || 'https://via.placeholder.com/300';
-    document.getElementById('songTitle').textContent = song.title;
-    
-    const artistLink = document.getElementById('songArtistLink');
-    artistLink.textContent = song.artistName;
-    artistLink.href = `./artist.html?id=${song.apiArtistId}`; 
-    
-    const albumLink = document.getElementById('songAlbumLink');
-    // Asumiendo que 'song' tiene 'albumName' y 'apiAlbumId'
-    albumLink.textContent = `ÁLBUM: ${song.albumName || 'Álbum Desconocido'}`; 
-    albumLink.href = `./album.html?id=${song.apiAlbumId}`;
+    // 1. Renderizado existente
+    document.getElementById('songCover').src = song.image || 'https://via.placeholder.com/300';
+    document.getElementById('songTitle').textContent = song.title;
+    
+    const artistLink = document.getElementById('songArtistLink');
+    artistLink.textContent = song.artistName;
+    artistLink.href = `./artist.html?id=${song.apiArtistId}`; 
+    
+    const albumLink = document.getElementById('songAlbumLink');
+    albumLink.textContent = `ÁLBUM: ${song.albumName || 'Álbum Desconocido'}`; 
+    albumLink.href = `./album.html?id=${song.apiAlbumId}`;
 
-    // TODO: La API de Canción no devuelve rating agregado, lo simulamos
-    const rating = song.averageRating || 0;
-    const reviewCount = song.reviewCount || 0;
-    document.getElementById('ratingNumber').textContent = rating.toFixed(1);
-    document.getElementById('ratingStars').innerHTML = createStarRating(rating, true);
-    document.getElementById('ratingCount').textContent = `(${reviewCount} reviews)`;
+    const rating = song.averageRating || 0;
+    const reviewCount = song.reviewCount || 0;
+    document.getElementById('ratingNumber').textContent = rating.toFixed(1);
+    document.getElementById('ratingStars').innerHTML = createStarRating(rating, true);
+    document.getElementById('ratingCount').textContent = `(${reviewCount} reviews)`;
+
+    // ------------------------------------------------------
+    // 2. LÓGICA DE AUDIO (Plan Híbrido Spotify/Deezer)
+    // ------------------------------------------------------
+    const audioContainer = document.getElementById('audioPlayerContainer');
+    
+    if (audioContainer) {
+        if (song.previewUrl) {
+            // Tenemos URL (Spotify o Deezer)
+            audioContainer.innerHTML = `
+                <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-music me-2" style="color: #1DB954;"></i>
+                        <span style="font-size: 0.85rem; color: #ccc; font-weight: 500;">Vista previa (30 seg)</span>
+                    </div>
+                    <audio controls controlsList="nodownload" style="width: 100%; height: 32px; border-radius: 4px;">
+                        <source src="${song.previewUrl}" type="audio/mpeg">
+                        Tu navegador no soporta el elemento de audio.
+                    </audio>
+                </div>
+            `;
+        } else {
+            // No hay URL disponible
+            audioContainer.innerHTML = `
+                <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
+                    <small style="color: #888;">
+                        <i class="fas fa-volume-mute me-2"></i>Vista previa no disponible
+                    </small>
+                </div>
+            `;
+        }
+    }
 }
 
 function renderSongDetails(song) {

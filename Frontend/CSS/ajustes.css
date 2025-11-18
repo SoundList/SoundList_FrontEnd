@@ -1,0 +1,334 @@
+.adjustments-layout {
+    display: flex;
+    color: var(--blanco);
+    padding: 2rem;
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+}
+
+.adjustments-sidebar {
+    position: sticky;
+    top: 120px;
+    gap: 1rem;
+    width: 300px;
+    margin-right: 2rem;
+}
+
+.adjustments-account-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+}
+
+.sidebar-actions {
+    width: 100%;
+}
+
+.sidebar-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    letter-spacing: 0.2px;
+}
+
+.sidebar-hint {
+    width: 100%;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.adjustments-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-card {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.settings-card.hidden {
+    display: none;
+}
+
+.settings-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.settings-card-header h3 {
+    margin-bottom: 0.35rem;
+}
+
+.eyebrow-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15rem;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 0.35rem;
+}
+
+.setting-description {
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 0;
+}
+
+.gradient-pill {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--blanco);
+    font-weight: 600;
+}
+
+.settings-form {
+    width: 100%;
+}
+
+.settings-form .form-control {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    padding: 0.75rem 1.25rem;
+    color: var(--blanco);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.settings-form .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.settings-form .form-control:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--morado);
+    box-shadow: 0 0 0 0.2rem rgba(124, 58, 237, 0.25);
+    color: var(--blanco);
+    outline: none;
+}
+
+.form-hint {
+    display: block;
+    margin-top: 0.35rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+}
+
+.settings-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    pointer-events: none;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(236, 72, 153, 0.4)) border-box;
+    mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0.35;
+}
+
+.settings-card:focus-within::after {
+    opacity: 0.65;
+}
+
+@media (max-width: 992px) {
+    .adjustments-layout {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .adjustments-sidebar {
+        position: static;
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .settings-card-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .sidebar-actions button {
+        text-align: left;
+        justify-content: flex-start;
+    }
+}
+
+/* Estilos para botón de eliminar cuenta en sidebar */
+.sidebar-delete-btn {
+    border-color: rgba(220, 53, 69, 0.5) !important;
+    color: rgba(220, 53, 69, 0.9) !important;
+    margin-top: 0.5rem;
+}
+
+.sidebar-delete-btn:hover {
+    background: rgba(220, 53, 69, 0.15) !important;
+    border-color: rgba(220, 53, 69, 0.7) !important;
+    color: #dc3545 !important;
+}
+
+.sidebar-delete-btn.active {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.3) 0%, rgba(220, 53, 69, 0.2) 100%) !important;
+    border-color: rgba(220, 53, 69, 0.6) !important;
+    color: #dc3545 !important;
+}
+
+/* Estilos para tarjeta de peligro */
+.settings-card-danger {
+    border-color: rgba(220, 53, 69, 0.3) !important;
+}
+
+.settings-card-danger::after {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.4), rgba(220, 53, 69, 0.3)) border-box !important;
+}
+
+.gradient-pill-danger {
+    background: rgba(220, 53, 69, 0.2) !important;
+    border: 1px solid rgba(220, 53, 69, 0.4) !important;
+    color: #dc3545 !important;
+}
+
+/* Botón de eliminar cuenta */
+.btn-delete-account {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem 3.5rem;
+    color: var(--blanco);
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-family: 'Arimo', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    margin-top: 20px;
+}
+
+.btn-delete-account:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.5);
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+}
+
+.btn-delete-account:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Modal de eliminar cuenta */
+.delete-account-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+}
+
+.delete-account-modal {
+    background: linear-gradient(135deg, rgba(13, 17, 32, 0.95) 0%, rgba(20, 25, 40, 0.95) 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    box-shadow: 0 8px 32px rgba(220, 53, 69, 0.3);
+}
+
+.delete-account-modal-content {
+    text-align: center;
+    color: var(--blanco);
+}
+
+.delete-account-modal-logo {
+    margin-bottom: 1.5rem;
+}
+
+.delete-account-logo-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid rgba(220, 53, 69, 0.5);
+}
+
+.delete-account-modal-title {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.delete-account-modal-message {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.delete-account-modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.delete-account-btn {
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    font-family: 'Arimo', sans-serif;
+}
+
+.delete-account-btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: var(--blanco);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+}
+
+.delete-account-btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.5);
+}
+
+.delete-account-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--blanco);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.delete-account-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajustes de cuenta - SoundList</title>
+    <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="../../CSS/home.css">
+    <link rel="stylesheet" href="../../CSS/editProfile.css">
+    <link rel="stylesheet" href="../../CSS/ajustes.css">
+</head>
+<body class="edit-profile-body">
+    <div class="home-container">
+        <header class="top-header">
+            <div class="header-content container-fluid">
+                <button class="mobile-menu-toggle d-lg-none" id="mobileMenuToggle" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="header-left">
+                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon d-none d-md-block">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, usuario">
+                        <button class="search-clear" id="searchClear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display: none;"></div>
+                </div>
+
+                <div class="header-center d-none d-lg-flex">
+                    <button class="nav-btn active" data-page="inicio">INICIO</button>
+                    <button class="nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="nav-btn" data-page="amigos">EXPLORAR</button>
+                </div>
+
+                <div class="mobile-nav-menu" id="mobileNavMenu">
+                    <button class="mobile-nav-btn active" data-page="inicio">INICIO</button>
+                    <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
+                    <button class="mobile-nav-btn" data-page="amigos">EXPLORAR</button>
+                </div>
+
+                <div class="header-right">
+                    <div class="notifications-dropdown-container" id="notificationsContainer" style="display: none;">
+                        <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <div class="notifications-dropdown" id="notificationsDropdown" style="display: none;">
+                            <div class="notifications-dropdown-header">
+                                <h3>Notificaciones</h3>
+                            </div>
+                            <div class="notifications-list" id="notificationsList">
+                                <div class="notification-empty">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No tienes notificaciones</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="login-container" id="loginContainer" style="display: none;">
+                        <button class="login-btn" id="loginBtn">
+                            <img src="../../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon">
+                            <span class="login-text">Iniciar Sesion</span>
+                        </button>
+                    </div>
+
+                    <div class="profile-dropdown-container" id="profileContainer" style="display: none;">
+                        <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
+                            <img src="../../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
+                        </button>
+                        <div class="profile-dropdown" id="profileDropdown" style="display: none;">
+                            <div class="profile-dropdown-header">
+                                <img src="../../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small">
+                                <span id="usernameDisplay">Usuario</span>
+                            </div>
+                            <button class="profile-dropdown-item" id="verPerfilBtn">
+                                <i class="fas fa-user"></i> Perfil
+                            </button>
+                            <button class="profile-dropdown-item" id="ajustesBtn">
+                                <i class="fas fa-cog"></i> Ajustes
+                            </button>
+                            <button class="profile-dropdown-item" id="cerrarSesionBtn">
+                                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="add-review-container" id="addReviewContainer" style="display: none;">
+                        <button class="icon-btn add-review-btn" id="addReviewBtn" title="Crear reseña">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="settings-container adjustments-layout">
+                <aside class="sidebar adjustments-sidebar">
+                    <div class="profile-section-edit">
+                        <img id="settings-avatar" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit">
+                        <div class="adjustments-account-name">
+                            <span id="settings-username">Cuenta</span>
+                            <small class="text-success fw-semibold"><i class="fa-solid fa-check me-1"></i>Verificada</small>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-actions">
+                        <button id="sidebar-email-btn" class="active" data-panel="email">
+                            <i class="fa-solid fa-envelope me-2"></i> Editar mail
+                        </button>
+                        <button id="sidebar-password-btn" data-panel="password">
+                            <i class="fa-solid fa-lock me-2"></i> Editar contraseña
+                        </button>
+                        <button id="sidebar-delete-btn" data-panel="delete" class="sidebar-delete-btn">
+                            <i class="fa-solid fa-trash-can me-2"></i> Eliminar cuenta
+                        </button>
+                    </div>
+
+                    <div class="sidebar-hint">
+                        <i class="fa-solid fa-shield-halved me-2"></i>
+                        Protegemos tus datos con cifrado y verificación en cada cambio.
+                    </div>
+                </aside>
+
+                <section class="settings-content adjustments-content">
+                    <article class="setting-box settings-card" id="email-panel" data-panel="email">
+                        <header class="settings-card-header">
+                            <div>
+                                <p class="eyebrow-label">Cuenta y seguridad</p>
+                                <h3>Actualizar correo electrónico</h3>
+                                <p class="setting-description">
+                                    Usa un correo al que tengas acceso. Te enviaremos avisos importantes y alertas de seguridad.
+                                </p>
+                            </div>
+                            <span class="badge rounded-pill text-bg-dark-subtle gradient-pill">
+                                <i class="fa-solid fa-envelope me-2"></i>Correo principal
+                            </span>
+                        </header>
+
+                        <form id="form-change-email" class="settings-form">
+                            <div class="mb-4">
+                                <label for="current-email">Mail actual</label>
+                                <input type="email" id="current-email" class="form-control" readonly>
+                                <small class="form-hint">Este es el correo que usamos hoy para tu cuenta.</small>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="new-email">Nuevo mail</label>
+                                <input type="email" id="new-email" class="form-control" placeholder="usuario@ejemplo.com" required>
+                                <small class="form-hint">Debe ser un correo válido y activo.</small>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="confirm-email">Confirmar nuevo mail</label>
+                                <input type="email" id="confirm-email" class="form-control" placeholder="Repite el nuevo mail" required>
+                                <small class="form-hint">El nuevo mail debe coincidir en ambos campos.</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-confirm w-100" id="confirm-email-btn">
+                                Confirmar cambio de mail
+                            </button>
+                        </form>
+                    </article>
+
+                    <article class="setting-box settings-card hidden" id="password-panel" data-panel="password">
+                        <header class="settings-card-header">
+                            <div>
+                                <p class="eyebrow-label">Acceso seguro</p>
+                                <h3>Actualizar contraseña</h3>
+                                <p class="setting-description">
+                                    Crea una contraseña única y difícil de adivinar. Usa al menos 8 caracteres combinando letras, números y símbolos.
+                                </p>
+                            </div>
+                            <span class="badge rounded-pill text-bg-dark-subtle gradient-pill">
+                                <i class="fa-solid fa-lock me-2"></i>Recomendado
+                            </span>
+                        </header>
+
+                        <form id="form-change-password" class="settings-form">
+                            <div class="mb-4">
+                                <label for="current-password">Contraseña actual</label>
+                                <input type="password" id="current-password" class="form-control" placeholder="Ingresa tu contraseña actual" required minlength="6">
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="new-password">Nueva contraseña</label>
+                                <input type="password" id="new-password" class="form-control" placeholder="Mínimo 8 caracteres" required minlength="8">
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="confirm-password">Confirmar nueva contraseña</label>
+                                <input type="password" id="confirm-password" class="form-control" placeholder="Repite la nueva contraseña" required minlength="8">
+                                <small class="form-hint">La nueva contraseña debe coincidir en ambos campos.</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-confirm w-100" id="confirm-password-btn">
+                                Actualizar contraseña
+                            </button>
+                        </form>
+                    </article>
+
+                    <article class="setting-box settings-card settings-card-danger hidden" id="delete-panel" data-panel="delete">
+                        <header class="settings-card-header">
+                            <div>
+                                <p class="eyebrow-label">Zona de peligro</p>
+                                <h3>Eliminar cuenta</h3>
+                                <p class="setting-description">
+                                    Esta acción es permanente e irreversible. Se eliminarán todos tus datos, reseñas, comentarios y configuraciones. No podrás recuperar tu cuenta después de eliminarla.
+                                </p>
+                            </div>
+                            <span class="badge rounded-pill text-bg-danger gradient-pill-danger">
+                                <i class="fa-solid fa-exclamation-triangle me-2"></i>Irreversible
+                            </span>
+                        </header>
+
+                        <div class="settings-form">
+                            <div class="mb-4">
+                                <label for="delete-confirm-password">Confirma tu contraseña para eliminar la cuenta</label>
+                                <input type="password" id="delete-confirm-password" class="form-control" placeholder="Ingresa tu contraseña actual" required>
+                                <small class="form-hint text-danger">Por seguridad, necesitamos que confirmes tu contraseña antes de eliminar tu cuenta.</small>
+                            </div>
+
+                            <button type="button" class="btn btn-danger btn-delete-account w-100" id="confirm-delete-btn">
+                                <i class="fa-solid fa-trash-can me-2"></i> Eliminar cuenta permanentemente
+                            </button>
+                        </div>
+                    </article>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <div class="login-required-modal-overlay" id="loginRequiredModalOverlay" style="display: none;">
+        <div class="login-required-modal">
+            <div class="login-required-modal-content">
+                <div class="login-required-modal-logo">
+                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="login-required-logo-img">
+                </div>
+                <h2 class="login-required-modal-title">Inicia sesión</h2>
+                <p class="login-required-modal-message">Debes iniciar sesión para realizar esta acción.</p>
+                <div class="login-required-modal-buttons">
+                    <button class="login-required-btn login-required-btn-primary" id="goToLoginBtn">Iniciar sesión</button>
+                    <button class="login-required-btn login-required-btn-secondary" id="cancelLoginRequiredBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="logout-logo-img">
+                </div>
+                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="delete-account-modal-overlay" id="deleteAccountModalOverlay" style="display: none;">
+        <div class="delete-account-modal">
+            <div class="delete-account-modal-content">
+                <div class="delete-account-modal-logo">
+                    <img src="../../Assets/default-avatar.png" alt="SoundList Logo" class="delete-account-logo-img">
+                </div>
+                <h2 class="delete-account-modal-title">¿Eliminar cuenta permanentemente?</h2>
+                <p class="delete-account-modal-message">
+                    Esta acción no se puede deshacer. Se eliminarán todos tus datos, reseñas, comentarios y configuraciones de forma permanente.
+                </p>
+                <div class="delete-account-modal-buttons">
+                    <button class="delete-account-btn delete-account-btn-danger" id="confirmDeleteAccountBtn">Sí, eliminar cuenta</button>
+                    <button class="delete-account-btn delete-account-btn-secondary" id="cancelDeleteAccountBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script type="module" src="../../JS/main.js"></script>
+    <script src="../../JS/APIs/userApi.js"></script>
+    <script src="../../JS/Pages/ajustes.js"></script>
+</body>
+</html>
+

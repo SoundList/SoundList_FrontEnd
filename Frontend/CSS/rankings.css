@@ -1269,3 +1269,25 @@ button.nav-btn.active:hover {
     padding: 3rem 1rem;
     font-size: 1.1rem;
 }
+
+/* CSS para el menú desplegable de filtros (AÑO y TIPO) */
+.filter-dropdown {
+    /* Mantiene el menú en una altura fija */
+    max-height: 350px; 
+    
+    /* Añade scrollbar vertical si el contenido excede la altura máxima */
+    overflow-y: auto;  
+    
+    /* Asegura que aparezca encima de otros elementos */
+    z-index: 1000;
+}
+
+/* Opcional: Estilo para navegadores WebKit (Chrome, Edge) */
+.filter-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-dropdown::-webkit-scrollbar-thumb {
+    background-color: #555981; /* Color similar al fondo púrpura */
+    border-radius: 3px;
+}

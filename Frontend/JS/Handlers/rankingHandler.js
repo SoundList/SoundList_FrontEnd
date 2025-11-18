@@ -1,5 +1,6 @@
 
 import { fetchRankings } from '../APIs/rankingAPI.js';
+import { getAllReviews } from '../APIs/socialApi.js';
 import { 
     renderRankingList, 
     showLoading, 
@@ -25,28 +26,62 @@ const tipoDropdown = document.getElementById('tipoFilterDropdown');
 const anoDropdown = document.getElementById('anoFilterDropdown');
 
 /**
- * Función principal. Llama a la API y renderiza los resultados.
+ * Función principal. Llama a la API, cuenta reseñas y renderiza.
+ */
+/**
+ * Función principal. Llama a la API, cuenta reseñas y renderiza.
  */
 async function loadRankings() {
     console.log("Cargando rankings con el estado:", currentState);
     showLoading(); 
     updateTitlesAndTags();
 
-    if (currentState.categoria === 'masResenados') {
-        alert("El filtro 'MAS RESEÑADOS' no está implementado.\n\nEl 'ContentAPI' no devuelve la cantidad de reseñas.");
-        showEmptyState();
-        return;
-    }
-    
+    // Eliminamos el alert de 'masResenados' y dejamos que el flujo continúe.
+    // El filtro 'masResenados' no envía el parámetro 'orden' al backend, 
+    // por lo que nos dará la lista sin ordenar por calificación.
+
     try {
-        const items = await fetchRankings(currentState);
-        renderRankingList(items, currentState.tipo);
+        // 1. Obtener ítems de Content
+        let items = await fetchRankings(currentState);
+
+        // 2. Obtener TODAS las reseñas del Social Service
+        const allReviews = await getAllReviews();
+        const itemTypeKey = currentState.tipo === 'canciones' ? 'songId' : 'albumId';
+
+        // 3. Contar las reseñas por ID local (GUID)
+        const reviewSummary = {}; // { GUID_Local: count }
+        allReviews.forEach(review => {
+            const id = review[itemTypeKey] || review[itemTypeKey.charAt(0).toUpperCase() + itemTypeKey.slice(1)];
+            if (id) {
+                reviewSummary[id] = (reviewSummary[id] || 0) + 1;
+            }
+        });
+
+        // 4. Enriquecer los ítems con el conteo de reseñas
+        let rankedItems = items
+            .map(item => {
+                const localId = item.songId || item.albumId; // GUID local
+                item.reviewCount = reviewSummary[localId] || 0;
+                return item;
+            })
+            // 5. FILTRADO ESTRICTO: Solo ítems que tienen al menos una reseña (reviewCount > 0)
+            .filter(item => item.reviewCount > 0); 
+            
+        // -----------------------------------------------------------------
+        // 6. NUEVO: Lógica de Ordenamiento por Conteo de Reseñas (JS Sort)
+        // -----------------------------------------------------------------
+        if (currentState.categoria === 'masResenados') {
+            // Ordenamos de mayor a menor reviewCount
+            rankedItems.sort((a, b) => b.reviewCount - a.reviewCount);
+        }
+        // Si no es 'masResenados', la lista ya viene ordenada por el ContentAPI (por Calificación)
+
+        renderRankingList(rankedItems, currentState.tipo);
     } catch (error) {
         console.error("Error al cargar rankings:", error);
         showEmptyState();
     }
 }
-
 /**
  * Actualiza el H2 y los tags de filtro (ej. "TODOS – CANCIONES")
  */
@@ -89,10 +124,14 @@ function initializeDropdown(button, dropdown) {
  */
 function populateYearDropdown() {
     const currentYear = new Date().getFullYear();
+    
+    // CAMBIO: Definimos el límite de años a generar (Ejemplo: 40 años atrás)
+    const yearLimit = 40; 
+    
     let yearsHTML = `<a href="#" class="filter-dropdown-item" data-value="null">TODOS (Año)</a>`;
     
-    // Genera los últimos 10 años
-    for (let i = 0; i < 10; i++) {
+    // Genera los últimos 40 años
+    for (let i = 0; i < yearLimit; i++) {
         const year = currentYear - i;
         yearsHTML += `<a href="#" class="filter-dropdown-item" data-value="${year}">${year}</a>`;
     }

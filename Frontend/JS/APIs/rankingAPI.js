@@ -1,12 +1,10 @@
-
-const GATEWAY_BASE_URL = 'http://localhost:5000';
+const GATEWAY_BASE_URL = 'http://localhost:5000'; // Asegúrate de que esta URL sea correcta
 
 /**
- * Pide los rankings al ContentAPI, que ya los tiene ordenados
+ * Pide los rankings al ContentAPI y prepara los filtros.
  */
 export async function fetchRankings(config) {
     
-    //determinar el endpoint y los parámetros
     let endpoint = '';
     const params = {};
 
@@ -16,28 +14,35 @@ export async function fetchRankings(config) {
         endpoint = `${GATEWAY_BASE_URL}/api/gateway/contents/album`;
     }
 
-    // ContentAPI ya ordena por 'calification' usando el param 'orden'
+    // 1. Enviamos el parámetro 'orden' al ContentAPI para que nos devuelva la lista ordenada.
     if (config.categoria === 'mejores') {
-        params.orden = 'desc'; // 'desc' = más rating
+        params.orden = 'desc'; 
     } else if (config.categoria === 'peores') {
-        params.orden = 'asc'; // 'asc' = menos rating
+        params.orden = 'asc'; 
     }
 
     try {
-        // llamar al Gateway
         const response = await window.axios.get(endpoint, {
             params: params,
             timeout: 5000
         });
 
         let items = response.data || [];
-
-        // el backend nos da la lista ordenada, nosotros la filtramos por año
+        
+        // 2. FILTRADO (Frontend): Quitamos los ítems con calificación 0
+        if (config.categoria !== 'masResenados') { // Si no es por reseña, usamos el rating
+            items = items.filter(item => 
+                item.calification && item.calification > 0
+            );
+        }
+        
+        // 3. Filtrado por año
         if (config.ano) {
             items = items.filter(item => 
                 item.releaseDate && item.releaseDate.startsWith(config.ano)
             );
         }
+
         return items;
 
     } catch (error) {

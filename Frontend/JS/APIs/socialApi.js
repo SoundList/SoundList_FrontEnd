@@ -492,3 +492,30 @@ export async function getAverageRating(contentId, type) {
         return 0; // Si falla, asumimos 0 para no romper el flujo
     }
 }
+
+/**
+ * Obtiene todas las reseñas guardadas en el Social Service.
+ * @returns {Array} Lista de reseñas.
+ */
+export async function getAllReviews() { 
+    // Asegúrate de que API_BASE_URL (o la variable que uses) esté definida e importada.
+    const API_BASE_URL = 'http://localhost:5000'; 
+    const REVIEWS_ENDPOINT = `${API_BASE_URL}/api/gateway/reviews`;
+
+    function getAuthHeaders() {
+        const token = localStorage.getItem("authToken");
+        return { 'Authorization': `Bearer ${token}` };
+    }
+
+    try {
+        // Asumo que tienes axios disponible globalmente o importado en este archivo
+        const response = await axios.get(REVIEWS_ENDPOINT, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error en getAllReviews:", error.response?.data || error.message);
+        // Devolvemos lista vacía en caso de error, para que la página no se rompa.
+        return []; 
+    }
+}

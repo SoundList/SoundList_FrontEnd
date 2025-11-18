@@ -4,8 +4,8 @@
  */
 
 import { fetchSearchResults } from '../../APIs/searchApi.js';
-import { createReview, updateReview } from '../../APIs/socialApi.js';
-import { getOrCreateSong, getOrCreateAlbum } from '../../APIs/contentApi.js';
+import { createReview, updateReview, getAverageRating } from '../../APIs/socialApi.js';
+import { getOrCreateSong, getOrCreateAlbum, updateSongRating, updateAlbumRating } from '../../APIs/contentApi.js';
 import { showAlert } from '../../Utils/reviewHelpers.js';
 import { setReviewFilter } from '../reviews/reviewUtils.js';
 
@@ -491,6 +491,32 @@ async function submitCreateReview(state) {
         }
         
         const response = await createReview(reviewData, authToken);
+        
+        // === NUEVO CÓDIGO: ACTUALIZACIÓN DE PROMEDIO ===
+        try {
+            
+            // 1. Obtener el nuevo promedio desde Social (Usando el GUID interno)
+            // Necesitas importar getAverageRating de socialApi.js al principio del archivo
+            const newAverage = await getAverageRating(contentGuid, state.currentReviewData.type);
+
+            if (newAverage > 0) {
+                // 2. Enviar el PATCH a Content (Usando el ID de Spotify)
+                // state.currentReviewData.id tiene el ID de Spotify (APISongId/APIAlbumId)
+                const spotifyId = state.currentReviewData.id;
+
+                if (state.currentReviewData.type === 'song') {
+                    // Necesitas importar updateSongRating de contentApi.js
+                    await updateSongRating(spotifyId, newAverage);
+                } else {
+                    // Necesitas importar updateAlbumRating de contentApi.js
+                    await updateAlbumRating(spotifyId, newAverage);
+                }
+            }
+        } catch (ratingError) {
+            // No bloqueamos el flujo si falla la actualización del promedio, 
+            // la reseña ya se creó y eso es lo importante para el usuario.
+            console.error("⚠️ Advertencia: La reseña se creó, pero falló la actualización del promedio.", ratingError);
+        }
         
         let reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id || 'N/A';
         if (reviewId !== 'N/A') reviewId = String(reviewId).trim();

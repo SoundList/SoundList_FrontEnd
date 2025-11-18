@@ -479,6 +479,48 @@ async function submitCreateReview(state) {
             
             await updateReview(editReviewId, reviewData, authToken);
             
+            // ============================================================
+            // === NUEVO: SINCRONIZACIÓN DE PROMEDIO AL EDITAR ===
+            // ============================================================
+            if (state.currentReviewData && state.currentReviewData.id) {
+                try {
+                    console.log("🔄 (Edición) Recalculando promedio para actualizar Content...");
+                    
+                    const spotifyId = state.currentReviewData.id;
+                    const type = state.currentReviewData.type;
+                    let contentGuid = null;
+
+                    // 1. Necesitamos el GUID interno para pedir el promedio a Social
+                    if (type === 'song') {
+                        const songData = await getOrCreateSong(spotifyId); 
+                        contentGuid = songData.songId || songData.SongId;
+                    } else {
+                        const albumData = await getOrCreateAlbum(spotifyId);
+                        contentGuid = albumData.albumId || albumData.AlbumId;
+                    }
+
+                    // 2. Pedir el nuevo promedio a Social
+                    if (contentGuid) {
+                        const rawAverage = await getAverageRating(contentGuid, type);
+                        const newAverage = parseInt(rawAverage);
+                        
+                        console.log(`⭐ (Edición) Nuevo promedio calculado: ${newAverage}`);
+
+                        // 3. Actualizar Content Service
+                        if (newAverage > 0) {
+                            if (type === 'song') {
+                                await updateSongRating(spotifyId, newAverage);
+                            } else {
+                                await updateAlbumRating(spotifyId, newAverage);
+                            }
+                            console.log("✅ (Edición) Calificación actualizada en Content Service.");
+                        }
+                    }
+                } catch (syncError) {
+                    console.warn("⚠️ Advertencia: La reseña se editó, pero hubo un error al sincronizar la calificación:", syncError);
+                }
+            }
+
             console.log('✅ Reseña editada exitosamente');
             showAlert('✅ Reseña editada exitosamente', 'success');
             hideCreateReviewModal(state);

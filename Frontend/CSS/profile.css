@@ -1,15 +1,37 @@
-/* Asegurar que el main-content en la página de perfil use todo el ancho disponible */
-/* Solo aplicar cuando hay un profile-header dentro */
-.main-content:has(.profile-header) {
+/* Contenedor principal del perfil - Extender ancho */
+.home-container {
     max-width: 100% !important;
-    padding: 2rem 0.5rem !important;
+    width: 100% !important;
+}
+
+.main-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+}
+
+/* Contenedor del contenido del perfil - Limitar ancho */
+.profile-header {
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.profile-main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    box-sizing: border-box;
 }
 
 /* Profile Header - Estilo similar a Spotify */
 .profile-header {
     background: linear-gradient(to bottom, rgba(90, 24, 154, 0.3), rgba(13, 17, 32, 0.1));
     border-bottom: none;
-    padding: 2rem 1.5rem;
+    padding: 2rem 2rem;
     margin-bottom: 2rem;
     display: flex;
     flex-direction: column;
@@ -149,6 +171,8 @@
         gap: 3rem;
         padding: 3rem 2rem;
         min-height: 280px;
+        max-width: 1650px;
+        margin: 0 auto;
     }
 
     .profile-section {
@@ -161,6 +185,9 @@
 
     .profile-info {
         align-items: flex-start;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
         justify-content: center;
     }
 
@@ -172,13 +199,16 @@
 
     .username {
         font-size: 2.5rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0;
+        order: 1;
     }
 
     .user-quote {
         font-size: 1rem;
         max-width: 500px;
         text-align: left;
+        margin-top: 0.5rem;
+        order: 2;
     }
 
     .profile-right-column {
@@ -233,7 +263,7 @@
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 2rem;
-    padding: 0 0.5rem;
+    padding: 0 !important;
     max-width: 100% !important;
     margin: 0 !important;
     width: 100% !important;
@@ -252,7 +282,7 @@
 .featured-reviews-section {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 16px;
-    padding: 1.5rem;
+    padding: 1.5rem 0.5rem;
     box-shadow: 0 4px 15px rgba(86, 60, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.1);
     width: 100%;
@@ -325,26 +355,41 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     margin-bottom: 0.5rem;
     color: #fff;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .review-username {
     color: #fff;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .review-separator {
     color: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+}
+
+.review-content-type {
+    color: #fff;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .review-song {
     color: #fff;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .review-artist {
     color: rgba(255, 255, 255, 0.8);
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .review-title {
@@ -379,7 +424,8 @@
     justify-content: flex-start;
     gap: 0.75rem;
     flex-shrink: 0;
-    min-width: -webkit-fill-available; /* Fallback para Samsung Internet */
+    /* Samsung Internet 5.0+ support */
+    min-width: -webkit-fill-available;
     min-width: fit-content;
 }
 
@@ -416,10 +462,24 @@
     display: flex !important;
     align-items: center !important;
     gap: 0.5rem !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     margin-bottom: 0.5rem !important;
     color: #fff !important;
     font-weight: 600 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+}
+
+.featured-reviews-section .review-username,
+.featured-reviews-section .review-content-type,
+.featured-reviews-section .review-song,
+.featured-reviews-section .review-artist {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.featured-reviews-section .review-separator {
+    flex-shrink: 0 !important;
 }
 
 .featured-reviews-section .review-comment {
@@ -444,11 +504,12 @@
     flex-direction: column !important;
     align-items: flex-end !important;
     justify-content: flex-start !important;
-    gap: 0.75rem !important;
-    flex-shrink: 0 !important;
-    min-width: -webkit-fill-available !important; /* Fallback para Samsung Internet */
-    min-width: fit-content !important;
-}
+        gap: 0.75rem !important;
+        flex-shrink: 0 !important;
+        /* Samsung Internet 5.0+ support */
+        min-width: -webkit-fill-available !important;
+        min-width: fit-content !important;
+    }
 
 /* Asegurar que los botones de reseña sean pequeños y compactos (igual que en home) */
 .review-btn {
@@ -574,10 +635,11 @@
     .profile-main-content {
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
-        gap: 2rem;
-        padding: 0 0.5rem;
-        max-width: 100% !important;
+        gap: 1rem;
+        padding: 0 2rem !important;
+        max-width: 1650px !important;
         width: 100% !important;
+        margin: 0 auto !important;
         align-items: stretch;
         box-sizing: border-box;
         flex-direction: unset !important;
@@ -600,7 +662,7 @@
 
     .recent-reviews-section,
     .featured-reviews-section {
-        padding: 1.5rem;
+        padding: 2rem 0.5rem;
         min-width: 0;
         width: 100% !important;
         max-width: 100% !important;
@@ -733,7 +795,8 @@
         justify-content: flex-start !important;
         gap: 0.75rem !important;
         flex-shrink: 0 !important;
-        min-width: -webkit-fill-available !important; /* Fallback para Samsung Internet */
+        /* Samsung Internet 5.0+ support */
+        min-width: -webkit-fill-available !important;
         min-width: fit-content !important;
     }
     
@@ -752,7 +815,9 @@
         display: flex !important;
         align-items: center !important;
         gap: 0.5rem !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
     }
     
     /* Asegurar que el comentario sea visible en featured reviews */

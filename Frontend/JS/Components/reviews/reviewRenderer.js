@@ -36,8 +36,14 @@ export function renderReviews(reviews) {
         }
         
         const isLiked = review.userLiked || false;
-        const likeCount = review.likes || 0;
-        const commentCount = review.comments || 0;
+        // Asegurar que likeCount sea un número válido (incluso si es 0)
+        const likeCount = (typeof review.likes === 'number' && !isNaN(review.likes) && review.likes >= 0) 
+            ? Math.floor(review.likes) 
+            : (typeof review.likes === 'string' ? Math.max(0, parseInt(review.likes, 10) || 0) : 0);
+        // Asegurar que commentCount sea un número válido (incluso si es 0)
+        const commentCount = (typeof review.comments === 'number' && !isNaN(review.comments) && review.comments >= 0)
+            ? Math.floor(review.comments)
+            : (typeof review.comments === 'string' ? Math.max(0, parseInt(review.comments, 10) || 0) : 0);
         const defaultAvatar = '../Assets/default-avatar.png';
         
         // Verificar si es la reseña del usuario actual
@@ -88,7 +94,7 @@ export function renderReviews(reviews) {
                         </button>
                         ` : ''}
                         <div class="review-likes-container">
-                                <span class="review-likes-count">${likeCount}</span>
+                                <span class="review-likes-count">${likeCount || 0}</span>
                                 <button class="review-btn btn-like ${isLiked ? 'liked' : ''}"  
                                             data-review-id="${reviewId}"
                                             title="${!isLoggedIn ? 'Inicia sesión para dar Me Gusta' : ''}">
@@ -99,7 +105,7 @@ export function renderReviews(reviews) {
                                     data-review-id="${reviewId}"
                                     title="Ver comentarios">
                                 <i class="fas fa-comment"></i>
-                                <span class="review-comments-count">${commentCount}</span>
+                                <span class="review-comments-count">${commentCount || 0}</span>
                         </button>
                     </div>
             </div>
@@ -141,12 +147,28 @@ export function attachReviewActionListeners(reviewsListElement) {
                 this.classList.remove('liked');
                 icon.style.color = 'rgba(255,255,255,0.7)';
                 const currentLikes = parseInt(likesSpan.textContent);
-                likesSpan.textContent = Math.max(0, currentLikes - 1);
+                const newLikesCount = Math.max(0, currentLikes - 1);
+                likesSpan.textContent = newLikesCount;
+                
+                // Actualizar cache de likes
+                try {
+                    localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                } catch (e) {
+                    // Ignorar errores de localStorage
+                }
                 
                 const userId = localStorage.getItem('userId');
                 const reactionId = localStorage.getItem(`reaction_${reviewId}_${userId}`);
                 deleteReviewReaction(reviewId, userId, authToken, reactionId)
-                    .then(() => localStorage.removeItem(`like_${reviewId}_${userId}`))
+                    .then(() => {
+                        localStorage.removeItem(`like_${reviewId}_${userId}`);
+                        // Actualizar cache después de confirmar en backend
+                        try {
+                            localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                        } catch (e) {
+                            // Ignorar errores de localStorage
+                        }
+                    })
                     .catch(err => {
                         console.warn('No se pudo eliminar like del backend', err);
                     });
@@ -155,7 +177,15 @@ export function attachReviewActionListeners(reviewsListElement) {
                 this.classList.add('liked');
                 icon.style.color = 'var(--magenta, #EC4899)';
                 const currentLikes = parseInt(likesSpan.textContent) || 0;
-                likesSpan.textContent = currentLikes + 1;
+                const newLikesCount = currentLikes + 1;
+                likesSpan.textContent = newLikesCount;
+                
+                // Actualizar cache de likes
+                try {
+                    localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                } catch (e) {
+                    // Ignorar errores de localStorage
+                }
                 
                 const currentUserId = localStorage.getItem('userId');
                 localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
@@ -165,6 +195,12 @@ export function attachReviewActionListeners(reviewsListElement) {
                         const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
                         if (reactionId) {
                             localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, reactionId);
+                        }
+                        // Actualizar cache después de confirmar en backend
+                        try {
+                            localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                        } catch (e) {
+                            // Ignorar errores de localStorage
                         }
                     })
                     .catch(err => {

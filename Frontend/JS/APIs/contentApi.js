@@ -1,12 +1,6 @@
-/*
- * JavaScript/API/contentApi.js
- *
- * RESPONSABILIDAD: Todas las llamadas al ContentAPI, a través del Gateway.
- * ¡VERSION CORREGIDA! Las rutas y parámetros coinciden con appsettings.json
- */
+
 
 import { API_BASE_URL } from './configApi.js'; // (Debe ser 'http://localhost:5000')
-
 /**
  * Helper unificado para manejar las respuestas de fetch y parsear el JSON.
  */
@@ -142,6 +136,33 @@ export async function getOrCreateAlbum(apiAlbumId) {
     return await getAlbumByApiId(apiAlbumId); // Reutiliza la función GET
 }
 
+/**
+ * Busca una canción por su ID (GUID) de base de datos.
+ * Endpoint: GET /api/Song/{id}
+ */
+export async function getSongById(songId) {
+    try {
+        // Llamamos al endpoint estándar pasándole el GUID
+        const response = await axios.get(`${API_BASE_URL}/Song/${songId}`);
+        return response.data;
+    } catch (error) {
+        // Si falla (ej. 404), retornamos null silenciosamente para no romper la UI
+        return null;
+    }
+}
+
+/**
+ * Busca un álbum por su ID (GUID) de base de datos.
+ * Endpoint: GET /api/Album/{id}
+ */
+export async function getAlbumById(albumId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/Album/${albumId}`);
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+}
 
 export async function updateSongRating(apiSongId, newRating) {
     console.log(`(API) Actualizando rating Canción ${apiSongId} a ${newRating}`);

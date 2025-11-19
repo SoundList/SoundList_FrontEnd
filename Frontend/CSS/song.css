@@ -1,6 +1,4 @@
-/* =========================================
-   SONG PAGE STYLES (COMPLETO V2)
-   ========================================= */
+
 
 .song-page-container {
     max-width: 1200px;
@@ -475,4 +473,235 @@
     background-color: #9a6aff;
     border-color: #9a6aff;
     transform: translateY(-1px);
+}
+
+/* Custom Audio Player Styles */
+.custom-audio-player {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 30px; /* Cápsula */
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 300px; /* Ajusta según necesites */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-controls {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 0.8rem;
+}
+
+.play-btn {
+    background: #7C3AED; 
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.play-btn:hover {
+    transform: scale(1.1);
+    background: #7C3AED;
+}
+
+.play-btn i {
+    font-size: 0.8rem;
+    margin-left: 2px; 
+}
+.play-btn i.fa-pause { margin-left: 0; }
+
+.progress-container {
+    flex-grow: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #fff;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.1s linear;
+}
+
+.time-display {
+    font-size: 0.75rem;
+    color: #ccc;
+    font-family: monospace;
+    min-width: 30px;
+}
+
+.audio-placeholder {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Contenedor del número e ícono */
+.song-index-container {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+/* El número de la canción */
+.song-number {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* El contenedor del botón (oculto por defecto) */
+.song-play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none; /* Oculto */
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+}
+
+/* --- MAGIA: Mostrar botón al pasar el mouse sobre la fila --- */
+.song-item:hover .song-number {
+    display: none; /* Ocultar número */
+}
+
+.song-item:hover .song-play-overlay {
+    display: flex; /* Mostrar botón */
+}
+
+/* Estilo si la canción está sonando (Clase agregada por JS) */
+.song-item.playing .song-number {
+    display: none;
+}
+.song-item.playing .song-play-overlay {
+    display: flex;
+}
+.song-item.playing .song-title {
+    color: #1DB954; /* Verde Spotify */
+    font-weight: 700;
+}
+
+/* El botón de Play en sí */
+.mini-play-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s;
+}
+
+.mini-play-btn:hover {
+    transform: scale(1.2);
+    color: #1DB954; /* Verde al pasar el mouse */
+}
+
+/* Icono para cuando no hay preview */
+.no-preview-icon {
+    font-size: 0.8rem;
+    color: #555;
+    cursor: default;
+}
+/* --- ESTILOS DEL REPRODUCTOR (Versión Minimalista) --- */
+
+/* El contenedor sigue igual */
+.song-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.song-title {
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%; 
+}
+
+/* Reset del contenedor del player */
+.hero-audio-player .custom-audio-player {
+    background: transparent;
+    border: none;
+    padding: 0;
+    max-width: 200px; /* Un poco más compacto sin el tiempo */
+    box-shadow: none;
+}
+
+/* 1. Botón de Play (COLOR SÓLIDO) */
+.hero-audio-player .play-btn {
+    background: #7C3AED; /* Morado sólido */
+    width: 42px;         /* Un pelín más discreto */
+    height: 42px;
+    font-size: 1.1rem;
+    color: #fff;         /* Ícono blanco */
+    box-shadow: none;    /* Sin sombras brillantes */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Borde sutil */
+    transition: all 0.2s ease;
+}
+
+.hero-audio-player .play-btn:hover {
+    transform: scale(1.05);
+    background: #6d28d9; /* Un tono más oscuro al pasar el mouse */
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 2. Ocultar el contador de segundos */
+.hero-audio-player .time-display {
+    display: none;
+}
+
+/* Barra de progreso (Sólida para combinar) */
+.hero-audio-player .progress-container {
+    height: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    margin-left: 0.5rem; /* Separación del botón */
+}
+
+.hero-audio-player .progress-bar {
+    background: #7C3AED; /* Mismo morado sólido */
+    border-radius: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .song-title-row {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    .song-title {
+        max-width: 100%;
+        white-space: normal;
+        text-align: center;
+    }
 }

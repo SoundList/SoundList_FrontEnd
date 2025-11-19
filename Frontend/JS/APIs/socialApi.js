@@ -453,13 +453,11 @@ export async function getNotifications(userId, authToken) {
  */
 export async function getUser(userId) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, {
-            timeout: 2000 
-        });
+
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`);
         return response.data;
     } catch (error) {
-        console.error(`Error en getUser (ID: ${userId}):`, error);
-        throw error;
+        return null;
     }
 }
 

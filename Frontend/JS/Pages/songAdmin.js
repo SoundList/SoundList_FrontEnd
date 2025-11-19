@@ -2,7 +2,6 @@
 import {
     getSongByApiId,
     getOrCreateSong,
-    
 } from './../APIs/contentApi.js'; 
 
 import { 
@@ -27,6 +26,7 @@ import {
     getUser
 } from './../APIs/socialApi.js';
 import { showAlert, showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { createAudioPlayer } from './../Components/audioPlayer.js';
 
 // --- 2. ESTADO GLOBAL ---
 let currentRating = 0;
@@ -86,10 +86,22 @@ async function loadPageData() {
 
         // 3. Obtener reseñas (¡LÓGICA CORREGIDA!)
         const allReviews = await getReviews();
+        
+        // Normalizamos el ID local para comparar
+        const targetId = String(localSongId).trim().toLowerCase();
+
         const filteredReviews = allReviews.filter(review => {
-            // Comparamos el ID de canción (GUID)
-            return (review.songId === localSongId || review.SongId === localSongId);
-        });
+            // Obtenemos el ID de la reseña de forma segura
+            const reviewSongId = review.songId || review.SongId;
+            
+            // Si la reseña no tiene SongId, la descartamos
+            if (!reviewSongId) return false;
+
+            // Normalizamos y comparamos
+            return String(reviewSongId).trim().toLowerCase() === targetId;
+        });
+
+        console.log(`Reseñas filtradas: ${filteredReviews.length} de ${allReviews.length}`);
         
         // 4. Enriquecer reseñas (¡LÓGICA CORREGIDA!)
         const reviewsData = await Promise.all(
@@ -168,34 +180,13 @@ function renderSongHeader(song) {
     // 2. LÓGICA DE AUDIO (Plan Híbrido Spotify/Deezer)
     // ------------------------------------------------------
     const audioContainer = document.getElementById('audioPlayerContainer');
-    
     if (audioContainer) {
-        if (song.previewUrl) {
-            // Tenemos URL (Spotify o Deezer)
-            audioContainer.innerHTML = `
-                <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="fas fa-music me-2" style="color: #1DB954;"></i>
-                        <span style="font-size: 0.85rem; color: #ccc; font-weight: 500;">Vista previa (30 seg)</span>
-                    </div>
-                    <audio controls controlsList="nodownload" style="width: 100%; height: 32px; border-radius: 4px;">
-                        <source src="${song.previewUrl}" type="audio/mpeg">
-                        Tu navegador no soporta el elemento de audio.
-                    </audio>
-                </div>
-            `;
-        } else {
-            // No hay URL disponible
-            audioContainer.innerHTML = `
-                <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
-                    <small style="color: #888;">
-                        <i class="fas fa-volume-mute me-2"></i>Vista previa no disponible
-                    </small>
-                </div>
-            `;
-        }
+        // Usamos nuestro componente personalizado
+        // Pasamos la URL y el ID de la canción para generar IDs únicos en el DOM
+        audioContainer.innerHTML = createAudioPlayer(song.previewUrl, song.songId);
     }
 }
+
 
 function renderSongDetails(song) {
     const releaseDate = new Date(song.releaseDate).toLocaleDateString('es-ES', {
@@ -283,97 +274,56 @@ function highlightStars(rating) {
 async function handleSubmitReview() {
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
-    if (!authToken || !userId) {
-        showAlert('Debes iniciar sesión para crear una reseña', 'warning');
-        showLoginRequiredModal();
-        return;
-    }
+    
+    if (!authToken || !userId) {
+        showAlert('Debes iniciar sesión para crear una reseña', 'warning');
+        // showLoginRequiredModal(); // Descomentar si tienes esta función
+        return;
+    }
 
-    const reviewTitle = document.getElementById('reviewTitleInput').value.trim();
-    const reviewText = document.getElementById('reviewTextInput').value.trim();
+    const reviewTitle = document.getElementById('reviewTitleInput').value.trim();
+    const reviewText = document.getElementById('reviewTextInput').value.trim(); // <--- Aquí se define reviewText
 
-    if (!reviewTitle || !reviewText || currentRating === 0) {
-        showAlert('Por favor, completa todos los campos y la calificación.', 'warning');
-        return;
-    }
-    if (!currentSongData || !currentSongData.songId) {
-        showAlert('Error: No se pudo identificar la canción.', 'danger');
-      return;
-    }
+    if (!reviewTitle || !reviewText || currentRating === 0) {
+        showAlert('Por favor, completa todos los campos y la calificación.', 'warning');
+        return;
+    }
 
-    const reviewData = {
-        Title: reviewTitle,
-        Content: reviewText, // <-- CORREGIDO
-        Rating: currentRating,
-        UserId: userId, // <-- AÑADIDO
-        SongId: currentSongData.songId, // <-- AÑADIDO (GUID local)
+    if (!currentSongData || !currentSongData.songId) {
+        showAlert('Error: No se pudo identificar la canción.', 'danger');
+        return;
+    }
+
+    const reviewData = {
+        Title: reviewTitle,
+        Content: reviewText, // <--- CORRECCIÓN: Usamos 'reviewText', no 'content'
+        Rating: currentRating,
+        UserId: userId,
+        SongId: currentSongData.songId, // GUID Local
         AlbumId: null
-    };
-    
-    const submitBtn = document.getElementById('submitReviewBtn');
-    
-    try {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'SUBIENDO...';
+    };
+    
+    const submitBtn = document.getElementById('submitReviewBtn');
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'SUBIENDO...';
 
-        // ¡LLAMADA A API CORREGIDA!
-        await createReview(reviewData, authToken); 
-        
-        showAlert('¡Reseña de canción enviada!', 'success');
-        hideCreateReviewModal();
-        
-        // Recargar solo las reseñas (¡LÓGICA CORREGIDA!)
-        const allReviews = await getReviews();
-        const reviewsData = allReviews.filter(r => r.songId === currentSongData.songId || r.SongId === currentSongData.songId);
-        
-        // ¡Volver a enriquecer las reseñas!
-        const enrichedReviews = await Promise.all(
-            reviewsData.map(async (review) => {
-                // (Copiamos la lógica de 'loadPageData' para enriquecer)
-                try {
-                    const reviewId = review.reviewId || review.ReviewId || review.id;
-                    const userId = review.userId || review.UserId;
-                    const [userData, likes, comments] = await Promise.all([
-                        getUser(userId).catch(e => null),
-                        getReviewReactionCount(reviewId).catch(e => 0),
-                        getCommentsByReview(reviewId).catch(e => [])
-                    ]);
-                    const currentUserId = localStorage.getItem('userId');
-                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true';
-                    return {
-                        id: reviewId,
-                        username: userData?.username || userData?.Username || 'Usuario',
-                        avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
-                        contentType: 'Canción',
-                        song: currentSongData.title,
-                        artist: currentSongData.artistName,
-                        title: review.title || review.Title,
-                        comment: review.content || review.Content,
-                        rating: review.rating || review.Rating,
-                        likes: likes,
-                        comments: comments.length,
-                        userLiked: userLiked,
-                        userId: userId
-                    };
-                } catch (error) {
-                    console.error("Error enriqueciendo reseña:", error, review);
-                    return null;
-                }
-            })
-        );
-        renderReviews(enrichedReviews.filter(r => r !== null));
+        await createReview(reviewData, authToken); 
+        
+        showAlert('¡Reseña enviada!', 'success');
+        hideCreateReviewModal();
+        
+        // Recargar la página para ver la nueva reseña
+        await loadPageData();
 
-    } catch (error) {
-        console.error("Error al enviar la reseña:", error);
-        if (error.response?.status === 409) {
-            showAlert('Ya has enviado una reseña para esta canción.', 'warning');
-        } else {
-            showAlert(`Error al enviar reseña: ${error.message}`, 'danger');
-        }
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'SUBIR';
-content    }
+    } catch (error) {
+        console.error("Error al enviar:", error);
+        showAlert(`Error al enviar reseña: ${error.message}`, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SUBIR';
+    }
 }
 
 // --- 8. LÓGICA DE MODALS (COPIADA DE ALBUMADMIN) ---

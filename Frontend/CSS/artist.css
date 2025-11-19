@@ -109,3 +109,116 @@ ARTIST PAGE STYLES
 .review-modal-content .form-control:focus { background-color: #3b2a51; border-color: #7c3aed; box-shadow: 0 0 0 0.25rem rgba(124, 58, 237, 0.25); color: #e0e0e0; }
 .review-modal-content .btn-primary { background-color: #7c3aed; border-color: #7c3aed; color: #fff; font-family: 'League Spartan', sans-serif; font-weight: 700; padding: 0.8rem 1.5rem; border-radius: 8px; font-size: 1.1rem; text-transform: uppercase; width: 100%; margin-top: 1rem; }
 .review-modal-content .btn-primary:hover { background-color: #9a6aff; border-color: #9a6aff; transform: translateY(-1px); }
+
+
+
+/* --- LISTA DE CANCIONES (Estilo Propio) --- */
+.song-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.song-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    transition: background 0.2s ease;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+}
+
+.song-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Número a la izquierda (Fijo) */
+.song-number {
+    width: 30px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-right: 1rem;
+    text-align: center;
+}
+
+/* Info central */
+.song-info {
+    flex: 1; /* Ocupa todo el espacio disponible */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.song-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+}
+
+/* Columna de Acciones (Derecha) */
+.song-actions {
+    min-width: 50px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* El Botón de Play Personalizado */
+.list-play-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.list-play-btn:hover {
+    background: #7C3AED; /* Tu color morado de marca */
+    border-color: #7C3AED;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
+}
+
+.list-play-btn i {
+    font-size: 1rem;
+    margin-left: 3px; /* Ajuste visual óptico para el triángulo de play */
+}
+
+.list-play-btn i.fa-pause {
+    margin-left: 0;
+}
+
+/* Estilo cuando la canción está sonando */
+.song-item.playing {
+    background: rgba(124, 58, 237, 0.15); /* Fondo morado suave */
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+.song-item.playing .song-title {
+    color: #EC4899; /* Título rosa/morado */
+}
+
+.song-item.playing .list-play-btn {
+    background: #7C3AED;
+    border-color: #7C3AED;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
+}
+
+.no-preview-text {
+    font-size: 0.8rem;
+    color: #555;
+    font-style: italic;
+}

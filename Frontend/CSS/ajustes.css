@@ -11,6 +11,18 @@
     margin: 0 auto;
 }
 
+/* Estilo para el mensaje de validación de contraseña */
+.password-hint,
+.form-text.password-hint,
+small.password-hint,
+#form-change-password .password-hint,
+.setting-box .password-hint {
+    color: rgba(255, 255, 255, 0.7) !important;
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
 /* Mensaje de seguridad */
 .security-message {
     font-size: 0.75rem;

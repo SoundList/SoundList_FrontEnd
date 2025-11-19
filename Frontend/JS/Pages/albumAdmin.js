@@ -452,7 +452,47 @@ async function handleSubmitReview() {
         submitBtn.textContent = 'SUBIENDO...';
 
         // 6. Llamar a la API
-        await createReview(reviewData, authToken);
+        const response = await createReview(reviewData, authToken);
+        
+        // Guardar datos del contenido en localStorage para uso futuro (igual que en createReviewModal.js)
+        const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
+        if (reviewId) {
+            const storageKey = `review_content_${String(reviewId).trim()}`;
+            try {
+                // Debug: ver qué campos tiene currentAlbumData
+                console.log('🔍 currentAlbumData completo:', currentAlbumData);
+                
+                // Obtener artista de todas las posibles fuentes (para álbumes puede estar en Songs[0])
+                let artistName = currentAlbumData.ArtistName || 
+                                currentAlbumData.artistName || 
+                                (currentAlbumData.artist ? (currentAlbumData.artist.name || currentAlbumData.artist.Name) : null) ||
+                                (currentAlbumData.Artist ? (currentAlbumData.Artist.Name || currentAlbumData.Artist.name) : null);
+                
+                // Si no hay artista directo, intentar desde las canciones del álbum
+                if (!artistName && currentAlbumData.Songs && currentAlbumData.Songs.length > 0) {
+                    const firstSong = currentAlbumData.Songs[0];
+                    artistName = firstSong.ArtistName || 
+                                firstSong.artistName ||
+                                (firstSong.artist ? (firstSong.artist.name || firstSong.artist.Name) : null) ||
+                                (firstSong.Artist ? (firstSong.Artist.Name || firstSong.Artist.name) : null);
+                }
+                
+                artistName = artistName || 'Artista';
+                
+                const contentData = {
+                    type: 'album',
+                    id: currentAlbumData.apiAlbumId || currentAlbumData.APISongId || currentAlbumData.id,
+                    name: currentAlbumData.title || currentAlbumData.Title || 'Álbum',
+                    artist: artistName,
+                    image: currentAlbumData.image || currentAlbumData.Image || null
+                };
+                
+                localStorage.setItem(storageKey, JSON.stringify(contentData));
+                console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`, contentData);
+            } catch (e) {
+                console.warn('Error guardando datos en localStorage:', e);
+            }
+        }
         
         showAlert('¡Reseña enviada con éxito!', 'success');
         hideCreateReviewModal();

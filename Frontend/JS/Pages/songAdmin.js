@@ -310,7 +310,37 @@ async function handleSubmitReview() {
         submitBtn.textContent = 'SUBIENDO...';
 
         // ¡LLAMADA A API CORREGIDA!
-        await createReview(reviewData, authToken); 
+        const response = await createReview(reviewData, authToken);
+        
+        // Guardar datos del contenido en localStorage para uso futuro (igual que en createReviewModal.js)
+        const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
+        if (reviewId) {
+            const storageKey = `review_content_${String(reviewId).trim()}`;
+            try {
+                // Obtener artista de todas las posibles fuentes
+                // Debug: ver qué campos tiene currentSongData
+                console.log('🔍 currentSongData completo:', currentSongData);
+                
+                const artistName = currentSongData.ArtistName || 
+                                  currentSongData.artistName || 
+                                  (currentSongData.artist ? (currentSongData.artist.name || currentSongData.artist.Name) : null) ||
+                                  (currentSongData.Artist ? (currentSongData.Artist.Name || currentSongData.Artist.name) : null) ||
+                                  'Artista';
+                
+                const contentData = {
+                    type: 'song',
+                    id: currentSongData.apiSongId || currentSongData.APISongId || currentSongData.id,
+                    name: currentSongData.title || currentSongData.Title || 'Canción',
+                    artist: artistName,
+                    image: currentSongData.image || currentSongData.Image || null
+                };
+                
+                localStorage.setItem(storageKey, JSON.stringify(contentData));
+                console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`, contentData);
+            } catch (e) {
+                console.warn('Error guardando datos en localStorage:', e);
+            }
+        }
 
         // --- NUEVA LÓGICA DE SINCRONIZACIÓN ---
         try {

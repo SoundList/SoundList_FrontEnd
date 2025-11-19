@@ -1070,3 +1070,4 @@ function initializeSampleComments() {
             }, 2000); 
         }
     }
+}

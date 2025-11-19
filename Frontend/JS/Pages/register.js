@@ -38,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const submitButton = registerForm.querySelector('button[type="submit"]');
         setButtonLoading(submitButton, true);
-        showAlert('Creando cuenta...', 'info');
         
         // Intentar primero el backend directo, luego el gateway como fallback
         const PORTS = [

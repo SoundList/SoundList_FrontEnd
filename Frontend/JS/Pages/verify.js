@@ -42,8 +42,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // El gateway no tiene ruta para VerifyEmail, solo usar backend directo
         const verifyEmailEndpoint = `${API_BASE_URL}/api/User/VerifyEmail`;
-        
-        showAlert('Verificando código...', 'info');
         axios.get(verifyEmailEndpoint, { params: { token: code } })
             .then(() => {
                 showAlert('¡Cuenta verificada! Redirigiendo al inicio de sesión...', 'success');

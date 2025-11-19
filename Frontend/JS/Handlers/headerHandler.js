@@ -22,6 +22,20 @@ let notifications = []; // Array para almacenar notificaciones
 let userReviewsState = {}; // Estado para polling
 let notificationPollingInterval = null; // Intervalo de polling
 
+function getLoginPath() {
+    const currentPath = window.location.pathname || '';
+    const currentFile = currentPath.split('/').pop();
+
+    if (currentPath.includes('/Pages/') ||
+        currentFile === 'profile.html' ||
+        currentFile === 'editProfile.html' ||
+        currentFile === 'ajustes.html') {
+        return '../login.html';
+    }
+
+    return 'login.html';
+}
+
 // --- 3. FUNCIÓN DE INICIALIZACIÓN PRINCIPAL ---
 /**
  * Inicializa todos los componentes compartidos del header.
@@ -350,7 +364,7 @@ function navigateToContentView(type, id) {
     const encodedId = encodeURIComponent(id.trim());
     
     // Determinar la ruta correcta según dónde estemos
-    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
         // Estamos en Pages/, necesitamos subir un nivel para llegar a HTML/
         destinationUrl = `../${fileName}?id=${encodedId}`;
     } else if (currentPath.includes('/HTML/') || 
@@ -430,7 +444,7 @@ function initializeProfileDropdown() {
                 let profilePath = '';
                 
                 // Determinar la ruta correcta según dónde estemos
-                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
                     // Ya estamos en Pages/, solo necesitamos el nombre del archivo
                     profilePath = 'profile.html';
                 } else if (currentPath.includes('/HTML/') || currentFile === 'home.html' || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
@@ -453,12 +467,37 @@ function initializeProfileDropdown() {
         });
     }
 
-    if(ajustesBtn) {
-        ajustesBtn.addEventListener('click', function() {
-            profileDropdown.style.display = 'none';
-            showAlert('Funcionalidad de ajustes en desarrollo', 'info');
-        });
-    }
+    if(ajustesBtn) {
+        ajustesBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            profileDropdown.style.display = 'none';
+
+            const currentPath = window.location.pathname;
+            const currentFile = currentPath.split('/').pop();
+            let settingsPath = '';
+
+            if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
+                settingsPath = 'ajustes.html';
+            } else if (
+                currentPath.includes('/HTML/') ||
+                currentFile === 'home.html' ||
+                currentFile === 'album.html' ||
+                currentFile === 'song.html' ||
+                currentFile === 'artist.html' ||
+                currentFile === 'rankings.html' ||
+                currentFile === 'amigos.html' ||
+                currentFile === 'login.html' ||
+                currentFile === 'register.html'
+            ) {
+                settingsPath = 'Pages/ajustes.html';
+            } else {
+                settingsPath = '../Pages/ajustes.html';
+            }
+
+            window.location.href = settingsPath;
+        });
+    }
 
     if(cerrarSesionBtn) {
         cerrarSesionBtn.addEventListener('click', function() {
@@ -547,7 +586,7 @@ function initializeNavigation() {
                 
                 // Determinar la ruta correcta según dónde estemos
                 // Si estamos en Pages/ (profile, editProfile)
-                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
                     homePath = '../home.html';
                 } 
                 // Si estamos en HTML/ o en cualquier página del nivel raíz (home, album, song, artist, rankings, amigos)
@@ -585,7 +624,7 @@ function initializeNavigation() {
                 let rankingsPath = '';
                 
                 // Determinar la ruta correcta según dónde estemos
-                if (rankingsCurrentPath.includes('/Pages/') || rankingsCurrentFile === 'profile.html' || rankingsCurrentFile === 'editProfile.html') {
+                if (rankingsCurrentPath.includes('/Pages/') || rankingsCurrentFile === 'profile.html' || rankingsCurrentFile === 'editProfile.html' || rankingsCurrentFile === 'ajustes.html') {
                     // Estamos en Pages/, necesitamos subir un nivel
                     rankingsPath = '../rankings.html';
                 } else if (rankingsCurrentPath.includes('/HTML/') || rankingsCurrentFile === 'home.html' || rankingsCurrentFile === 'album.html' || rankingsCurrentFile === 'song.html' || rankingsCurrentFile === 'artist.html' || rankingsCurrentFile === 'amigos.html') {
@@ -608,7 +647,7 @@ function initializeNavigation() {
                 let amigosPath = '';
                 
                 // Determinar la ruta correcta según dónde estemos
-                if (amigosCurrentPath.includes('/Pages/') || amigosCurrentFile === 'profile.html' || amigosCurrentFile === 'editProfile.html') {
+                if (amigosCurrentPath.includes('/Pages/') || amigosCurrentFile === 'profile.html' || amigosCurrentFile === 'editProfile.html' || amigosCurrentFile === 'ajustes.html') {
                     // Estamos en Pages/, necesitamos subir un nivel
                     amigosPath = '../amigos.html';
                 } else if (amigosCurrentPath.includes('/HTML/') || amigosCurrentFile === 'home.html' || amigosCurrentFile === 'album.html' || amigosCurrentFile === 'song.html' || amigosCurrentFile === 'artist.html' || amigosCurrentFile === 'rankings.html') {
@@ -647,7 +686,7 @@ function loadUserData() {
         
         if (loginBtn) {
             loginBtn.addEventListener('click', function() {
-                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
+                window.location.href = getLoginPath();
             });
         }
     } else {
@@ -687,7 +726,7 @@ function loadUserData() {
                         const currentFile = currentPath.split('/').pop();
                         let homePath = '';
                         
-                        if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                        if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
                             homePath = '../home.html';
                         } else if (currentPath.includes('/HTML/') || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
                             homePath = 'home.html';
@@ -729,8 +768,14 @@ function initializeLogoutModal() {
         
     if (confirmLogoutBtn) {
         confirmLogoutBtn.addEventListener('click', function() {
-            performLogout();
-        });
+                stopNotificationPolling();
+                userReviewsState = {};
+                notifications = [];
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            window.location.href = getLoginPath();
+            });
     }
         
     if (cancelLogoutBtn) {
@@ -1298,9 +1343,8 @@ function initializeLoginRequiredModal() {
     const loginRequiredModalOverlay = document.getElementById('loginRequiredModalOverlay');
 
     if (goToLoginBtn) {
-        goToLoginBtn.addEventListener('click', function() {
-            // Asume que login.html está en la misma carpeta HTML
-          window.location.href = 'login.html'; 
+        goToLoginBtn.addEventListener('click', function() {
+            window.location.href = getLoginPath();
         });
     }
 

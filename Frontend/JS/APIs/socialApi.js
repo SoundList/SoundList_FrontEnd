@@ -460,3 +460,60 @@ export async function getUser(userId) {
         return null;
     }
 }
+
+export async function getAverageRating(contentId, type) {
+    try {
+        // Construimos la URL. Asumo que usas API_BASE_URL importado en este archivo
+        // Si no tienes API_BASE_URL, usa la URL completa: 'http://localhost:5000/api/gateway'
+        
+        // Asegúrate de que esta variable exista o defínela aquí:
+        const baseUrl = 'http://localhost:5000/api/gateway'; // O usa import { API_BASE_URL } ...
+        
+        let queryString = '';
+        if (type === 'song') {
+            queryString = `songId=${contentId}`;
+        } else {
+            queryString = `albumId=${contentId}`;
+        }
+
+        const url = `${baseUrl}/reviews/average?${queryString}`;
+        
+        const token = localStorage.getItem('authToken');
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
+        // Asumo que usas axios (como en tus otros archivos)
+        const response = await axios.get(url, config);
+        return response.data; // Retorna el int (ej: 4)
+        
+    } catch (error) {
+        console.error("❌ Error obteniendo promedio:", error);
+        return 0; // Si falla, asumimos 0 para no romper el flujo
+    }
+}
+
+/**
+ * Obtiene todas las reseñas guardadas en el Social Service.
+ * @returns {Array} Lista de reseñas.
+ */
+export async function getAllReviews() { 
+    // Asegúrate de que API_BASE_URL (o la variable que uses) esté definida e importada.
+    const API_BASE_URL = 'http://localhost:5000'; 
+    const REVIEWS_ENDPOINT = `${API_BASE_URL}/api/gateway/reviews`;
+
+    function getAuthHeaders() {
+        const token = localStorage.getItem("authToken");
+        return { 'Authorization': `Bearer ${token}` };
+    }
+
+    try {
+        // Asumo que tienes axios disponible globalmente o importado en este archivo
+        const response = await axios.get(REVIEWS_ENDPOINT, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error en getAllReviews:", error.response?.data || error.message);
+        // Devolvemos lista vacía en caso de error, para que la página no se rompa.
+        return []; 
+    }
+}

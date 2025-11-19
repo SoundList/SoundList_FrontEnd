@@ -163,3 +163,22 @@ export async function getAlbumById(albumId) {
         return null;
     }
 }
+
+export async function updateSongRating(apiSongId, newRating) {
+    console.log(`(API) Actualizando rating Canción ${apiSongId} a ${newRating}`);
+    const url = `${API_BASE_URL}/api/gateway/contents/song/${apiSongId}/Calificacion?newCalification=${newRating}`;
+    
+    // PATCH suele requerir body, aunque sea vacío, axios lo maneja mejor así
+    return axios.patch(url, {}, {
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
+export async function updateAlbumRating(apiAlbumId, newRating) {
+    console.log(`(API) Actualizando rating Álbum ${apiAlbumId} a ${newRating}`);
+    const url = `${API_BASE_URL}/api/gateway/contents/album/${apiAlbumId}/Calificacion?newCalification=${newRating}`;
+    
+    return axios.patch(url, {}, {
+        headers: { 'Content-Type': 'application/json' }
+    });
+}

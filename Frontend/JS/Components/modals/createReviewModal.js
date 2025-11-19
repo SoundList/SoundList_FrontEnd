@@ -4,8 +4,8 @@
  */
 
 import { fetchSearchResults } from '../../APIs/searchApi.js';
-import { createReview, updateReview } from '../../APIs/socialApi.js';
-import { getOrCreateSong, getOrCreateAlbum } from '../../APIs/contentApi.js';
+import { createReview, updateReview, getAverageRating } from '../../APIs/socialApi.js';
+import { getOrCreateSong, getOrCreateAlbum, updateSongRating, updateAlbumRating } from '../../APIs/contentApi.js';
 import { showAlert } from '../../Utils/reviewHelpers.js';
 import { setReviewFilter } from '../reviews/reviewUtils.js';
 
@@ -14,6 +14,15 @@ import { setReviewFilter } from '../reviews/reviewUtils.js';
  * @param {Object} state - Objeto con estado compartido (currentReviewData, loadReviews)
  */
 export function initializeCreateReviewModal(state) {
+    // Validar que state existe, si no crear uno por defecto
+    if (!state) {
+        console.warn('⚠️ initializeCreateReviewModal: state no proporcionado, creando uno por defecto');
+        state = {
+            currentReviewData: null,
+            currentRating: 0
+        };
+    }
+    
     const addReviewBtn = document.getElementById('addReviewBtn');
     const closeCreateReviewModal = document.getElementById('closeCreateReviewModal');
     const createReviewModalOverlay = document.getElementById('createReviewModalOverlay');
@@ -78,7 +87,7 @@ export function initializeCreateReviewModal(state) {
             if (this.value.length > 0) {
                 currentSearchController = new AbortController();
                 searchTimeout = setTimeout(() => {
-                    performContentSearch(this.value.trim(), currentSearchController.signal, state);
+                    performContentSearch(this.value.trim(), currentSearchController.signal, state || {});
                 }, 500);
             } else {
                 if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
@@ -95,11 +104,18 @@ export function initializeCreateReviewModal(state) {
     // Inicializar estrellas del modal
     if (createReviewStars) {
         // Guardar referencia al estado de rating en el objeto state
-        if (!state.currentRating) {
+        if (state && !state.currentRating) {
             state.currentRating = 0;
         }
         
         const stars = createReviewStars.querySelectorAll('.star-input');
+        
+        if (stars.length === 0) {
+            console.warn('⚠️ No se encontraron estrellas con la clase .star-input');
+            return;
+        }
+        
+        let currentRating = 0; // Variable local como fallback si state no existe
         
         function highlightStars(rating) {
             stars.forEach((star, index) => {
@@ -108,7 +124,10 @@ export function initializeCreateReviewModal(state) {
         }
         
         function updateStarRating(rating) {
-            state.currentRating = rating;
+            currentRating = rating;
+            if (state) {
+                state.currentRating = rating;
+            }
             highlightStars(rating);
         }
             
@@ -126,7 +145,7 @@ export function initializeCreateReviewModal(state) {
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
-            highlightStars(state.currentRating || 0);
+            highlightStars(state ? (state.currentRating || 0) : currentRating);
         });
     }
 }
@@ -306,9 +325,13 @@ export function showCreateReviewModal(contentData = null, state) {
     }
     
     if (contentData) {
-        setSelectedContent(contentData, state);
+        if (state) {
+            setSelectedContent(contentData, state);
+        }
     } else {
-        state.currentReviewData = null;
+        if (state) {
+            state.currentReviewData = null;
+        }
         if (contentSelector) contentSelector.style.display = 'block';
         if (contentInfo) contentInfo.style.display = 'none';
         if (contentSearchInput) contentSearchInput.value = '';
@@ -322,7 +345,9 @@ export function showCreateReviewModal(contentData = null, state) {
     
     // Resetear estrellas
     const stars = document.querySelectorAll('#createReviewStars .star-input');
-    stars.forEach(star => star.classList.remove('active'));
+    if (stars.length > 0) {
+        stars.forEach(star => star.classList.remove('active'));
+    }
     if (state) {
         state.currentRating = 0;
     }
@@ -339,7 +364,9 @@ function setSelectedContent(contentData, state) {
         return;
     }
     
-    state.currentReviewData = contentData;
+    if (state) {
+        state.currentReviewData = contentData;
+    }
     
     const contentSelector = document.getElementById('createReviewContentSelector');
     const contentInfo = document.getElementById('createReviewContentInfo');
@@ -387,7 +414,9 @@ function hideCreateReviewModal(state) {
             modalTitle.textContent = 'Crear Reseña';
         }
     }
-    state.currentReviewData = null;
+    if (state) {
+        state.currentReviewData = null;
+    }
 }
     
 /**
@@ -450,6 +479,48 @@ async function submitCreateReview(state) {
             
             await updateReview(editReviewId, reviewData, authToken);
             
+            // ============================================================
+            // === NUEVO: SINCRONIZACIÓN DE PROMEDIO AL EDITAR ===
+            // ============================================================
+            if (state.currentReviewData && state.currentReviewData.id) {
+                try {
+                    console.log("🔄 (Edición) Recalculando promedio para actualizar Content...");
+                    
+                    const spotifyId = state.currentReviewData.id;
+                    const type = state.currentReviewData.type;
+                    let contentGuid = null;
+
+                    // 1. Necesitamos el GUID interno para pedir el promedio a Social
+                    if (type === 'song') {
+                        const songData = await getOrCreateSong(spotifyId); 
+                        contentGuid = songData.songId || songData.SongId;
+                    } else {
+                        const albumData = await getOrCreateAlbum(spotifyId);
+                        contentGuid = albumData.albumId || albumData.AlbumId;
+                    }
+
+                    // 2. Pedir el nuevo promedio a Social
+                    if (contentGuid) {
+                        const rawAverage = await getAverageRating(contentGuid, type);
+                        const newAverage = parseInt(rawAverage);
+                        
+                        console.log(`⭐ (Edición) Nuevo promedio calculado: ${newAverage}`);
+
+                        // 3. Actualizar Content Service
+                        if (newAverage > 0) {
+                            if (type === 'song') {
+                                await updateSongRating(spotifyId, newAverage);
+                            } else {
+                                await updateAlbumRating(spotifyId, newAverage);
+                            }
+                            console.log("✅ (Edición) Calificación actualizada en Content Service.");
+                        }
+                    }
+                } catch (syncError) {
+                    console.warn("⚠️ Advertencia: La reseña se editó, pero hubo un error al sincronizar la calificación:", syncError);
+                }
+            }
+
             console.log('✅ Reseña editada exitosamente');
             showAlert('✅ Reseña editada exitosamente', 'success');
             hideCreateReviewModal(state);
@@ -524,6 +595,38 @@ async function submitCreateReview(state) {
         }
         
         const response = await createReview(reviewData, authToken);
+        
+        // === NUEVO CÓDIGO: ACTUALIZACIÓN DE PROMEDIO ===
+        // === LÓGICA DE SINCRONIZACIÓN ===
+        try {
+            console.log("🔄 1. Iniciando cálculo de promedio...");
+            
+            // A. Pedir promedio a Social
+            // IMPORTANTE: contentGuid es el ID interno (Guid)
+            const rawAverage = await getAverageRating(contentGuid, state.currentReviewData.type);
+            
+            // Aseguramos que sea un entero
+            const newAverage = parseInt(rawAverage); 
+            
+            console.log(`⭐ 2. Promedio recibido de Social: ${rawAverage} -> Convertido: ${newAverage}`);
+
+            if (newAverage > 0) {
+                // B. Enviar a Content
+                const spotifyId = state.currentReviewData.id; // ID de Spotify (String corto)
+                console.log(`📤 3. Enviando PATCH a Content. ID: ${spotifyId}, Rating: ${newAverage}`);
+
+                if (state.currentReviewData.type === 'song') {
+                    await updateSongRating(spotifyId, newAverage);
+                } else {
+                    await updateAlbumRating(spotifyId, newAverage);
+                }
+                console.log("✅ 4. Content Service actualizado con éxito.");
+            } else {
+                console.warn("⚠️ El promedio calculado fue 0, no se actualizó Content.");
+            }
+        } catch (syncError) {
+            console.error("❌ Error en la sincronización de calificación:", syncError);
+        }
         
         let reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id || 'N/A';
         if (reviewId !== 'N/A') reviewId = String(reviewId).trim();

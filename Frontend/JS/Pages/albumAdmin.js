@@ -34,7 +34,6 @@ let editingCommentId = null;
 let originalCommentText = null;
 let deletingReviewId = null;
 let deletingCommentId = null;
-let reportingCommentId = null;
 
 //  ---  INICIO  DE  LA  APLICACIÓN  ---
 // ¡CORREGIDO! Esta es la función que main.js llama.
@@ -47,7 +46,6 @@ export function initializeAlbumPage() {
     // Inicializar modals de esta página
     initializeCommentsModalLogic();
     initializeDeleteModalsLogic();
-    initializeReportModalLogic();
 };
 
 //  ---  FUNCIONES  PRINCIPALES  ---
@@ -1022,135 +1020,6 @@ async function deleteReviewLogic(reviewId) {
         showAlert('Debes iniciar sesión para eliminar reseñas', 'warning');
     return;
 }
-    
-    console.log('🗑️ Eliminando reseña:', { reviewId, userId });
-    
-    try {
-        await deleteReview(reviewId, userId, authToken);
-        
-        showAlert('✅ Reseña eliminada exitosamente', 'success');
-        
-        if (typeof loadReviews === 'function') {
-            await loadReviews();
-        }
-    } catch (error) {
-        console.error('Error eliminando reseña:', error);
-        if (error.response) {
-            const status = error.response.status;
-            const message = error.response.data?.message || error.response.data?.Message || 'Error desconocido';
-        
-            if (status === 409) {
-                showAlert('No se puede eliminar la reseña porque tiene likes o comentarios.', 'warning');
-            } else if (status === 404) {
-                showAlert('La reseña no fue encontrada.', 'danger');
-        } else if (status === 401) {
-                showAlert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-            } else if (status === 403) {
-                showAlert('No tienes permisos para eliminar esta reseña.', 'danger');
-            } else {
-                showAlert(`Error al eliminar la reseña: ${message}`, 'danger');
-            }
-        } else {
-            showAlert('Error al eliminar la reseña. Intenta nuevamente.', 'danger');
-        }
-    }
-}
-    
-// --- MODAL DE REPORTAR ---
-
-function initializeReportModalLogic() {
-    const cancelReportCommentBtn = document.getElementById('cancelReportCommentBtn');
-    const confirmReportCommentBtn = document.getElementById('confirmReportCommentBtn');
-    const reportCommentModalOverlay = document.getElementById('reportCommentModalOverlay');
-    const reportRadios = document.querySelectorAll('.report-radio');
-    const reportCommentTextarea = document.getElementById('reportCommentTextarea');
-    
-    if (cancelReportCommentBtn) {
-        cancelReportCommentBtn.addEventListener('click', hideReportCommentModal);
-}
-    if (confirmReportCommentBtn) {
-        confirmReportCommentBtn.addEventListener('click', confirmReportComment);
-    }
-    if (reportCommentModalOverlay) {
-        reportCommentModalOverlay.addEventListener('click', (e) => {
-            if (e.target === reportCommentModalOverlay) hideReportCommentModal();
-        });
-    }
-    
-    if (reportRadios.length > 0) {
-        reportRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-                const confirmBtn = document.getElementById('confirmReportCommentBtn');
-                if (confirmBtn) confirmBtn.disabled = false;
-                
-                if (this.value === 'other' && reportCommentTextarea) {
-                reportCommentTextarea.style.display = 'block';
-            } else if (reportCommentTextarea) {
-                    reportCommentTextarea.style.display = 'none';
-                }
-            });
-        });
-    }
-}
-
-function reportComment(commentId) {
-    showReportCommentModal(commentId);
-}
-function reportReview(reviewId) {
-    // TODO: Podríamos adaptar este modal para reportar reseñas también
-    showAlert('Funcionalidad de reportar reseña en desarrollo.', 'info');
-}
-
-function showReportCommentModal(commentId) {
-reportingCommentId = commentId; // O 'reviewId' si adaptamos
-    const modal = document.getElementById('reportCommentModalOverlay');
-    const textarea = document.getElementById('reportCommentTextarea');
-    const confirmBtn = document.getElementById('confirmReportCommentBtn');
-    
-    document.querySelectorAll('.report-radio').forEach(radio => radio.checked = false);
-    if (textarea) {
-        textarea.value = '';
-        textarea.style.display = 'none';
-    }
-    if (confirmBtn) confirmBtn.disabled = true;
-    if (modal) modal.style.display = 'flex';
-}
-    
-function hideReportCommentModal() {
-    const modal = document.getElementById('reportCommentModalOverlay');
-if(modal) modal.style.display = 'none';
-    reportingCommentId = null;
-}
-    
-async function confirmReportComment() {
-    if (!reportingCommentId) return;
-    
-    const selectedReason = document.querySelector('.report-radio:checked');
-    if (!selectedReason) {
-        showAlert('Por favor, selecciona un motivo para el reporte', 'warning');
-        return;
-    }
-    
-    const reason = selectedReason.value;
-    const textarea = document.getElementById('reportCommentTextarea');
-    const additionalInfo = textarea ? textarea.value.trim() : '';
-    
-    // TODO: Implementar 'reportComment' en socialApi.js
-    const reportData = {
-        commentId: reportingCommentId,
-        reason: reason,
-        additionalInfo: additionalInfo
-    };
-    
-    console.log('Reportar comentario:', reportData);
-    
-    hideReportCommentModal();
-    showAlert('Comentario reportado. Gracias por tu reporte.', 'success');
-}
-
 
 // --- 9. DATOS DE EJEMPLO ---
 function initializeSampleComments() {

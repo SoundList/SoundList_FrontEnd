@@ -139,12 +139,6 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
                                         title="Eliminar reseña">
                                     <i class="fas fa-trash"></i>
                             </button>
-                            ` : isLoggedIn ? `
-                            <button class="review-btn btn-report"  
-                                        data-review-id="${reviewId}"
-                                        title="Reportar reseña">
-                                    <i class="fas fa-flag"></i>
-                            </button>
                             ` : ''}
                             <div class="review-likes-container">
                                     <span class="review-likes-count">${likeCount}</span>
@@ -260,65 +254,66 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 } else {
                     console.warn('showDeleteReviewModal no está disponible');
                 }
+        });
+    });
+
+        // Click en la reseña para ver detalles (también en propio perfil)
+        container.querySelectorAll('.review-clickable').forEach(element => {
+            element.addEventListener('click', function(e) {
+                if (e.target.closest('.review-actions') || 
+                    e.target.closest('.btn-edit') || 
+                    e.target.closest('.btn-delete') || 
+                    e.target.closest('.btn-like') || 
+                    e.target.closest('.comment-btn')) {
+                    return;
+                }
+                
+                const reviewId = this.getAttribute('data-review-id');
+                if (reviewId && typeof showReviewDetailModal === 'function') {
+                    showReviewDetailModal(reviewId);
+                }
             });
         });
     } else {
-        // Reportar (solo si NO es tu propio perfil)
-        container.querySelectorAll('.btn-report').forEach(btn => {
+        // Comentarios
+        container.querySelectorAll('.comment-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const reviewId = this.getAttribute('data-review-id');
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    if (typeof showLoginRequiredModal === 'function') {
+                        showLoginRequiredModal();
+                    }
+                    return;
+                }
                 
-                if (typeof reportReview === 'function') {
-                    reportReview(reviewId);
-                } else if (typeof showReportModal === 'function') {
-                    showReportModal(reviewId, 'review');
+                const reviewId = this.getAttribute('data-review-id');
+                if (typeof showCommentsModal === 'function') {
+                    showCommentsModal(reviewId);
                 } else {
-                    console.warn('Funciones de reportar no están disponibles');
+                    console.warn('showCommentsModal no está disponible');
+                }
+            });
+        });
+
+        // Click en la reseña para ver detalles
+        container.querySelectorAll('.review-clickable').forEach(element => {
+            element.addEventListener('click', function(e) {
+                if (e.target.closest('.review-actions') || 
+                    e.target.closest('.btn-edit') || 
+                    e.target.closest('.btn-delete') || 
+                    e.target.closest('.btn-like') || 
+                    e.target.closest('.comment-btn')) {
+                    return;
+                }
+                
+                const reviewId = this.getAttribute('data-review-id');
+                if (reviewId && typeof showReviewDetailModal === 'function') {
+                    showReviewDetailModal(reviewId);
                 }
             });
         });
     }
-
-    // Comentarios
-    container.querySelectorAll('.comment-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                if (typeof showLoginRequiredModal === 'function') {
-                    showLoginRequiredModal();
-                }
-                return;
-            }
-            
-            const reviewId = this.getAttribute('data-review-id');
-            if (typeof showCommentsModal === 'function') {
-                showCommentsModal(reviewId);
-            } else {
-                console.warn('showCommentsModal no está disponible');
-            }
-        });
-    });
-
-    // Click en la reseña para ver detalles
-    container.querySelectorAll('.review-clickable').forEach(element => {
-        element.addEventListener('click', function(e) {
-            if (e.target.closest('.review-actions') || 
-                e.target.closest('.btn-edit') || 
-                e.target.closest('.btn-delete') || 
-                e.target.closest('.btn-report') || 
-                e.target.closest('.btn-like') || 
-                e.target.closest('.comment-btn')) {
-                return;
-            }
-            
-            const reviewId = this.getAttribute('data-review-id');
-            if (reviewId && typeof showReviewDetailModal === 'function') {
-                showReviewDetailModal(reviewId);
-            }
-        });
-    });
 }
 
 /**
@@ -549,15 +544,37 @@ async function loadUserProfile(userIdToLoad) {
         }
         
         // Mostrar la bio/descripción del usuario
-        const bio = user.Bio || user.bio || user.description || user.Description || "";
+        // Log completo del objeto usuario para ver todos los campos disponibles
+        console.log("📋 Objeto usuario completo:", user);
+        console.log("📋 Todas las claves del usuario:", Object.keys(user));
+        
+        // El backend devuelve 'bio', no 'userQuote'
+        const bio = user.bio || user.Bio || user.userQuote || user.quote || user.description || user.Description || user.UserQuote || "";
+        console.log("📝 Bio encontrada:", bio);
+        console.log("📝 userQuoteEl:", userQuoteEl);
+        console.log("📝 Campos del usuario:", {
+            userQuote: user.userQuote,
+            UserQuote: user.UserQuote,
+            quote: user.quote,
+            Bio: user.Bio,
+            bio: user.bio,
+            description: user.description,
+            Description: user.Description
+        });
+        
         if (userQuoteEl) {
             if (bio && bio.trim() !== "") {
                 userQuoteEl.textContent = bio;
                 userQuoteEl.style.display = "block";
+                userQuoteEl.style.visibility = "visible";
+                console.log("✅ Descripción mostrada:", bio);
             } else {
                 userQuoteEl.textContent = "";
                 userQuoteEl.style.display = "none";
+                console.log("⚠️ Descripción vacía, ocultando elemento");
             }
+        } else {
+            console.error("❌ Elemento user-quote no encontrado en el DOM");
         }
         
         console.log("✅ Perfil principal cargado:", user);
@@ -863,53 +880,6 @@ async function deleteReviewLogic(reviewId) {
         } else {
             alert('Error al eliminar la reseña. Intenta nuevamente.');
             }
-        }
-    }
-}
-
-/**
- * Muestra el modal de reportar reseña o usa prompt si el modal no está disponible
- */
-function reportReview(reviewId) {
-    showReportModal(reviewId, 'review');
-}
-
-/**
- * Muestra el modal de reportar (reseña o comentario) o usa prompt si el modal no está disponible
- */
-function showReportModal(id, type) {
-    // Intentar usar el modal de home si está disponible
-    const modal = document.getElementById('reportCommentModalOverlay');
-    if (modal) {
-        const textarea = document.getElementById('reportCommentTextarea');
-        const confirmBtn = document.getElementById('confirmReportCommentBtn');
-        const title = document.querySelector('.report-comment-title');
-        const message = document.querySelector('.report-comment-message');
-        
-        if (title) {
-            title.textContent = type === 'comment' ? 'Reportar comentario' : 'Reportar reseña';
-        }
-        if (message) {
-            message.textContent = type === 'comment' 
-                ? '¿Por qué quieres reportar este comentario?' 
-                : '¿Por qué quieres reportar esta reseña?';
-        }
-        
-        document.querySelectorAll('.report-radio').forEach(radio => radio.checked = false);
-        if (textarea) {
-            textarea.value = '';
-            textarea.style.display = 'none';
-        }
-        if (confirmBtn) confirmBtn.disabled = true;
-        modal.style.display = 'flex';
-    } else {
-        // Si no hay modal, usar prompt simple
-        const reason = prompt(type === 'comment' 
-            ? '¿Por qué quieres reportar este comentario?' 
-            : '¿Por qué quieres reportar esta reseña?');
-        if (reason) {
-            console.log(`Reportar ${type}:`, { id, reason });
-            alert(`${type === 'comment' ? 'Comentario' : 'Reseña'} reportada. Gracias por tu reporte.`);
         }
     }
 }
@@ -1260,15 +1230,6 @@ async function loadReviewDetailComments(reviewId, comments) {
                             </button>
                       </div>
                     `;
-                } else if (currentUserId) {
-                    // Si no es propio, mostrar botón de reportar
-                    actionButtons = `
-                        <div class="review-detail-comment-actions">
-                            <button class="review-detail-comment-action-btn comment-report-btn" data-comment-id="${commentId}" title="Reportar">
-                                <i class="fas fa-flag"></i>
-                            </button>
-                      </div>
-                    `;
                 }
                 
                 return `
@@ -1349,26 +1310,6 @@ function attachReviewDetailCommentListeners(reviewId) {
             });
         }
     });
-    
-    // Botones de reportar
-    document.querySelectorAll('.review-detail-comment-item .comment-report-btn').forEach(btn => {
-        // Verificar si ya tiene un listener
-        if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const commentId = this.getAttribute('data-comment-id');
-                if (commentId) {
-                    showReportCommentModal(commentId);
-                }
-            });
-        }
-    });
-}
-
-function showReportCommentModal(commentId) {
-    showReportModal(commentId, 'comment');
 }
 
 async function toggleReviewLikeInDetail(reviewId, btn) {

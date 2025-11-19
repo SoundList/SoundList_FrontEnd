@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Perfil - Soundlist</title>
+    <title>Ajustes - Soundlist</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
     
@@ -16,6 +16,7 @@
     
     <link rel="stylesheet" href="../../CSS/home.css"> 
     <link rel="stylesheet" href="../../CSS/editProfile.css"> 
+    <link rel="stylesheet" href="../../CSS/ajustes.css"> 
     
 </head>
 <body class="edit-profile-body">
@@ -117,54 +118,112 @@
                     <div class="profile-section-edit">
                         <img id="avatar-preview" src="../../Assets/default-avatar.png" alt="Avatar" class="profile-avatar-edit"> 
                         <div class="adjustments-account-name">
-                            <span id="edit-profile-username">Cuenta</span>
+                            <span id="settings-username">Cuenta</span>
                             <small class="text-success fw-semibold"><i class="fa-solid fa-check me-1"></i>Verificada</small>
                         </div>
                     </div>
                     
-                    <button id="btn-edit-description" data-section="description" class="active">
-                        <i class="fa-solid fa-file-alt me-2"></i> Editar Descripción
+                    <button id="btn-change-email" data-section="email" class="active">
+                        <i class="fa-solid fa-envelope me-2"></i> Cambiar Email
                     </button>
-                    <button id="btn-edit-image" data-section="image">
-                        <i class="fa-solid fa-image me-2"></i> Editar Imagen
+                    <button id="btn-change-password" data-section="password">
+                        <i class="fa-solid fa-lock me-2"></i> Cambiar Contraseña
+                    </button>
+                    <button id="btn-delete-account" data-section="delete" class="text-danger">
+                        <i class="fa-solid fa-trash me-2"></i> Eliminar Cuenta
                     </button>
                 </div>
 
                 <div class="settings-content"> 
                 
-                    <div id="section-description" class="setting-section">
+                    <!-- Sección Cambiar Email -->
+                    <div id="section-email" class="setting-section">
                         <div class="setting-box">
-                            <h3>Editar Descripción </h3>
-                            <form id="form-edit-description">
+                            <h3>Cambiar Email</h3>
+                            <form id="form-change-email">
                                 <div class="mb-4">
-                                    <label for="current-description">Descripción Actual</label>
-                                    <textarea id="current-description" class="form-control" readonly disabled></textarea>
+                                    <label for="current-email">Email Actual</label>
+                                    <input type="email" id="current-email" class="form-control" readonly disabled>
                                 </div>
                                 <div class="mb-4">
-                                    <label for="new-description">Nueva Descripcion (Máx. 160 caracteres)</label>
-                                    <textarea id="new-description" class="form-control" maxlength="160"></textarea>
+                                    <label for="new-email">Nuevo Email</label>
+                                    <input type="email" id="new-email" class="form-control" placeholder="Ingresa tu nuevo email" required>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="confirm-email">Confirmar Nuevo Email</label>
+                                    <input type="email" id="confirm-email" class="form-control" placeholder="Confirma tu nuevo email" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-confirm w-100">
-                                    Confirmar
+                                    Cambiar Email
                                 </button>
+                                <p class="security-message">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    Nosotros ciframos y protegemos tu información de forma segura.
+                                </p>
                             </form>
                         </div>
                     </div>
 
-                    <div id="section-image" class="setting-section hidden">
+                    <!-- Sección Cambiar Contraseña -->
+                    <div id="section-password" class="setting-section hidden">
                         <div class="setting-box">
-                            <h3>Cambiar Imagen de Perfil</h3>
-                            <form id="form-edit-image">
-                                <div class="mb-4 text-center">
-                                    <img id="image-upload-preview" src="../../Assets/default-avatar.png" alt="Nueva Imagen" class="profile-avatar-edit large-avatar">
-                                    <input type="file" id="avatar-input" accept="image/*">
-                                    <label for="avatar-input" class="file-upload-label mt-3">
-                                        Seleccionar Nueva Imagen
-                                    </label>
+                            <h3>Cambiar Contraseña</h3>
+                            <form id="form-change-password">
+                                <div class="mb-4">
+                                    <label for="current-password">Contraseña Actual</label>
+                                    <input type="password" id="current-password" class="form-control" placeholder="Ingresa tu contraseña actual" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary btn-confirm w-100" disabled id="confirm-image-btn">
-                                    Confirmar Cambio de Imagen
+                                <div class="mb-4">
+                                    <label for="new-password">Nueva Contraseña</label>
+                                    <input type="password" id="new-password" class="form-control" placeholder="Ingresa tu nueva contraseña" required>
+                                    <small class="form-text text-muted">La contraseña debe tener al menos 8 caracteres.</small>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="confirm-password">Confirmar Nueva Contraseña</label>
+                                    <input type="password" id="confirm-password" class="form-control" placeholder="Confirma tu nueva contraseña" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-confirm w-100">
+                                    Cambiar Contraseña
                                 </button>
+                                <p class="security-message">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    Nosotros ciframos y protegemos tu información de forma segura.
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Sección Eliminar Cuenta -->
+                    <div id="section-delete" class="setting-section hidden">
+                        <div class="setting-box delete-account-box">
+                            <h3 class="delete-account-title">Eliminar Cuenta</h3>
+                            <div class="delete-warning-box" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <div>
+                                    <strong>Advertencia:</strong> Esta acción es permanente y no se puede deshacer. 
+                                    Al eliminar tu cuenta, perderás acceso a todos tus datos, reseñas, comentarios y configuraciones.
+                                </div>
+                            </div>
+                            <form id="form-delete-account">
+                                <div class="mb-4">
+                                    <label for="delete-confirm-password">Confirma tu contraseña para eliminar la cuenta</label>
+                                    <input type="password" id="delete-confirm-password" class="form-control" placeholder="Ingresa tu contraseña" required>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="delete-confirm-checkbox" required>
+                                        <label class="form-check-label" for="delete-confirm-checkbox">
+                                            Entiendo que esta acción es permanente y no se puede deshacer
+                                        </label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-delete-account w-100">
+                                    <i class="fa-solid fa-trash me-2"></i> Eliminar Cuenta Permanentemente
+                                </button>
+                                <p class="security-message">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    Nosotros ciframos y protegemos tu información de forma segura.
+                                </p>
                             </form>
                         </div>
                     </div>
@@ -210,7 +269,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
     <script type="module" src="../../JS/main.js"></script> 
     <script src="../../JS/APIs/userApi.js"></script>
-    <script src="../../JS/Pages/editProfile.js"></script>
+    <script src="../../JS/Pages/ajustes.js"></script>
     
 </body>
 </html>
+

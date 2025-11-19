@@ -2,6 +2,7 @@
 import {
     getSongByApiId,
     getOrCreateSong,
+    updateSongRating
 } from './../APIs/contentApi.js'; 
 
 import { 
@@ -23,6 +24,7 @@ import {
     getReviewReactionCount,
     addReviewReaction,
     deleteReviewReaction,
+    getAverageRating,
     getUser
 } from './../APIs/socialApi.js';
 import { showAlert, showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
@@ -36,7 +38,6 @@ let editingCommentId = null;
 let originalCommentText = null;
 let deletingReviewId = null;
 let deletingCommentId = null;
-let reportingCommentId = null;
 
 // --- 3. PUNTO DE ENTRADA (LLAMADO POR MAIN.JS) ---
 // ¡CORREGIDO! Ya no usa DOMContentLoaded
@@ -50,7 +51,6 @@ export function initializeSongPage() {
     // (Asegúrate de que tu song.html tenga los modals correspondientes)
     initializeCommentsModalLogic();
     initializeDeleteModalsLogic();
-    initializeReportModalLogic();
 }
 
 // --- 4. FUNCIONES PRINCIPALES ---
@@ -309,13 +309,70 @@ async function handleSubmitReview() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'SUBIENDO...';
 
-        await createReview(reviewData, authToken); 
-        
-        showAlert('¡Reseña enviada!', 'success');
-        hideCreateReviewModal();
-        
-        // Recargar la página para ver la nueva reseña
-        await loadPageData();
+        // ¡LLAMADA A API CORREGIDA!
+        await createReview(reviewData, authToken); 
+
+        // --- NUEVA LÓGICA DE SINCRONIZACIÓN ---
+        try {
+            console.log("🔄 Calculando promedio para actualizar Content...");
+            
+            // A. Pedimos el nuevo promedio a Social (Usando el GUID)
+            const newAverage = await getAverageRating(currentSongData.songId, 'song');
+            
+            if (newAverage > 0) {
+                // B. Enviamos el PATCH a Content (Usando el ID de Spotify)
+                // currentSongData.apiSongId es "0W3TCDzYM7xFrZSaXnQvs4"
+                await updateSongRating(currentSongData.apiSongId, newAverage);
+                console.log(`✅ Calificación actualizada a ${newAverage} en Content Service.`);
+            }
+        } catch (syncError) {
+            console.error("⚠️ Advertencia: La reseña se creó, pero falló el cálculo de promedio.", syncError);
+        }
+        // ---------------------------------------
+        
+        showAlert('¡Reseña de canción enviada!', 'success');
+        hideCreateReviewModal();
+        
+        // Recargar solo las reseñas (¡LÓGICA CORREGIDA!)
+        const allReviews = await getReviews();
+        const reviewsData = allReviews.filter(r => r.songId === currentSongData.songId || r.SongId === currentSongData.songId);
+        
+        // ¡Volver a enriquecer las reseñas!
+        const enrichedReviews = await Promise.all(
+            reviewsData.map(async (review) => {
+                // (Copiamos la lógica de 'loadPageData' para enriquecer)
+                try {
+                    const reviewId = review.reviewId || review.ReviewId || review.id;
+                    const userId = review.userId || review.UserId;
+                    const [userData, likes, comments] = await Promise.all([
+                        getUser(userId).catch(e => null),
+                        getReviewReactionCount(reviewId).catch(e => 0),
+                        getCommentsByReview(reviewId).catch(e => [])
+                    ]);
+                    const currentUserId = localStorage.getItem('userId');
+                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true';
+                    return {
+                        id: reviewId,
+                        username: userData?.username || userData?.Username || 'Usuario',
+                        avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
+                        contentType: 'Canción',
+                        song: currentSongData.title,
+                        artist: currentSongData.artistName,
+                        title: review.title || review.Title,
+                        comment: review.content || review.Content,
+                        rating: review.rating || review.Rating,
+                        likes: likes,
+                        comments: comments.length,
+                        userLiked: userLiked,
+                        userId: userId
+                    };
+                } catch (error) {
+                    console.error("Error enriqueciendo reseña:", error, review);
+                    return null;
+                }
+            })
+        );
+        renderReviews(enrichedReviews.filter(r => r !== null));
 
     } catch (error) {
         console.error("Error al enviar:", error);
@@ -395,13 +452,7 @@ function attachReviewActionListeners(reviewsListElement) {
             showDeleteReviewModal(reviewId, reviewTitle);
         });
     });
-    reviewsListElement.querySelectorAll('.btn-report').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const reviewId = this.getAttribute('data-review-id');
-            reportReview(reviewId);
-        });
-    });
-    reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
+    reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation(); 
             const authToken = localStorage.getItem('authToken');
@@ -415,7 +466,7 @@ function attachReviewActionListeners(reviewsListElement) {
     });
     reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
         element.addEventListener('click', function(e) {
-            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-report') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
+            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
                 return;
             }
             const reviewId = this.getAttribute('data-review-id');
@@ -496,13 +547,9 @@ async function loadCommentsIntoModal(reviewId) {
                             <button class="comment-action-btn comment-delete-btn" data-comment-id="${commentId}" title="Eliminar"><i class="fas fa-trash"></i></button>
                         </div>
                     `;
-                } else {
-                    actionButtons = `
-                        <div class="comment-actions">
-                            <button class="comment-action-btn comment-report-btn" data-comment-id="${commentId}" title="Reportar"><i class="fas fa-flag"></i></button>
-                        </div>
-                    `;
-                }
+                } else {
+                    actionButtons = '';
+                }
               
                 return `
                 <div class="comment-item" data-comment-id="${commentId}">
@@ -598,14 +645,7 @@ function attachCommentActionListeners() {
         });
     });
     
-    document.querySelectorAll('.comment-report-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const commentId = this.getAttribute('data-comment-id');
-            reportComment(commentId);
-        });
-    });
-    
-    document.querySelectorAll('.comment-like-btn').forEach(btn => {
+    document.querySelectorAll('.comment-like-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const commentId = this.getAttribute('data-comment-id');
@@ -958,99 +998,6 @@ Indentation    }
     }
 }
     
-// --- MODAL DE REPORTAR ---
-
-function initializeReportModalLogic() {
-    const cancelReportCommentBtn = document.getElementById('cancelReportCommentBtn');
-    const confirmReportCommentBtn = document.getElementById('confirmReportCommentBtn');
-    const reportCommentModalOverlay = document.getElementById('reportCommentModalOverlay');
-    const reportRadios = document.querySelectorAll('.report-radio');
-    const reportCommentTextarea = document.getElementById('reportCommentTextarea');
-    
-    if (cancelReportCommentBtn) {
-        cancelReportCommentBtn.addEventListener('click', hideReportCommentModal);
-    }
-    if (confirmReportCommentBtn) {
-        confirmReportCommentBtn.addEventListener('click', confirmReportComment);
-    }
-    if (reportCommentModalOverlay) {
-        reportCommentModalOverlay.addEventListener('click', (e) => {
-            if (e.target === reportCommentModalOverlay) hideReportCommentModal();
-        });
-    }
-    
-    if (reportRadios.length > 0) {
-       reportRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                const confirmBtn = document.getElementById('confirmReportCommentBtn');
-                if (confirmBtn) confirmBtn.disabled = false;
-                
-                if (this.value === 'other' && reportCommentTextarea) {
-                    reportCommentTextarea.style.display = 'block';
-                } else if (reportCommentTextarea) {
-                    reportCommentTextarea.style.display = 'none';
-           }
-            });
-        });
-    }
-}
-
-function reportComment(commentId) {
-    showReportCommentModal(commentId);
-}
-function reportReview(reviewId) {
-    // TODO: Podríamos adaptar este modal para reportar reseñas también
-    showAlert('Funcionalidad de reportar reseña en desarrollo.', 'info');
-}
-
-function showReportCommentModal(commentId) {
-    reportingCommentId = commentId; // O 'reviewId' si adaptamos
-    const modal = document.getElementById('reportCommentModalOverlay');
-    const textarea = document.getElementById('reportCommentTextarea');
-    const confirmBtn = document.getElementById('confirmReportCommentBtn');
-    
-    document.querySelectorAll('.report-radio').forEach(radio => radio.checked = false);
-    if (textarea) {
-        textarea.value = '';
-        textarea.style.display = 'none';
-    }
-    if (confirmBtn) confirmBtn.disabled = true;
-    if (modal) modal.style.display = 'flex';
-}
-    
-function hideReportCommentModal() {
-    const modal = document.getElementById('reportCommentModalOverlay');
-   if(modal) modal.style.display = 'none';
-    reportingCommentId = null;
-}
-    
-async function confirmReportComment() {
-    if (!reportingCommentId) return;
-    
-    const selectedReason = document.querySelector('.report-radio:checked');
-    if (!selectedReason) {
-        showAlert('Por favor, selecciona un motivo para el reporte', 'warning');
-        return;
-    }
-    
-    const reason = selectedReason.value;
-    const textarea = document.getElementById('reportCommentTextarea');
-    const additionalInfo = textarea ? textarea.value.trim() : '';
-    
-    // TODO: Implementar 'reportComment' en socialApi.js
-   const reportData = {
-        commentId: reportingCommentId,
-        reason: reason,
-        additionalInfo: additionalInfo
-    };
-    
-    console.log('Reportar comentario:', reportData);
-    
-    hideReportCommentModal();
-    showAlert('Comentario reportado. Gracias por tu reporte.', 'success');
-}
-
-
 // --- 9. DATOS DE EJEMPLO ---
 function initializeSampleComments() {
         const authToken = localStorage.getItem('authToken');

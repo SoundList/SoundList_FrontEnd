@@ -1,4 +1,4 @@
-import { AmigosApi } from '../APIs/AmigosApi.js';
+import { getFollowing, searchUsers } from '../APIs/AmigosApi.js';
 
 // ----------------------------------------------------------------------
 // A. FUNCIONES DE UTILIDAD VISUAL
@@ -66,18 +66,26 @@ export function showAlert(message, type) {
 export async function enrichReviewsWithSocialStatus(reviews) {
     if (!reviews || reviews.length === 0) return [];
 
-    const rawFollowing = await AmigosApi.getFollowing();
-    const myFollowing = Array.isArray(rawFollowing) ? rawFollowing : [];
+    try {
+        // Obtenemos la lista de IDs (Strings)
+        const rawFollowing = await getFollowing(); 
+        const myFollowingIds = Array.isArray(rawFollowing) ? rawFollowing : [];
 
-    return reviews.map(review => {
-        const authorId = review.userId || review.authorId; 
-        const isFollowingAuthor = myFollowing.some(u => u.id === authorId);
+        return reviews.map(review => {
+            const authorId = review.userId || review.authorId;
+            
+            // CORRECCIÓN: Usamos .includes() porque myFollowingIds es una lista de IDs
+            const isFollowingAuthor = myFollowingIds.includes(authorId);
 
-        return {
-            ...review,
-            isFollowingAuthor: isFollowingAuthor,
-            authorId: authorId 
-        };
-    });
+            return {
+                ...review,
+                isFollowingAuthor: isFollowingAuthor,
+                authorId: authorId 
+            };
+        });
+    } catch (error) {
+        console.error("Error enriqueciendo reseñas:", error);
+        return reviews; // Retorna las reseñas originales si falla la API
+    }
 }
 

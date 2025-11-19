@@ -1,5 +1,4 @@
 import { API_BASE_URL } from './configApi.js';
-
 const getAuthHeaders = () => {
     const token = localStorage.getItem('authToken');
     return {
@@ -8,93 +7,73 @@ const getAuthHeaders = () => {
     };
 };
 
-export const AmigosApi = {
-    searchUsers: async (query) => {
-        if (!query || query.length < 2) return [];
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/gateway/users/username/${query}`, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
-            if (!response.ok) return [];
-            const data = await response.json();
-            return Array.isArray(data) ? data : [data]; 
-        } catch (error) {
-            console.error('Error búsqueda:', error);
-            return [];
-        }
-    },
+// 1. BUSCADOR 
+export async function searchUsers(query) {
+    if (!query || query.trim().length < 1) return [];
+    
+    try {
+        const url = `${API_BASE_URL}/api/gateway/search/users?term=${encodeURIComponent(query)}`;
 
-    followUser: async (targetUserId) => {
-        try {
-            const currentUserId = localStorage.getItem('userId');
-            const bodyData = {
-                followerId: currentUserId,
-                followingId: targetUserId
-            };
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
 
-            const response = await fetch(`${API_BASE_URL}/api/gateway/users/follow`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(bodyData)
-            });
-            
-            return response.ok;
-        } catch (error) {
-            console.error('Error al seguir:', error);
-            return false;
-        }
-    },
-    unfollowUser: async (targetUserId) => {
-        try {
-            const currentUserId = localStorage.getItem('userId');
-            const response = await fetch(
-                `${API_BASE_URL}/api/gateway/users/${currentUserId}/unfollow/${targetUserId}`, 
-                {
-                    method: 'DELETE',
-                    headers: getAuthHeaders()
-                }
-            );
+        if (!response.ok) return [];
+        
+        const data = await response.json();
+        const results = Array.isArray(data) ? data : (data.Items || data.items || [data]);
+        
+        return results.map(user => ({
+            id: user.UserId || user.id,
+            username: user.Username || user.username || 'Usuario',
+            avatar: user.imgProfile || user.avatar || null,
+            bio: user.Bio || user.bio || ''
+        }));
 
-            return response.ok;
-        } catch (error) {
-            console.error('Error al dejar de seguir:', error);
-            return false;
-        }
-    },
+    } catch (error) {
+        console.error('Error búsqueda de usuarios:', error);
+        return [];
+    }
+}
+// 2. OBTENER LISTAS 
+export async function getFollowers() {
+    try {
+        const currentUserId = localStorage.getItem('userId');
+        if (!currentUserId) return []; 
 
-    getFollowers: async () => {
-        try {
-            const currentUserId = localStorage.getItem('userId');
-            const response = await fetch(`${API_BASE_URL}/api/gateway/users/${currentUserId}/followers`, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
-            if (!response.ok) return [];
-            return await response.json();
-        } catch (error) {
-            console.error('Error followers:', error);
-            return [];
-        }
-    },
+        const url = `${API_BASE_URL}/api/gateway/users/${currentUserId}/followers`;
+        const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
+        
+        if (!response.ok) return [];
+        
+        const data = await response.json();
+        const results = data.Items || data.items || [];
+        return results.map(f => f.followerId || f.FollowerId).filter(Boolean);
 
-    getFollowing: async () => {
-        try {
-            const currentUserId = localStorage.getItem('userId');
-            if (!currentUserId) return []; 
+    } catch (error) {
+        console.error('Error al obtener Seguidores:', error);
+        return [];
+    }
+}
 
-            const response = await fetch(`${API_BASE_URL}/api/gateway/users/${currentUserId}/following`, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
+export async function getFollowing() {
+    try {
+        const currentUserId = localStorage.getItem('userId');
+        if (!currentUserId) return []; 
 
-            if (!response.ok) return [];
-            const data = await response.json();
-            return Array.isArray(data) ? data : []; 
+        const url = `${API_BASE_URL}/api/gateway/users/${currentUserId}/follow`; 
+        
+        const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
 
-        } catch (error) {
-            console.warn('Fallo silencioso en getFollowing (la funcionalidad se ocultará):', error);
-            return [];
-        }
+        if (!response.ok) return [];
+        const data = await response.json();
+        const results = data.Items || data.items || [];
+
+        return results.map(f => f.followingId || f.FollowingId).filter(Boolean);
+
+    } catch (error) {
+        console.warn('Error al obtener Seguidos:', error);
+        return [];
     }
 }

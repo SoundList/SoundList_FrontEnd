@@ -32,3 +32,4 @@ function renderStars(rating) {
 
     return starsHtml;
 }
+export { renderStars };

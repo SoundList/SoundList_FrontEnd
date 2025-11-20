@@ -705,3 +705,25 @@
         text-align: center;
     }
 }
+
+
+
+.form-control.is-invalid-custom,
+.review-rating-input.is-invalid-custom .stars-input {
+    border: 1px solid #dc3545 !important; /* Borde rojo */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* Opcional: Sombra de enfoque roja */
+}
+
+.invalid-feedback-custom {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545; /* Texto rojo */
+    display: none; /* Por defecto oculto */
+}
+
+.is-invalid-field .invalid-feedback-custom {
+    display: block; /* Muestra el mensaje cuando el campo tiene la clase de error */
+}
+
+

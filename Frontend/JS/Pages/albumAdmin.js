@@ -139,7 +139,7 @@ async function loadPageData() {
 
         const validReviews = reviewsData.filter(r => r !== null);
         // --- FIN DEL PASO CLAVE ---
-
+        updateHeaderStatistics(filteredReviews);
         // 8. Renderizar el resto del contenido
         renderSongList(songsData);
         renderAlbumDetails(albumData, songsData.length);
@@ -159,7 +159,7 @@ async function loadPageData() {
 //  ---  FUNCIONES  DE  RENDERIZADO  (Sin  cambios)  ---
 
 function renderAlbumHeader(album) {
-    document.getElementById('albumCover').src = album.image || './../../Assets/album-de-musica.png';
+    document.getElementById('albumCover').src = album.image;
     document.getElementById('albumTitle').textContent = album.title;
     
     const artistLink = document.getElementById('albumArtistLink');
@@ -501,7 +501,7 @@ async function handleSubmitReview() {
         // 7A. Recargar reseñas BÁSICAS
         const allReviews = await getReviews();
         const filteredReviews = allReviews.filter(r => r.albumId === currentAlbumData.albumId || r.AlbumId === currentAlbumData.albumId);
-
+        updateHeaderStatistics(filteredReviews);
         // 7B. "Enriquecer" las reseñas (¡ESTO FALTABA!)
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
@@ -1060,54 +1060,40 @@ async function deleteReviewLogic(reviewId) {
         showAlert('Debes iniciar sesión para eliminar reseñas', 'warning');
     return;
 }
-
-// --- 9. DATOS DE EJEMPLO ---
-function initializeSampleComments() {
-        const authToken = localStorage.getItem('authToken');
-        if (authToken && authToken.startsWith('dev-token-')) {
-            // Los comentarios se agregarán después de cargar las reseñas
-            // para usar los IDs reales de las reseñas
-            setTimeout(() => {
-                // Obtener todas las reseñas renderizadas
-                const reviewItems = document.querySelectorAll('.review-item');
-                if (reviewItems.length > 0) {
-                    const firstReviewId = reviewItems[0].getAttribute('data-review-id');                if (firstReviewId && !commentsData[firstReviewId]) {
-                        const currentUserId = localStorage.getItem('userId');
-                        commentsData[firstReviewId] = [
-                            {
-                                Id_Comment: 'dev-comment-1',
-                                Text: '¡Excelente canción! Me encanta.',
-                                Created: new Date(Date.now() - 3600000).toISOString(), // Hace 1 hora
-                        ReviewId: firstReviewId,
-                                IdUser: currentUserId || 'sample-user-1', // Tu comentario para poder editarlo
-                                UserName: localStorage.getItem('username') || 'Usuario Demo',
-                                Likes: 0, // 0 likes para poder editar
-                            userLiked: false
-                        },
-                            {
-                                Id_Comment: 'dev-comment-2',
-
-                                Text: 'Totalmente de acuerdo, es una obra maestra.',
-                                Created: new Date(Date.now() - 7200000).toISOString(), // Hace 2 horas
-                                ReviewId: firstReviewId,
-                                IdUser: 'sample-user-2', // Comentario de otro usuario
-                        UserName: 'Maria456',
-                                Likes: 2, // Tiene likes
-                            userLiked: false
-                            }
-                        ];
-                    
-                        // Actualizar contador en el botón de comentarios
-                        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${firstReviewId}"]`);
-                    if (commentBtn) {
-                            const countSpan = commentBtn.querySelector('.review-comments-count');
-                            if (countSpan) {
-                                countSpan.textContent = commentsData[firstReviewId].length;
-                        }
-                        }
-                    }
-                }
-            }, 2000); 
-        }
-    }
 }
+
+/**
+ * Calcula el promedio de estrellas basado en el array de reseñas
+ * y actualiza el DOM del header.
+ */
+function updateHeaderStatistics(reviews) {
+    const ratingNumberEl = document.getElementById('ratingNumber');
+    const ratingStarsEl = document.getElementById('ratingStars');
+    const ratingCountEl = document.getElementById('ratingCount');
+
+    if (!reviews || reviews.length === 0) {
+        ratingNumberEl.textContent = "0.0";
+        ratingStarsEl.innerHTML = createStarRating(0, true); 
+        ratingCountEl.textContent = "(0 reviews)";
+        return;
+    }
+
+    // 1. Sumar todas las calificaciones
+    const totalRating = reviews.reduce((sum, review) => {
+        const rating = review.rating || review.Rating || 0;
+        return sum + Number(rating);
+    }, 0);
+
+    // 2. Calcular promedio crudo (ej: 4.23333...)
+    const rawAverage = totalRating / reviews.length;
+
+    // 3. Redondear al 0.5 más cercano
+    const roundedAverage = Math.round(rawAverage * 2) / 2;
+
+    // 4. Actualizar el DOM
+    ratingNumberEl.textContent = roundedAverage.toFixed(1); 
+    ratingStarsEl.innerHTML = createStarRating(roundedAverage, true); 
+    ratingCountEl.textContent = `(${reviews.length} reviews)`;
+}
+
+

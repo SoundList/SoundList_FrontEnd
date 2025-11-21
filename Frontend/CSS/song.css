@@ -131,7 +131,7 @@
     backdrop-filter: blur(10px);
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    overflow: hidden;
+    overflow: visible; /* Cambiar a visible para que el scrollbar de reseñas sea visible */
 }
 
 .tabs-nav {
@@ -177,15 +177,20 @@
 .tab-content-container {
     padding: 2rem;
     min-height: 300px;
+    max-height: calc(100vh - 300px); /* Usar altura disponible de la ventana */
+    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
 }
 
 .tab-pane {
     display: none;
     animation: fadeIn 0.4s ease-out;
+    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
 }
 
 .tab-pane.active {
     display: block;
+    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+    max-height: calc(100vh - 350px); /* Altura máxima para activar scroll */
 }
 
 /* --- PESTAÑA RESEÑAS & AI SUMMARY (Faltaba esto) --- */
@@ -219,10 +224,48 @@
     line-height: 1.5;
 }
 
+/* Scrollbar personalizado para reseñas en página de canción - Mayor especificidad */
+.tab-pane .reviews-list,
+#reviewsList.reviews-list,
 .reviews-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    /* Altura máxima para usar todo el espacio disponible del contenedor */
+    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important; /* Espacio para el scrollbar */
+    scrollbar-width: thin !important; /* Firefox */
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important; /* Firefox */
+}
+
+/* Estilos del scrollbar para WebKit (Chrome, Safari, Edge) */
+.tab-pane .reviews-list::-webkit-scrollbar,
+#reviewsList.reviews-list::-webkit-scrollbar,
+.reviews-list::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.tab-pane .reviews-list::-webkit-scrollbar-track,
+#reviewsList.reviews-list::-webkit-scrollbar-track,
+.reviews-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+}
+
+.tab-pane .reviews-list::-webkit-scrollbar-thumb,
+#reviewsList.reviews-list::-webkit-scrollbar-thumb,
+.reviews-list::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5) !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease !important;
+}
+
+.tab-pane .reviews-list::-webkit-scrollbar-thumb:hover,
+#reviewsList.reviews-list::-webkit-scrollbar-thumb:hover,
+.reviews-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7) !important;
 }
 
 /* Reutilizamos estilos básicos de review-item si no están en home.css */
@@ -239,12 +282,49 @@
 
 
 /* --- PESTAÑA DETALLE (Corregido para igualar Álbum) --- */
+.tab-pane .detail-grid,
+#tab-detalle .detail-grid,
 .detail-grid {
     display: grid;
     gap: 1.5rem;
     background: rgba(0, 0, 0, 0.2);
     padding: 2rem;
     border-radius: 15px;
+    /* Scrollbar personalizado para detalle - altura máxima para activar scroll */
+    max-height: 300px !important; /* Altura fija para forzar scroll cuando hay mucho contenido */
+    overflow-y: scroll !important; /* Forzar scrollbar siempre visible */
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Estilos del scrollbar para WebKit en detail-grid - Mayor especificidad */
+.tab-pane .detail-grid::-webkit-scrollbar,
+#tab-detalle .detail-grid::-webkit-scrollbar,
+.detail-grid::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.tab-pane .detail-grid::-webkit-scrollbar-track,
+#tab-detalle .detail-grid::-webkit-scrollbar-track,
+.detail-grid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+}
+
+.tab-pane .detail-grid::-webkit-scrollbar-thumb,
+#tab-detalle .detail-grid::-webkit-scrollbar-thumb,
+.detail-grid::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5) !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease !important;
+}
+
+.tab-pane .detail-grid::-webkit-scrollbar-thumb:hover,
+#tab-detalle .detail-grid::-webkit-scrollbar-thumb:hover,
+.detail-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7) !important;
 }
 
 .detail-item {

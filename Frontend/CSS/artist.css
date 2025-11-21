@@ -39,12 +39,59 @@ ARTIST PAGE STYLES
 .tab-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
 .tab-btn.active { color: #fff; background: linear-gradient(to top, rgba(124, 58, 237, 0.1), transparent); }
 .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #7C3AED, #EC4899); }
-.tab-content-container { padding: 2rem; min-height: 300px; }
-.tab-pane { display: none; animation: fadeIn 0.4s ease-out; }
-.tab-pane.active { display: block; }
+.tab-content-container { 
+    padding: 2rem; 
+    min-height: 300px;
+    max-height: calc(100vh - 300px); /* Usar altura disponible de la ventana */
+    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+}
+.tab-pane { 
+    display: none; 
+    animation: fadeIn 0.4s ease-out; 
+    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+}
+.tab-pane.active { 
+    display: block; 
+    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+    max-height: calc(100vh - 350px); /* Altura máxima para activar scroll */
+}
 
 /* LISTAS (Canciones y Álbumes reusan el mismo estilo básico) */
-.song-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.song-list { 
+    list-style: none; 
+    padding: 0; 
+    margin: 0; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 0.5rem;
+    /* Scrollbar personalizado para lista de canciones/álbumes - usar todo el espacio disponible */
+    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Estilos del scrollbar para WebKit en song-list (artista) */
+.song-list::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.song-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+}
+
+.song-list::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5) !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease !important;
+}
+
+.song-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7) !important;
+}
 .song-item { display: flex; align-items: center; padding: 1rem; border-radius: 12px; transition: background 0.2s ease; cursor: pointer; background: rgba(255, 255, 255, 0.03); }
 .song-item:hover { background: rgba(255, 255, 255, 0.1); }
 .song-number { width: 40px; color: rgba(255, 255, 255, 0.6); font-size: 1.1rem; text-align: center; }
@@ -57,11 +104,85 @@ ARTIST PAGE STYLES
 .ai-icon { font-size: 1.5rem; color: #3B82F6; }
 .ai-summary h5 { margin-top: 0; margin-bottom: 0.5rem; color: #3B82F6; font-weight: 700; }
 .ai-text { margin: 0; font-style: italic; color: rgba(255, 255, 255, 0.9); line-height: 1.5; }
-.reviews-list { display: flex; flex-direction: column; gap: 1rem; }
+.reviews-list { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 1rem;
+    /* Altura máxima para usar todo el espacio disponible del contenedor */
+    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important; /* Espacio para el scrollbar */
+    scrollbar-width: thin !important; /* Firefox */
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important; /* Firefox */
+}
+
+/* Estilos del scrollbar para WebKit (Chrome, Safari, Edge) */
+.reviews-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.reviews-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.reviews-list::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.reviews-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7);
+}
 .review-item { background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 1.5rem; display: flex; gap: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.1); }
 
 /* --- DETALLE (CON CÁPSULAS, según el mock de Artista) --- */
-.detail-grid { display: grid; gap: 1.5rem; background: rgba(0, 0, 0, 0.2); padding: 2rem; border-radius: 15px; }
+.tab-pane .detail-grid,
+#tab-detalle .detail-grid,
+.detail-grid { 
+    display: grid; 
+    gap: 1.5rem; 
+    background: rgba(0, 0, 0, 0.2); 
+    padding: 2rem; 
+    border-radius: 15px;
+    /* Scrollbar personalizado para detalle - altura máxima para activar scroll */
+    max-height: 300px !important; /* Altura fija para forzar scroll cuando hay mucho contenido */
+    overflow-y: scroll !important; /* Forzar scrollbar siempre visible */
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Estilos del scrollbar para WebKit en detail-grid (artista) - Mayor especificidad */
+.tab-pane .detail-grid::-webkit-scrollbar,
+#tab-detalle .detail-grid::-webkit-scrollbar,
+.detail-grid::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.tab-pane .detail-grid::-webkit-scrollbar-track,
+#tab-detalle .detail-grid::-webkit-scrollbar-track,
+.detail-grid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+}
+
+.tab-pane .detail-grid::-webkit-scrollbar-thumb,
+#tab-detalle .detail-grid::-webkit-scrollbar-thumb,
+.detail-grid::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5) !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease !important;
+}
+
+.tab-pane .detail-grid::-webkit-scrollbar-thumb:hover,
+#tab-detalle .detail-grid::-webkit-scrollbar-thumb:hover,
+.detail-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7) !important;
+}
 .detail-item { display: flex; flex-direction: column; gap: 0.5rem; }
 .detail-label { font-size: 0.9rem; font-weight: 700; color: rgba(255, 255, 255, 0.6); letter-spacing: 1px; text-transform: uppercase; margin-left: 1rem; }
 .detail-value {

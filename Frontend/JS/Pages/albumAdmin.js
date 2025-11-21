@@ -2,7 +2,8 @@
 import {
     getAlbumByApiId,
     getAlbumSongsByApiId,
-    getOrCreateAlbum // Importante para crear reseñas
+    getOrCreateAlbum,
+    updateAlbumRating // Importante para crear reseñas
 } from './../APIs/contentApi.js';
 import { 
     createSongListItem, 
@@ -524,6 +525,31 @@ async function handleSubmitReview() {
         // 7A. Recargar reseñas BÁSICAS
         const allReviews = await getReviews();
         const filteredReviews = allReviews.filter(r => r.albumId === currentAlbumData.albumId || r.AlbumId === currentAlbumData.albumId);
+        if (filteredReviews.length > 0) {
+            const totalRating = filteredReviews.reduce((sum, review) => {
+                const r = review.rating || review.Rating || 0;
+                return sum + Number(r);
+            }, 0);
+            
+            // Promedio exacto
+            const rawAverage = totalRating / filteredReviews.length;
+            
+            // IMPORTANTE: Tu Backend espera un Entero (int) según el Controller que vi antes.
+            // Así que redondeamos al entero más cercano (Ej: 3.6 -> 4).
+            const integerRating = Math.round(rawAverage);
+
+            console.log(`📡 Actualizando Ranking del Álbum a: ${integerRating} (Promedio real: ${rawAverage})`);
+
+            // Llamamos al PATCH del ContentService
+            try {
+                // Usamos apiAlbumId (ID de Spotify) porque es lo que espera tu endpoint UpdateAlbumRating
+                await updateAlbumRating(currentAlbumData.apiAlbumId, integerRating);
+            } catch (err) {
+                console.error("Error actualizando el rating en ContentService:", err);
+                // No bloqueamos el flujo si falla esto, pero lo logueamos
+            }
+        }
+        
         updateHeaderStatistics(filteredReviews);
         // 7B. "Enriquecer" las reseñas (¡ESTO FALTABA!)
         const reviewsData = await Promise.all(

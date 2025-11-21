@@ -1,10 +1,6 @@
 
 let selectedAvatarFile = null;
 
-/**
- * Muestra la sección de ajustes correspondiente y actualiza el menú.
- * @param {string} sectionId - 'description', 'image', 'email', 'password'
- */
 function showSection(sectionId) {
 
     document.querySelectorAll('.setting-section').forEach(section => {

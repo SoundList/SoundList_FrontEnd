@@ -21,15 +21,11 @@
 </head>
 <body>
     <div class="amigos-container">
-        <!-- Header/Navigation Bar -->
         <header class="top-header">
             <div class="header-content container-fluid">
-                <!-- Mobile Menu Toggle -->
                 <button class="mobile-menu-toggle d-lg-none" id="mobileMenuToggle" aria-label="Toggle menu">
                     <i class="fas fa-bars"></i>
                 </button>
-
-                <!-- Left Side: Logo and Search -->
                 <div class="header-left">
                     <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon d-none d-md-block">
                     <div class="search-container">
@@ -40,27 +36,22 @@
                         </button>
                     </div>
                     <div class="search-dropdown" id="searchDropdown" style="display: none;">
-                        <!-- Search results will be populated here -->
                     </div>
                 </div>
 
-                <!-- Center: Navigation Buttons -->
                 <div class="header-center d-none d-lg-flex">
                     <button class="nav-btn" data-page="inicio">INICIO</button>
                     <button class="nav-btn" data-page="rankings">RANKINGS</button>
                     <button class="nav-btn active" data-page="amigos">EXPLORAR</button>
                 </div>
 
-                <!-- Mobile Navigation Menu -->
                 <div class="mobile-nav-menu" id="mobileNavMenu">
                     <button class="mobile-nav-btn" data-page="inicio">INICIO</button>
                     <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
                     <button class="mobile-nav-btn active" data-page="amigos">EXPLORAR</button>
                 </div>
 
-                <!-- Right Side: Notifications and Profile/Login -->
                 <div class="header-right">
-                    <!-- Notifications Dropdown (shown when logged in) -->
                     <div class="notifications-dropdown-container" id="notificationsContainer" style="display: none;">
                         <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
                             <i class="fas fa-bell"></i>
@@ -77,14 +68,12 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Login Button (shown when not logged in) -->
                     <div class="login-container" id="loginContainer" style="display: none;">
                         <button class="login-btn" id="loginBtn">
                             <img src="../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon">
                             <span class="login-text">Iniciar Sesion</span>
                         </button>
                     </div>
-                    <!-- Profile Dropdown (shown when logged in) -->
                     <div class="profile-dropdown-container" id="profileContainer" style="display: none;">
                         <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
                             <img src="../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
@@ -105,7 +94,6 @@
                             </button>
                         </div>
                     </div>
-                    <!-- Add Review Button (shown when logged in) -->
                     <div class="add-review-container" id="addReviewContainer" style="display: none;">
                         <button class="icon-btn add-review-btn" id="addReviewBtn" title="Crear reseña">
                             <i class="fas fa-plus"></i>
@@ -115,9 +103,7 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- User Search Section -->
             <section class="user-search-section">
                 <div class="container-fluid">
                     <div class="user-search-container">
@@ -127,21 +113,20 @@
                         <div class="user-search-box">
                             <i class="fas fa-search user-search-icon"></i>
                             <input type="text" 
-                                   class="user-search-input" 
-                                   id="userSearchInput" 
-                                   placeholder="Buscar por nombre de usuario...">
+                                class="user-search-input" 
+                                id="userSearchInput" 
+                                placeholder="Buscar por nombre de usuario...">
                             <button class="user-search-clear" id="userSearchClear" style="display: none;">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         <div class="user-search-results" id="userSearchResults" style="display: none;">
-                            <!-- User search results will be populated here -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Reviews Filter Section -->
+
             <section class="reviews-filter-section">
                 <div class="container-fluid">
                     <div class="reviews-filter-container">
@@ -150,25 +135,20 @@
                         </h2>
                         <div class="filter-buttons">
                             <button class="filter-btn active" data-filter="amigos" id="filterAmigos">
-                                <i class="fas fa-user-friends"></i> Amigos
+                                <i class="fas fa-user-friends"></i> Seguidores
                             </button>
                             <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
                                 <i class="fas fa-heart"></i> Seguidos
-                            </button>
-                            <button class="filter-btn" data-filter="random" id="filterRandom">
-                                <i class="fas fa-random"></i> Descubrir
                             </button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Reviews List Section -->
             <section class="reviews-list-section">
                 <div class="container-fluid">
                     <div class="reviews-list-container">
                         <div class="reviews-list" id="reviewsList">
-                            <!-- Reviews will be populated here -->
                         </div>
                         <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
                             <i class="fas fa-comment-slash"></i>
@@ -180,7 +160,6 @@
         </main>
     </div>
 
-    <!-- Login Required Modal -->
     <div class="login-required-modal-overlay" id="loginRequiredModalOverlay" style="display: none;">
         <div class="login-required-modal">
             <div class="login-required-modal-content">
@@ -197,7 +176,6 @@
         </div>
     </div>
 
-    <!-- Review Detail Modal -->
     <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
         <div class="review-detail-modal">
             <div class="review-detail-modal-content">
@@ -208,14 +186,12 @@
                 </div>
                 <div class="review-detail-scrollable">
                     <div class="review-detail-content" id="reviewDetailContent">
-                        <!-- Review content will be populated here -->
                     </div>
                     <div class="review-detail-comments-section">
                         <div class="review-detail-comments-header">
                             <h3 class="review-detail-comments-title">Comentarios <span id="reviewDetailCommentsCount">0</span></h3>
                         </div>
                         <div class="review-detail-comments-list" id="reviewDetailCommentsList">
-                            <!-- Comments will be populated here -->
                         </div>
                     </div>
                 </div>
@@ -223,10 +199,10 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="../JS/APIs/userApi.js"></script>
     <script type="module" src="../JS/main.js"></script>
 </body>
 </html>

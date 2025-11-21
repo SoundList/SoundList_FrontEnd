@@ -237,12 +237,10 @@
                                placeholder="Buscar canción o álbum..."
                                autocomplete="off">
                         <div class="content-search-dropdown" id="contentSearchDropdown" style="display: none;">
-                            <!-- Search results will be populated here -->
                         </div>
                     </div>
                 </div>
                 <div class="create-review-content-info" id="createReviewContentInfo" style="display: none;">
-                    <!-- Content info will be populated dynamically -->
                     <div class="content-info-image">
                         <img src="../../Assets/default-avatar.png" alt="Content" id="contentInfoImage">
                     </div>
@@ -282,36 +280,27 @@
         </div>
     </div>
 
-    <!-- Review Detail Modal (Vista detallada estilo Twitter/X) -->
     <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
         <div class="review-detail-modal">
             <div class="review-detail-modal-content">
-                <!-- Header con botón cerrar -->
                 <div class="review-detail-header">
                     <button class="review-detail-close" id="closeReviewDetailModal">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                
-                <!-- Contenedor scrolleable -->
                 <div class="review-detail-scrollable">
-                    <!-- Reseña completa -->
                     <div class="review-detail-content" id="reviewDetailContent">
-                        <!-- Se llenará dinámicamente -->
                     </div>
-                    
-                    <!-- Comentarios -->
+
                     <div class="review-detail-comments-section">
                         <div class="review-detail-comments-header">
                             <h3 class="review-detail-comments-title">Comentarios <span id="reviewDetailCommentsCount">0</span></h3>
                         </div>
                         <div class="review-detail-comments-list" id="reviewDetailCommentsList">
-                            <!-- Comentarios se cargarán aquí -->
                         </div>
                     </div>
                 </div>
-                
-                <!-- Input de comentarios fijo en la parte inferior -->
+
                 <div class="review-detail-input-container">
                     <div class="review-detail-input-wrapper">
                         <img src="../../Assets/default-avatar.png" alt="Avatar" class="review-detail-input-avatar" id="reviewDetailInputAvatar" onerror="this.src='../../Assets/default-avatar.png'">
@@ -329,7 +318,6 @@
         </div>
     </div>
 
-    <!-- Delete Comment Modal -->
     <div class="delete-comment-modal-overlay" id="deleteCommentModalOverlay" style="display: none;">
         <div class="delete-comment-modal">
             <div class="delete-comment-modal-content">
@@ -346,7 +334,6 @@
         </div>
     </div>
 
-    <!-- Delete Review Modal -->
     <div class="delete-review-modal-overlay" id="deleteReviewModalOverlay" style="display: none;">
         <div class="delete-review-modal">
             <div class="delete-review-modal-content">
@@ -370,7 +357,6 @@
     <script type="module" src="../../JS/main.js"></script> 
 
     <script type="module">
-        // Importar y exponer socialApi globalmente
         import * as socialApi from '../../JS/APIs/socialApi.js';
         window.socialApi = socialApi;
     </script>
@@ -382,7 +368,6 @@
     <script src="../../JS/Components/reviewCard.js"></script>
     <script src="../../JS/Components/commentCard.js"></script> 
     <script src="../../JS/Components/reviewList.js"></script>
-    <!-- headerHandler.js ya se carga a través de main.js, no es necesario cargarlo aquí -->
     <script src="../../JS/Handlers/reviewHandler.js"></script> 
     <script src="../../JS/Handlers/commentHandler.js"></script> 
     <script src="../../JS/Handlers/likesHandler.js"></script>
@@ -400,17 +385,14 @@
                 setupNavButtons();
             }
 
-            // Inicializar el modal de crear reseña
             if (typeof initializeCreateReviewModal === 'function') {
                 initializeCreateReviewModal();
             }
 
-            // Inicializar el modal de detalles de reseña
             if (typeof initializeReviewDetailModalLogic === 'function') {
                 initializeReviewDetailModalLogic();
             }
 
-            // Inicializar los modales de eliminación
             if (typeof initializeDeleteModalsLogic === 'function') {
                 initializeDeleteModalsLogic();
             }

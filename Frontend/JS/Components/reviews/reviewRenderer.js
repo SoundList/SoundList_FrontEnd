@@ -1,12 +1,8 @@
-/**
- * Módulo de renderizado de reseñas
- * Funciones para renderizar el HTML de las reseñas y adjuntar listeners
- */
 
 import { renderStars } from '../../Utils/reviewHelpers.js';
 import { showLoginRequiredModal } from '../../Handlers/headerHandler.js';
 import { addReviewReaction, deleteReviewReaction } from '../../APIs/socialApi.js';
-
+import { AmigosHandler } from '../../Handlers/amigosHandler.js';
 /**
  * Renderiza las reseñas en el DOM
  * @param {Array} reviews - Array de reseñas procesadas
@@ -16,16 +12,13 @@ export function renderReviews(reviews) {
     const isLoggedIn = currentUserId !== null;
     
     const reviewsList = document.getElementById('reviewsList');
-    if (!reviewsList) return; // Salir si no estamos en la página de inicio
+    if (!reviewsList) return; 
 
     reviewsList.innerHTML = reviews.map((review, index) => {
-        // Asegurar que siempre tengamos un ID válido
         let reviewId = review.id || review.ReviewId || review.reviewId;
-        
-        // Normalizar el reviewId (convertir a string y limpiar)
+
         if (reviewId) {
             reviewId = String(reviewId).trim();
-            // Si después de normalizar está vacío o es "null" o "undefined", rechazar
             if (!reviewId || reviewId === 'null' || reviewId === 'undefined') {
                 console.warn('⚠️ Reseña con ID inválido en renderReviews, omitiendo:', { review, reviewId });
                 return '';
@@ -45,11 +38,25 @@ export function renderReviews(reviews) {
             ? Math.floor(review.comments)
             : (typeof review.comments === 'string' ? Math.max(0, parseInt(review.comments, 10) || 0) : 0);
         const defaultAvatar = '../Assets/default-avatar.png';
-        
-        // Verificar si es la reseña del usuario actual
         const reviewUserId = review.userId || review.UserId || '';
         const isOwnReview = currentUserId && (reviewUserId === currentUserId || reviewUserId.toString() === currentUserId.toString());
         
+        let followButtonHTML = '';
+        if (isLoggedIn && !isOwnReview && reviewUserId) {
+            const isFollowing = review.isFollowingAuthor || false;
+            const btnClass = isFollowing ? 'following' : 'follow';
+            const btnText = isFollowing ? 'Siguiendo' : 'Seguir';
+            const iconClass = isFollowing ? 'fa-user-check' : 'fa-user-plus';
+            
+            followButtonHTML = `
+                <button class="follow-btn-small ${btnClass}" 
+                        data-user-id="${reviewUserId}"
+                        title="${btnText}">
+                    <i class="fas ${iconClass}"></i>
+                    <span>${btnText}</span>
+                </button>
+            `;
+        }
         return `
         <div class="review-item" data-review-id="${reviewId}">
             <div class="review-user review-clickable" data-review-id="${reviewId}" style="cursor: pointer;">
@@ -113,16 +120,21 @@ export function renderReviews(reviews) {
         `;
     }).join('');
 
-    // Después de crear el HTML, llamamos a la función que agrega los listeners
     attachReviewActionListeners(reviewsList);
 }
 
-/**
- * Agrega listeners a los botones de la tarjeta de reseña (like, comment, edit, delete).
- * Esta función es llamada por renderReviews().
- * @param {HTMLElement} reviewsListElement - Elemento contenedor de las reseñas
- */
+
 export function attachReviewActionListeners(reviewsListElement) { 
+    reviewsListElement.querySelectorAll('.follow-btn-small').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation(); 
+            
+            const userId = this.getAttribute('data-user-id');
+            const isFollowing = this.classList.contains('following');
+            await AmigosHandler.toggleFollow(userId, isFollowing, this);
+        });
+    });
     reviewsListElement.querySelectorAll('.btn-like').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -143,7 +155,7 @@ export function attachReviewActionListeners(reviewsListElement) {
             setTimeout(() => { this.style.transform = ''; }, 200);
 
             if (isLiked) {
-                // Quitar like (Optimistic Update)
+
                 this.classList.remove('liked');
                 icon.style.color = 'rgba(255,255,255,0.7)';
                 const currentLikes = parseInt(likesSpan.textContent) || 0;
@@ -188,7 +200,7 @@ export function attachReviewActionListeners(reviewsListElement) {
                         }
                     });
             } else {
-                // Agregar like (Optimistic Update)
+
                 this.classList.add('liked');
                 icon.style.color = 'var(--magenta, #EC4899)';
                 const currentLikes = parseInt(likesSpan.textContent) || 0;
@@ -239,36 +251,31 @@ export function attachReviewActionListeners(reviewsListElement) {
         });
     });
 
-    // Add event listeners for edit buttons
     reviewsListElement.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', function() {
             const reviewId = this.getAttribute('data-review-id');
             const title = this.getAttribute('data-review-title') || '';
             const content = this.getAttribute('data-review-content') || '';
             const rating = parseInt(this.getAttribute('data-review-rating')) || 0;
-            
-            // Usar función global de modals
+
             if (typeof window.showEditReviewModal === 'function') {
                 window.showEditReviewModal(reviewId, title, content, rating);
             }
         });
     });
-    
-    // Add event listeners for delete buttons
+
     reviewsListElement.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation(); 
             let reviewId = this.getAttribute('data-review-id');
             const reviewTitle = this.closest('.review-item')?.querySelector('.review-title')?.textContent || 'esta reseña';
-            
-            // Usar función global de modals
+
             if (typeof window.showDeleteReviewModal === 'function') {
                 window.showDeleteReviewModal(reviewId, reviewTitle);
             }
         });
     });
-    
-    // Add event listeners for comment buttons
+
     reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation(); 
@@ -279,29 +286,44 @@ export function attachReviewActionListeners(reviewsListElement) {
             }
             
             const reviewId = this.getAttribute('data-review-id');
-            // Usar función global de modals
             if (typeof window.showCommentsModal === 'function') {
                 window.showCommentsModal(reviewId);
             }
         });
     });
-    
-    // Hacer las reseñas clickeables para abrir vista detallada
+
     reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
         element.addEventListener('click', function(e) {
-            // No abrir si se hizo clic en un botón de acción
             if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
                 return;
             }
             
             const reviewId = this.getAttribute('data-review-id');
             if (reviewId) {
-                // Usar función global de modals
                 if (typeof window.showReviewDetailModal === 'function') {
                     window.showReviewDetailModal(reviewId);
                 }
             }
         });
     });
+
+    reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
+        element.addEventListener('click', function(e) {
+            if (e.target.closest('.review-actions') || 
+                e.target.closest('.btn-edit') || 
+                e.target.closest('.btn-delete') || 
+                e.target.closest('.btn-like') || 
+                e.target.closest('.comment-btn') ||
+                e.target.closest('.follow-btn-small')) { 
+                return;
+            }
+            
+            const reviewId = this.getAttribute('data-review-id');
+            if (reviewId && typeof window.showReviewDetailModal === 'function') {
+                window.showReviewDetailModal(reviewId);
+            }
+        });
+    });
 }
+
 

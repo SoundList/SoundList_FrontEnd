@@ -1,7 +1,8 @@
-/**
- * Utilidades compartidas para reseñas
- * Funciones reutilizables para renderizado y alertas
- */
+import { getFollowing, searchUsers } from '../APIs/AmigosApi.js';
+
+// ----------------------------------------------------------------------
+// A. FUNCIONES DE UTILIDAD VISUAL
+// ----------------------------------------------------------------------
 
 /**
  * Renderiza estrellas según el rating
@@ -39,7 +40,12 @@ export function showAlert(message, type) {
     `;
 
     const mainContent = document.querySelector('.main-content');
-    mainContent.insertBefore(alertDiv, mainContent.firstChild);
+    if (mainContent) {
+        mainContent.insertBefore(alertDiv, mainContent.firstChild);
+    } else {
+        document.body.insertBefore(alertDiv, document.body.firstChild);
+    }
+
 
     const closeBtn = alertDiv.querySelector('.alert-close');
     closeBtn.addEventListener('click', () => {
@@ -51,5 +57,35 @@ export function showAlert(message, type) {
             alertDiv.remove();
         }
     }, 5000);
+}
+
+/**
+ * @param {Array<Object>} reviews La lista de reseñas a enriquecer.
+ * @returns {Promise<Array<Object>>} La lista de reseñas con la bandera isFollowingAuthor.
+ */
+export async function enrichReviewsWithSocialStatus(reviews) {
+    if (!reviews || reviews.length === 0) return [];
+
+    try {
+        // Obtenemos la lista de IDs (Strings)
+        const rawFollowing = await getFollowing(); 
+        const myFollowingIds = Array.isArray(rawFollowing) ? rawFollowing : [];
+
+        return reviews.map(review => {
+            const authorId = review.userId || review.authorId;
+            
+            // CORRECCIÓN: Usamos .includes() porque myFollowingIds es una lista de IDs
+            const isFollowingAuthor = myFollowingIds.includes(authorId);
+
+            return {
+                ...review,
+                isFollowingAuthor: isFollowingAuthor,
+                authorId: authorId 
+            };
+        });
+    } catch (error) {
+        console.error("Error enriqueciendo reseñas:", error);
+        return reviews; // Retorna las reseñas originales si falla la API
+    }
 }
 

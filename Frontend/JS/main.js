@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (module.initializeAmigosPage) {
                     module.initializeAmigosPage();
                 } else {
-                    // Si no tiene función de inicialización exportada, ejecutar directamente
                     console.log('Cargando página de amigos...');
                 }
             })

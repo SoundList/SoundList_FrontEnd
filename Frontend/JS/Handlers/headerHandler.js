@@ -13,7 +13,8 @@ import {
     getNotifications, 
     getReviews, 
     getReviewReactionCount, 
-    getCommentsByReview
+    getCommentsByReview,
+    getUser
 } from '../APIs/socialApi.js'; 
 
 // --- 2. VARIABLES GLOBALES DEL HEADER ---
@@ -1015,47 +1016,73 @@ export function formatNotificationTime(dateString) {
 
 
 async function loadNotifications() {
-    const authToken = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-    if (!authToken || !userId) return;
-    
-    try {
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    if (!authToken || !userId) return;
+    
+    try {
         // ¡CAMBIO CLAVE! Usamos la función importada de socialApi.js
-        const notificationsData = await getNotifications(userId, authToken);
-        
-        notifications = []; // Limpiar notificaciones existentes
-        
-        notificationsData.forEach(notification => {
-            addNotification({
-                type: notification.Type || notification.type || 'NewNotification',
-                date: notification.Date || notification.date || new Date().toISOString(),
-                username: notification.Username || notification.username || 'Usuario',
-                songName: notification.SongName || notification.songName || null,
-                reviewId: notification.ReviewId || notification.reviewId || null
-            });
-        });
-        
-        renderNotifications();
-        
-    } catch (error) {
-        const status = error.response?.status;
-        const errorCode = error.code;
-        const errorMessage = error?.message || String(error);
-        
-        const isExpectedError = status === 404 || 
-                                  status === 502 || 
-                          status === 503 ||
-                                  errorCode === 'ECONNABORTED' ||
-                                  errorMessage.includes('timeout') ||
-                                  errorMessage.includes('Network Error') ||
-                                  errorMessage.includes('ERR_CONNECTION_REFUSED');
-        
-        if (!isExpectedError) {
-            console.error('Error cargando notificaciones:', error);
-        } else {
-            console.debug('Servicio de notificaciones no disponible');
-        }
-    }
+        const notificationsData = await getNotifications(userId, authToken);
+        
+        notifications = []; // Limpiar notificaciones existentes
+        
+        // Enriquecer notificaciones con datos de usuario en paralelo
+        const enrichedNotifications = await Promise.all(
+            notificationsData.map(async (notification) => {
+                // Obtener el UserId del actor (quien generó la notificación)
+                const actorUserId = notification.UserId || notification.userId;
+                let username = 'Usuario'; // Valor por defecto
+                
+                // Si hay un UserId, obtener el username del usuario
+                if (actorUserId && actorUserId !== '00000000-0000-0000-0000-000000000000') {
+                    try {
+                        const userData = await getUser(actorUserId);
+                        if (userData) {
+                            username = userData.Username || userData.username || 'Usuario';
+                        }
+                    } catch (userError) {
+                        console.debug('No se pudo obtener username para notificación:', actorUserId, userError);
+                        // Mantener 'Usuario' como fallback
+                    }
+                }
+                
+                return {
+                    type: notification.Type || notification.type || 'NewNotification',
+                    date: notification.Date || notification.date || new Date().toISOString(),
+                    username: username,
+                    songName: notification.SongName || notification.songName || null,
+                    reviewId: notification.ReviewId || notification.reviewId || null,
+                    userId: actorUserId // Guardar el userId para referencia
+                };
+            })
+        );
+        
+        // Agregar las notificaciones enriquecidas
+        enrichedNotifications.forEach(notification => {
+            addNotification(notification);
+        });
+        
+        renderNotifications();
+        
+    } catch (error) {
+        const status = error.response?.status;
+        const errorCode = error.code;
+        const errorMessage = error?.message || String(error);
+        
+        const isExpectedError = status === 404 || 
+                                status === 502 || 
+                                status === 503 ||
+                                errorCode === 'ECONNABORTED' ||
+                                errorMessage.includes('timeout') ||
+                                errorMessage.includes('Network Error') ||
+                                errorMessage.includes('ERR_CONNECTION_REFUSED');
+        
+        if (!isExpectedError) {
+            console.error('Error cargando notificaciones:', error);
+        } else {
+            console.debug('Servicio de notificaciones no disponible');
+        }
+    }
 }
 
 function initializeSignalR() {
@@ -1152,24 +1179,41 @@ function playNotificationSound() {
     }
 }
 
-function showNotificationAlert(notification) {
-    addNotification({
-        type: notification.Type || notification.type,
-        date: notification.Date || notification.date || new Date().toISOString(),
-        username: notification.Username || notification.username || 'Usuario',
-        songName: notification.SongName || notification.songName || null,
-        reviewId: notification.ReviewId || notification.reviewId || null
-    });
-    
-    let message = 'Nueva notificación';
-    if (notification.Type === 'NewReaction' || notification.type === 'NewReaction') {
-        message = '¡Alguien le dio me gusta a tu reseña!';
-    } else if (notification.Type === 'NewComment' || notification.type === 'NewComment') {
-        message = '¡Alguien comentó tu reseña!';
-    } else if (notification.Type === 'NewFollower' || notification.type === 'NewFollower') {
-        message = '¡Nuevo seguidor!';
-    }
-    showAlert(message, 'info');
+async function showNotificationAlert(notification) {
+    // Enriquecer con username si es necesario
+    const actorUserId = notification.UserId || notification.userId;
+    let username = notification.Username || notification.username || 'Usuario';
+    
+    // Si hay un UserId pero no hay username, obtenerlo
+    if (actorUserId && actorUserId !== '00000000-0000-0000-0000-000000000000' && (!username || username === 'Usuario')) {
+        try {
+            const userData = await getUser(actorUserId);
+            if (userData) {
+                username = userData.Username || userData.username || 'Usuario';
+            }
+        } catch (userError) {
+            console.debug('No se pudo obtener username para notificación en tiempo real:', actorUserId, userError);
+        }
+    }
+    
+    addNotification({
+        type: notification.Type || notification.type,
+        date: notification.Date || notification.date || new Date().toISOString(),
+        username: username,
+        songName: notification.SongName || notification.songName || null,
+        reviewId: notification.ReviewId || notification.reviewId || null,
+        userId: actorUserId
+    });
+    
+    let message = 'Nueva notificación';
+    if (notification.Type === 'NewReaction' || notification.type === 'NewReaction') {
+        message = '¡Alguien le dio me gusta a tu reseña!';
+    } else if (notification.Type === 'NewComment' || notification.type === 'NewComment') {
+        message = '¡Alguien comentó tu reseña!';
+    } else if (notification.Type === 'NewFollower' || notification.type === 'NewFollower') {
+        message = '¡Nuevo seguidor!';
+    }
+    showAlert(message, 'info');
 }
 
 // --- 7. POLLING DE NOTIFICACIONES ---

@@ -21,7 +21,7 @@ export function initializeCarousel() {
             id: 'lo-mas-recomendado',
             title: 'LO MÁS RECOMENDADO',
             description: 'Basado en promedio de estrellas ponderado',
-            text: 'Canciones con mejores calificaciones (mínimo 10 reseñas)',
+            text: 'Canciones u álbumes con mejores calificaciones',
             getDescription: (data) => {
                 if (data && data.topSong) {
                     if (data.topSong.totalReviews > 0) {
@@ -29,17 +29,17 @@ export function initializeCarousel() {
                         const avgRating = data.topSong.avgRating ? data.topSong.avgRating.toFixed(1) : '0.0';
                         return `${data.topSong.totalReviews} ${reviewsText} • Promedio ${avgRating} estrellas`;
                     } else {
-                        return 'Crea reseñas para ver resultados (mínimo 10 reseñas)';
+                        return 'Crea reseñas para ver resultados';
                     }
                 }
-                return 'Basado en promedio de estrellas (mínimo 10 reseñas)';
+                return 'Basado en promedio de estrellas';
             }
         },
         {
             id: 'lo-mas-comentado',
             title: 'LO MÁS COMENTADO',
             description: 'Más interacción en comentarios',
-            text: 'Canciones con mayor cantidad total de comentarios en sus reseñas',
+            text: 'Canciones u álbumes con mayor cantidad total de comentarios en sus reseñas',
             getDescription: (data) => {
                 if (data && data.topSong && data.topSong.totalComments > 0) {
                     return `${data.topSong.totalComments} comentario${data.topSong.totalComments !== 1 ? 's' : ''} en ${data.topSong.totalReviews} reseña${data.topSong.totalReviews !== 1 ? 's' : ''}`;
@@ -75,7 +75,7 @@ export function initializeCarousel() {
             id: 'trending',
             title: 'TRENDING',
             description: 'Mayor crecimiento reciente',
-            text: 'Canciones con mayor crecimiento de actividad en las últimas 24-48 horas',
+            text: 'Canciones u álbumes con mayor crecimiento de actividad en las últimas 24-48 horas',
             getDescription: (data) => {
                 if (data && data.topSong) {
                     return `+${data.topSong.growthRate}% crecimiento • Últimas ${data.timeWindow}`;
@@ -89,20 +89,10 @@ export function initializeCarousel() {
     let carouselData = null;
 
     /**
-     * Función para obtener la URL de la imagen (híbrido: backend o imágenes locales de Assets)
+     * Función para obtener la URL de la imagen (siempre usar imágenes locales de Assets en la vista previa)
      */
     function getCarouselImageUrl(categoryId, categoryTitle, data) {
-        // Intentar obtener imagen del backend primero
-        if (data && data.topSong) {
-            if (data.topSong.albumImage) {
-                return data.topSong.albumImage;
-            }
-            if (data.topSong.artistImage) {
-                return data.topSong.artistImage;
-            }
-        }
-
-        // Fallback: Usar imágenes locales de Assets según la categoría
+        // Siempre usar imágenes locales de Assets según la categoría (no usar imágenes reales del contenido)
         const categoryImages = {
             'lo-mas-recomendado': '../Assets/LoMasRecomendado.png',
             'lo-mas-comentado': '../Assets/LoMasComentado.png',
@@ -122,15 +112,19 @@ export function initializeCarousel() {
 
     // Create carousel items
     async function createCarouselItems() {
+        console.log('🎠 createCarouselItems: Iniciando creación de items del carrusel...');
         carouselWrapper.innerHTML = '';
         indicatorsContainer.innerHTML = '';
 
         // Cargar datos dinámicos
+        console.log('🎠 createCarouselItems: Cargando datos...');
         carouselData = await loadCarouselData();
+        console.log('🎠 createCarouselItems: Datos cargados:', carouselData ? 'OK' : 'NULL');
 
         carouselTops.forEach((top, index) => {
             // Obtener datos específicos para esta categoría
             const data = carouselData ? carouselData[top.id] : null;
+            console.log(`🎠 createCarouselItems: Procesando ${top.id}:`, data ? 'tiene datos' : 'sin datos');
             const description = top.getDescription ? top.getDescription(data) : top.description;
             
             // Obtener URL de imagen local de Assets según la categoría
@@ -142,16 +136,10 @@ export function initializeCarousel() {
                 'trending': '../Assets/Trending.png'
             };
             
-            // Usar imagen local de Assets como imagen base
+            // Usar imagen local de Assets como imagen base (siempre usar Assets en el carrusel principal)
             let imageUrl = categoryImages[top.id] || '../Assets/default-avatar.png';
             
-            // Si hay datos del topSong con imagen del contenido, usarla (sobrescribe la imagen local)
-            if (data && data.topSong) {
-                const realImage = data.topSong.albumImage || data.topSong.artistImage || data.topSong.image || data.topSong.Image;
-                if (realImage && realImage !== '../Assets/default-avatar.png' && realImage !== null) {
-                    imageUrl = realImage;
-                }
-            }
+            // NO usar imágenes reales del contenido en el carrusel principal, solo en el modal
 
             // Create carousel item
             const item = document.createElement('div');
@@ -189,29 +177,8 @@ export function initializeCarousel() {
             
             carouselWrapper.appendChild(item);
             
-            // Intentar obtener imagen real del contenido cargando el primer contenido de la categoría
-            // Si hay imagen del contenido, reemplaza la imagen local
-            (async () => {
-                try {
-                    const firstContent = await loadCarouselContent(top.id, data);
-                    if (firstContent && firstContent.length > 0) {
-                        const firstImage = firstContent[0].image || firstContent[0].albumImage || firstContent[0].artistImage;
-                        if (firstImage && firstImage !== '../Assets/default-avatar.png' && firstImage !== null) {
-                            const carouselImage = item.querySelector('.album-image');
-                            if (carouselImage) {
-                                carouselImage.src = firstImage;
-                                // Si falla la imagen del contenido, volver a la imagen local
-                                carouselImage.onerror = function() {
-                                    this.onerror = null;
-                                    this.src = fallbackImage;
-                                };
-                            }
-                        }
-                    }
-                } catch (e) {
-                    // Silenciar errores, usar imagen local de Assets
-                }
-            })();
+            // NO reemplazar la imagen de Assets con imágenes reales del contenido
+            // La vista previa del carrusel siempre debe usar las imágenes de Assets
 
             // Create indicator
             const indicator = document.createElement('button');
@@ -315,9 +282,16 @@ export function initializeCarousel() {
 
     // Initialize carousel (async)
     createCarouselItems().then(() => {
+        console.log('🎠 initializeCarousel: Carrusel creado exitosamente');
+        const itemsCount = carouselWrapper.querySelectorAll('.carousel-item').length;
+        console.log('🎠 initializeCarousel: Items creados:', itemsCount);
+        if (itemsCount === 0) {
+            console.warn('⚠️ initializeCarousel: No se crearon items en el carrusel');
+        }
         startAutoPlay();
     }).catch(error => {
-        console.error('Error inicializando carrusel:', error);
+        console.error('❌ Error inicializando carrusel:', error);
+        console.error('❌ Stack trace:', error.stack);
         startAutoPlay();
     });
 }

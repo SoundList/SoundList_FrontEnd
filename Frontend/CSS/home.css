@@ -6,6 +6,20 @@
     --blanco: #ffffff;
 }
 
+/* Ocultar scrollbar del body/html pero mantener funcionalidad */
+html {
+    overflow-y: auto;
+}
+
+html::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
+
+html {
+    -ms-overflow-style: none; /* IE y Edge antiguos */
+    scrollbar-width: none; /* Firefox */
+}
+
 body {
     font-family: 'Arimo', sans-serif;
     margin: 0;
@@ -14,6 +28,14 @@ body {
     animation: gentleFadeIn 0.8s ease-out forwards;
     background: #0d1120;
     overflow-x: hidden;
+    overflow-y: auto; /* Permitir scroll si es necesario */
+    -ms-overflow-style: none; /* IE y Edge antiguos */
+    scrollbar-width: none; /* Firefox */
+}
+
+/* Ocultar scrollbar nativo del body */
+body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
 }
 
 @keyframes gentleFadeIn {
@@ -28,7 +50,9 @@ body {
 .home-container {
     background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
     min-height: 100vh;
+    max-height: 100vh; /* Limitar altura para evitar scroll del body */
     padding-bottom: 2rem;
+    overflow: hidden; /* Evitar scroll del contenedor principal */
 }
 
 /* Header Styles */
@@ -996,6 +1020,33 @@ button.nav-btn.active:hover {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    /* Altura máxima para aproximadamente 10 reseñas (cada reseña ~150px + gap 1rem) */
+    max-height: calc(10 * 150px + 9 * 1rem); /* 10 reseñas de ~150px + 9 gaps de 1rem */
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.5rem; /* Espacio para el scrollbar */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1); /* Firefox */
+}
+
+/* Estilos del scrollbar para WebKit (Chrome, Safari, Edge) */
+.reviews-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.reviews-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.reviews-list::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.reviews-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7);
 }
 
 .review-item {

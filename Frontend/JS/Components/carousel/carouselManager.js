@@ -89,10 +89,10 @@ export function initializeCarousel() {
     let carouselData = null;
 
     /**
-     * Función para obtener la URL de la imagen (híbrido: backend o fallback generado)
+     * Función para obtener la URL de la imagen (híbrido: backend o imágenes locales de Assets)
      */
     function getCarouselImageUrl(categoryId, categoryTitle, data) {
-        // Intentar obtener imagen del backend
+        // Intentar obtener imagen del backend primero
         if (data && data.topSong) {
             if (data.topSong.albumImage) {
                 return data.topSong.albumImage;
@@ -102,19 +102,22 @@ export function initializeCarousel() {
             }
         }
 
-        // Fallback: Generar imagen con el título de la categoría
-        const colors = {
-            'lo-mas-recomendado': '7C3AED-EC4899',
-            'lo-mas-comentado': '3B82F6-8B5CF6',
-            'top-10-semana': 'EC4899-7C3AED',
-            'top-50-mes': '8B5CF6-3B82F6',
-            'trending': '7C3AED-3B82F6'
+        // Fallback: Usar imágenes locales de Assets según la categoría
+        const categoryImages = {
+            'lo-mas-recomendado': '../Assets/LoMasRecomendado.png',
+            'lo-mas-comentado': '../Assets/LoMasComentado.png',
+            'top-10-semana': '../Assets/Top10semana.png',
+            'top-50-mes': '../Assets/Top50mes.png',
+            'trending': '../Assets/Trending.png'
         };
 
-        const gradient = colors[categoryId] || '7C3AED-EC4899';
-        const titleShort = categoryTitle.replace(/\s+/g, '%20');
-        
-        return `https://via.placeholder.com/300x300/${gradient}/ffffff?text=${titleShort}`;
+        // Si hay una imagen local para esta categoría, usarla
+        if (categoryImages[categoryId]) {
+            return categoryImages[categoryId];
+        }
+
+        // Último fallback: imagen por defecto
+        return '../Assets/default-avatar.png';
     }
 
     // Create carousel items
@@ -130,10 +133,19 @@ export function initializeCarousel() {
             const data = carouselData ? carouselData[top.id] : null;
             const description = top.getDescription ? top.getDescription(data) : top.description;
             
-            // Obtener URL de imagen (híbrido: backend o fallback)
-            let imageUrl = getCarouselImageUrl(top.id, top.title, data);
+            // Obtener URL de imagen local de Assets según la categoría
+            const categoryImages = {
+                'lo-mas-recomendado': '../Assets/LoMasRecomendado.png',
+                'lo-mas-comentado': '../Assets/LoMasComentado.png',
+                'top-10-semana': '../Assets/Top10semana.png',
+                'top-50-mes': '../Assets/Top50mes.png',
+                'trending': '../Assets/Trending.png'
+            };
             
-            // Si hay datos del topSong con imagen, usarla
+            // Usar imagen local de Assets como imagen base
+            let imageUrl = categoryImages[top.id] || '../Assets/default-avatar.png';
+            
+            // Si hay datos del topSong con imagen del contenido, usarla (sobrescribe la imagen local)
             if (data && data.topSong) {
                 const realImage = data.topSong.albumImage || data.topSong.artistImage || data.topSong.image || data.topSong.Image;
                 if (realImage && realImage !== '../Assets/default-avatar.png' && realImage !== null) {
@@ -146,13 +158,17 @@ export function initializeCarousel() {
             item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
             item.setAttribute('data-top', top.id);
             item.style.cursor = 'pointer';
+            
+            // Guardar la imagen local como fallback
+            const fallbackImage = categoryImages[top.id] || '../Assets/default-avatar.png';
+            
             item.innerHTML = `
                 <div class="carousel-card">
                     <div class="carousel-album-art">
                         <img src="${imageUrl}" 
                             alt="${top.title}" 
                             class="album-image"
-                            onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300/7C3AED/ffffff?text='+encodeURIComponent('${top.title.replace(/'/g, "\\'")}')">
+                            onerror="this.onerror=null; this.src='${fallbackImage}'">
                     </div>
                     <div class="carousel-content">
                         <h3 class="carousel-title">${top.title}</h3>
@@ -173,21 +189,27 @@ export function initializeCarousel() {
             
             carouselWrapper.appendChild(item);
             
-            // Intentar obtener imagen real cargando el primer contenido de la categoría
+            // Intentar obtener imagen real del contenido cargando el primer contenido de la categoría
+            // Si hay imagen del contenido, reemplaza la imagen local
             (async () => {
                 try {
                     const firstContent = await loadCarouselContent(top.id, data);
                     if (firstContent && firstContent.length > 0) {
                         const firstImage = firstContent[0].image || firstContent[0].albumImage || firstContent[0].artistImage;
-                        if (firstImage && firstImage !== '../Assets/default-avatar.png') {
+                        if (firstImage && firstImage !== '../Assets/default-avatar.png' && firstImage !== null) {
                             const carouselImage = item.querySelector('.album-image');
                             if (carouselImage) {
                                 carouselImage.src = firstImage;
+                                // Si falla la imagen del contenido, volver a la imagen local
+                                carouselImage.onerror = function() {
+                                    this.onerror = null;
+                                    this.src = fallbackImage;
+                                };
                             }
                         }
                     }
                 } catch (e) {
-                    // Silenciar errores, usar imagen por defecto
+                    // Silenciar errores, usar imagen local de Assets
                 }
             })();
 

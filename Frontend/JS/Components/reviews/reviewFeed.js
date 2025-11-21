@@ -124,12 +124,13 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                                         try {
                                             localStorage.setItem(storageKey, JSON.stringify(contentDataToSave));
                                         } catch (e) {
-                                            console.debug('Error guardando datos en localStorage:', e);
+                                            // Ignorar errores de localStorage
                                         }
                                     }
                                 }
                             } catch (e) {
-                                console.debug('No se pudo obtener canción:', e);
+                                // Manejar errores silenciosamente (404, etc.)
+                                // Usar valores por defecto que ya están establecidos
                             }
                         } else if (albumId && typeof getAlbumById === 'function') {
                             try {
@@ -168,12 +169,13 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                                         try {
                                             localStorage.setItem(storageKey, JSON.stringify(contentDataToSave));
                                         } catch (e) {
-                                            console.debug('Error guardando datos en localStorage:', e);
+                                            // Ignorar errores de localStorage
                                         }
                                     }
                                 }
                             } catch (e) {
-                                console.debug('No se pudo obtener álbum:', e);
+                                // Manejar errores silenciosamente (404, etc.)
+                                // Usar valores por defecto que ya están establecidos
                             }
                         }
                     }
@@ -181,7 +183,7 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                     // Determinar el nombre del contenido (igual que en profileHandler.js)
                     const itemTitle = contentType === 'song' ? songName : albumName;
 
-                    // Intentar obtener likes desde cache primero
+                    // Intentar obtener likes desde cache primero (FUENTE DE VERDAD INICIAL)
                     const likesCacheKey = `review_likes_${reviewId}`;
                     let cachedLikes = null;
                     try {
@@ -195,38 +197,112 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                     }
 
                     // Datos de Usuario y Social
-                    const [userData, likes, comments] = await Promise.all([
-                        getUser(userId).catch(() => null),
+                    // IMPORTANTE: Usar cache como valor inicial, luego sincronizar con backend
+                    const [userData, likesFromBackend, comments] = await Promise.all([
+                        getUser(userId).catch((err) => {
+                            // Manejar errores silenciosamente (404, 500, etc.)
+                            if (err.response && (err.response.status === 404 || err.response.status === 500)) {
+                                // Usuario no encontrado o error del servidor - usar valores por defecto
+                                return null;
+                            }
+                            // Otros errores también se manejan silenciosamente
+                            return null;
+                        }),
                         getReviewReactionCount(reviewId)
                             .then((count) => {
-                                // Guardar en cache cuando se obtiene correctamente
+                                // Sincronizar con backend, pero solo actualizar cache si es diferente
                                 if (typeof count === 'number' && !isNaN(count) && count >= 0) {
                                     try {
-                                        localStorage.setItem(likesCacheKey, String(count));
+                                        // Si hay cache y es diferente, usar el mayor (para evitar perder likes)
+                                        if (cachedLikes !== null && cachedLikes !== count) {
+                                            // Si el cache es mayor, mantenerlo (puede ser que el backend no se haya actualizado aún)
+                                            const finalCount = Math.max(cachedLikes, count);
+                                            localStorage.setItem(likesCacheKey, String(finalCount));
+                                            return finalCount;
+                                        } else {
+                                            // Si no hay cache o son iguales, usar el valor del backend
+                                            localStorage.setItem(likesCacheKey, String(count));
+                                            return count;
+                                        }
                                     } catch (e) {
                                         // Ignorar errores de localStorage
+                                        return count;
                                     }
                                 }
                                 return count;
                             })
                             .catch((err) => {
-                                console.warn(`⚠️ No se pudieron obtener likes para review ${reviewId}:`, err);
+                                // Manejar errores silenciosamente
                                 // Usar cache si está disponible, sino 0
                                 return cachedLikes !== null ? cachedLikes : 0;
                             }),
                         getCommentsByReview(reviewId).catch((err) => {
-                            console.warn(`⚠️ No se pudieron obtener comentarios para review ${reviewId}:`, err);
+                            // Manejar errores silenciosamente
                             return []; // Retornar array vacío en caso de error
                         })
                     ]);
+                    
+                    // Usar cache como valor inicial si está disponible, sino usar backend
+                    const likes = (cachedLikes !== null) ? cachedLikes : (likesFromBackend || 0);
 
                     // Verificar si el usuario actual le dio like a esta reseña
-                    // Nota: currentUserId se obtiene al inicio de loadReviewsFunction, pero aquí lo necesitamos dentro del map
+                    // IMPORTANTE: localStorage es la fuente de verdad inicial
                     const reviewCurrentUserId = localStorage.getItem('userId');
-                    const userLiked = reviewCurrentUserId 
-                        ? (localStorage.getItem(`like_${reviewId}_${reviewCurrentUserId}`) === 'true' || 
-                           localStorage.getItem(`reaction_${reviewId}_${reviewCurrentUserId}`) !== null)
-                        : false;
+                    let userLiked = false;
+                    
+                    if (reviewCurrentUserId) {
+                        // Verificar localStorage PRIMERO (fuente de verdad)
+                        const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${reviewCurrentUserId}`);
+                        const localLike = localStorage.getItem(`like_${reviewId}_${reviewCurrentUserId}`);
+                        userLiked = storedReactionId !== null || localLike === 'true';
+                        
+                        // Sincronizar con backend en segundo plano (solo si no hay en localStorage)
+                        // Esto asegura que si el usuario dio like en otra pestaña, se sincronice
+                        if (!userLiked) {
+                            try {
+                                const authToken = localStorage.getItem('authToken');
+                                if (authToken) {
+                                    // Intentar obtener la reacción desde el backend (en segundo plano, no bloquea)
+                                    const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                                    if (axiosInstance) {
+                                        // No usar await aquí, hacer la verificación en paralelo sin bloquear
+                                        axiosInstance.get(
+                                            `${API_BASE_URL}/api/gateway/reactions/review/${reviewId}/${reviewCurrentUserId}`,
+                                            {
+                                                headers: { 'Authorization': `Bearer ${authToken}` },
+                                                timeout: 2000,
+                                                validateStatus: (status) => status === 200 || status === 404 || status === 500
+                                            }
+                                        ).then(reactionResponse => {
+                                            if (reactionResponse.status === 200 && reactionResponse.data) {
+                                                // Si el backend confirma que hay like, actualizar localStorage
+                                                const reactionId = reactionResponse.data.Id_Reaction || reactionResponse.data.id || reactionResponse.data.id_Reaction;
+                                                if (reactionId) {
+                                                    localStorage.setItem(`reaction_${reviewId}_${reviewCurrentUserId}`, String(reactionId));
+                                                    localStorage.setItem(`like_${reviewId}_${reviewCurrentUserId}`, 'true');
+                                                    // Actualizar UI si la reseña está visible
+                                                    const likeBtn = document.querySelector(`.btn-like[data-review-id="${reviewId}"]`);
+                                                    if (likeBtn && !likeBtn.classList.contains('liked')) {
+                                                        likeBtn.classList.add('liked');
+                                                        const icon = likeBtn.querySelector('i');
+                                                        if (icon) icon.style.color = 'var(--magenta, #EC4899)';
+                                                    }
+                                                }
+                                            }
+                                        }).catch(reactionError => {
+                                            // Ignorar errores silenciosamente (404 es esperado si no hay like)
+                                            if (reactionError.response && reactionError.response.status !== 404) {
+                                                console.debug(`No se pudo verificar like desde backend para review ${reviewId}`);
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (e) {
+                                // Ignorar errores y usar localStorage como fallback
+                                console.debug('Error verificando like desde backend:', e);
+                            }
+                        }
+                    }
 
                     // contentType ya está en formato correcto ('song' o 'album')
                     const contentTypeNormalized = contentType;

@@ -4,7 +4,7 @@
  */
 
 import { getReviews, getCommentsByReview, getReviewReactionCount } from '../../APIs/socialApi.js';
-import { getSongByApiId } from '../../APIs/contentApi.js';
+import { getSongByApiId, getSongById, getAlbumById } from '../../APIs/contentApi.js';
 
 /**
  * Carga el contenido de una categoría del carrusel
@@ -28,65 +28,153 @@ export async function loadCarouselContent(categoryId, categoryData) {
 
         // Procesar según la categoría
         if (categoryId === 'lo-mas-recomendado') {
-            // Agrupar por canción y calcular promedio (mínimo 10 reseñas)
+            // Agrupar por canción/álbum y calcular promedio (mínimo 10 reseñas)
+            const contentMap = {}; // Cambiar nombre para incluir álbumes también
             reviews.forEach((review, index) => {
                 const songId = review.SongId || review.songId;
-                if (!songId) return;
-                if (!songsMap[songId]) {
-                    songsMap[songId] = { songId, ratings: [], reviewIds: [] };
+                const albumId = review.AlbumId || review.albumId;
+                const contentId = songId || albumId;
+                const contentType = songId ? 'song' : 'album';
+                
+                if (!contentId) return;
+                if (!contentMap[contentId]) {
+                    contentMap[contentId] = { 
+                        contentId, 
+                        contentType,
+                        ratings: [], 
+                        reviewIds: [] 
+                    };
                 }
-                songsMap[songId].ratings.push(review.Rating || review.rating || 0);
-                songsMap[songId].reviewIds.push(reviewIds[index]);
+                contentMap[contentId].ratings.push(review.Rating || review.rating || 0);
+                contentMap[contentId].reviewIds.push(reviewIds[index]);
             });
 
-            const songsWithAvg = Object.values(songsMap)
-                .filter(s => s.ratings.length >= 10)
-                .map(s => ({
-                    ...s,
-                    avgRating: s.ratings.reduce((a, b) => a + b, 0) / s.ratings.length,
-                    totalReviews: s.ratings.length
+            const contentWithAvg = Object.values(contentMap)
+                .filter(c => c.ratings.length >= 10)
+                .map(c => ({
+                    ...c,
+                    avgRating: c.ratings.reduce((a, b) => a + b, 0) / c.ratings.length,
+                    totalReviews: c.ratings.length
                 }))
                 .sort((a, b) => b.avgRating - a.avgRating)
                 .slice(0, 10);
 
-            // Obtener datos de canciones
-            const songsData = await Promise.all(
-                songsWithAvg.map(s => getSongByApiId(s.songId).catch(() => null))
+            // Obtener datos de canciones/álbumes
+            const contentData = await Promise.all(
+                contentWithAvg.map(async (c) => {
+                    try {
+                        if (c.contentType === 'song') {
+                            // Para canciones
+                            const songData = await getSongById(c.contentId);
+                            if (songData && (songData.Title || songData.title)) {
+                                return { ...songData, contentType: 'song' };
+                            }
+                            if (songData) {
+                                const apiSongId = songData.apiSongId || songData.APISongId;
+                                if (apiSongId) {
+                                    const fullSongData = await getSongByApiId(apiSongId);
+                                    return fullSongData ? { ...fullSongData, contentType: 'song' } : null;
+                                }
+                            }
+                            return await getSongByApiId(c.contentId).then(data => data ? { ...data, contentType: 'song' } : null);
+                        } else {
+                            // Para álbumes
+                            const albumData = await getAlbumById(c.contentId);
+                            if (albumData && (albumData.Title || albumData.title)) {
+                                return { ...albumData, contentType: 'album' };
+                            }
+                            if (albumData) {
+                                const apiAlbumId = albumData.apiAlbumId || albumData.APIAlbumId;
+                                if (apiAlbumId) {
+                                    const fullAlbumData = await getAlbumByApiId(apiAlbumId);
+                                    return fullAlbumData ? { ...fullAlbumData, contentType: 'album' } : null;
+                                }
+                            }
+                            return await getAlbumByApiId(c.contentId).then(data => data ? { ...data, contentType: 'album' } : null);
+                        }
+                    } catch (e) {
+                        return null;
+                    }
+                })
             );
 
-            return songsData.filter(Boolean).map((song, i) => ({
-                name: song.Title || song.title || song.Name || 'Canción',
-                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
-                image: song.Image || song.image || null,
-                avgRating: songsWithAvg[i]?.avgRating || 0,
-                totalReviews: songsWithAvg[i]?.totalReviews || 0
+            return contentData.filter(Boolean).map((content, i) => ({
+                name: content.Title || content.title || content.Name || (content.contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: content.ArtistName || content.artistName || content.Artist || 'Artista',
+                image: content.Image || content.image || null,
+                avgRating: contentWithAvg[i]?.avgRating || 0,
+                totalReviews: contentWithAvg[i]?.totalReviews || 0,
+                contentType: content.contentType || 'song'
             }));
 
         } else if (categoryId === 'lo-mas-comentado') {
-            // Agrupar por canción y contar comentarios
+            // Agrupar por canción/álbum y contar comentarios
+            const contentMap = {};
             reviews.forEach((review, index) => {
                 const songId = review.SongId || review.songId;
-                if (!songId) return;
-                if (!songsMap[songId]) {
-                    songsMap[songId] = { songId, totalComments: 0, reviewIds: [] };
+                const albumId = review.AlbumId || review.albumId;
+                const contentId = songId || albumId;
+                const contentType = songId ? 'song' : 'album';
+                
+                if (!contentId) return;
+                if (!contentMap[contentId]) {
+                    contentMap[contentId] = { 
+                        contentId, 
+                        contentType,
+                        totalComments: 0, 
+                        reviewIds: [] 
+                    };
                 }
-                songsMap[songId].totalComments += (commentsArrays[index]?.length || 0);
-                songsMap[songId].reviewIds.push(reviewIds[index]);
+                contentMap[contentId].totalComments += (commentsArrays[index]?.length || 0);
+                contentMap[contentId].reviewIds.push(reviewIds[index]);
             });
 
-            const songsSorted = Object.values(songsMap)
+            const contentSorted = Object.values(contentMap)
                 .sort((a, b) => b.totalComments - a.totalComments)
                 .slice(0, 10);
 
-            const songsData = await Promise.all(
-                songsSorted.map(s => getSongByApiId(s.songId).catch(() => null))
+            const contentData = await Promise.all(
+                contentSorted.map(async (c) => {
+                    try {
+                        if (c.contentType === 'song') {
+                            const songData = await getSongById(c.contentId);
+                            if (songData && (songData.Title || songData.title)) {
+                                return { ...songData, contentType: 'song' };
+                            }
+                            if (songData) {
+                                const apiSongId = songData.apiSongId || songData.APISongId;
+                                if (apiSongId) {
+                                    const fullSongData = await getSongByApiId(apiSongId);
+                                    return fullSongData ? { ...fullSongData, contentType: 'song' } : null;
+                                }
+                            }
+                            return await getSongByApiId(c.contentId).then(data => data ? { ...data, contentType: 'song' } : null);
+                        } else {
+                            const albumData = await getAlbumById(c.contentId);
+                            if (albumData && (albumData.Title || albumData.title)) {
+                                return { ...albumData, contentType: 'album' };
+                            }
+                            if (albumData) {
+                                const apiAlbumId = albumData.apiAlbumId || albumData.APIAlbumId;
+                                if (apiAlbumId) {
+                                    const fullAlbumData = await getAlbumByApiId(apiAlbumId);
+                                    return fullAlbumData ? { ...fullAlbumData, contentType: 'album' } : null;
+                                }
+                            }
+                            return await getAlbumByApiId(c.contentId).then(data => data ? { ...data, contentType: 'album' } : null);
+                        }
+                    } catch (e) {
+                        return null;
+                    }
+                })
             );
 
-            return songsData.filter(Boolean).map((song, i) => ({
-                name: song.Title || song.title || song.Name || 'Canción',
-                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
-                image: song.Image || song.image || null,
-                totalComments: songsSorted[i]?.totalComments || 0
+            return contentData.filter(Boolean).map((content, i) => ({
+                name: content.Title || content.title || content.Name || (content.contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: content.ArtistName || content.artistName || content.Artist || 'Artista',
+                image: content.Image || content.image || null,
+                totalComments: contentSorted[i]?.totalComments || 0,
+                contentType: content.contentType || 'song'
             }));
 
         } else if (categoryId === 'top-10-semana' || categoryId === 'top-50-mes') {
@@ -101,12 +189,18 @@ export async function loadCarouselContent(categoryId, categoryData) {
                 return date >= periodStart;
             });
 
+            const contentMap = {};
             periodReviews.forEach((review, index) => {
                 const songId = review.SongId || review.songId;
-                if (!songId) return;
-                if (!songsMap[songId]) {
-                    songsMap[songId] = {
-                        songId,
+                const albumId = review.AlbumId || review.albumId;
+                const contentId = songId || albumId;
+                const contentType = songId ? 'song' : 'album';
+                
+                if (!contentId) return;
+                if (!contentMap[contentId]) {
+                    contentMap[contentId] = {
+                        contentId,
+                        contentType,
                         totalRating: 0,
                         reviewCount: 0,
                         totalComments: 0,
@@ -114,29 +208,62 @@ export async function loadCarouselContent(categoryId, categoryData) {
                     };
                 }
                 const reviewIndex = reviews.indexOf(review);
-                songsMap[songId].totalRating += (review.Rating || review.rating || 0);
-                songsMap[songId].reviewCount += 1;
-                songsMap[songId].totalComments += (commentsArrays[reviewIndex]?.length || 0);
-                songsMap[songId].totalLikes += (likesArrays[reviewIndex] || 0);
+                contentMap[contentId].totalRating += (review.Rating || review.rating || 0);
+                contentMap[contentId].reviewCount += 1;
+                contentMap[contentId].totalComments += (commentsArrays[reviewIndex]?.length || 0);
+                contentMap[contentId].totalLikes += (likesArrays[reviewIndex] || 0);
             });
 
-            const songsWithScore = Object.values(songsMap)
-                .map(s => ({
-                    ...s,
-                    score: (s.totalRating / s.reviewCount) * 2 + s.totalComments * 0.5 + s.totalLikes * 0.3
+            const contentWithScore = Object.values(contentMap)
+                .map(c => ({
+                    ...c,
+                    score: (c.totalRating / c.reviewCount) * 2 + c.totalComments * 0.5 + c.totalLikes * 0.3
                 }))
                 .sort((a, b) => b.score - a.score)
                 .slice(0, limit);
 
-            const songsData = await Promise.all(
-                songsWithScore.map(s => getSongByApiId(s.songId).catch(() => null))
+            const contentData = await Promise.all(
+                contentWithScore.map(async (c) => {
+                    try {
+                        if (c.contentType === 'song') {
+                            const songData = await getSongById(c.contentId);
+                            if (songData && (songData.Title || songData.title)) {
+                                return { ...songData, contentType: 'song' };
+                            }
+                            if (songData) {
+                                const apiSongId = songData.apiSongId || songData.APISongId;
+                                if (apiSongId) {
+                                    const fullSongData = await getSongByApiId(apiSongId);
+                                    return fullSongData ? { ...fullSongData, contentType: 'song' } : null;
+                                }
+                            }
+                            return await getSongByApiId(c.contentId).then(data => data ? { ...data, contentType: 'song' } : null);
+                        } else {
+                            const albumData = await getAlbumById(c.contentId);
+                            if (albumData && (albumData.Title || albumData.title)) {
+                                return { ...albumData, contentType: 'album' };
+                            }
+                            if (albumData) {
+                                const apiAlbumId = albumData.apiAlbumId || albumData.APIAlbumId;
+                                if (apiAlbumId) {
+                                    const fullAlbumData = await getAlbumByApiId(apiAlbumId);
+                                    return fullAlbumData ? { ...fullAlbumData, contentType: 'album' } : null;
+                                }
+                            }
+                            return await getAlbumByApiId(c.contentId).then(data => data ? { ...data, contentType: 'album' } : null);
+                        }
+                    } catch (e) {
+                        return null;
+                    }
+                })
             );
 
-            return songsData.filter(Boolean).map((song, i) => ({
-                name: song.Title || song.title || song.Name || 'Canción',
-                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
-                image: song.Image || song.image || null,
-                score: songsWithScore[i]?.score || 0
+            return contentData.filter(Boolean).map((content, i) => ({
+                name: content.Title || content.title || content.Name || (content.contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: content.ArtistName || content.artistName || content.Artist || 'Artista',
+                image: content.Image || content.image || null,
+                score: contentWithScore[i]?.score || 0,
+                contentType: content.contentType || 'song'
             }));
 
         } else if (categoryId === 'trending') {
@@ -159,29 +286,69 @@ export async function loadCarouselContent(categoryId, categoryData) {
 
             recentReviews.forEach(r => {
                 const songId = r.SongId || r.songId;
-                if (songId) recentActivity[songId] = (recentActivity[songId] || 0) + 1;
+                const albumId = r.AlbumId || r.albumId;
+                const contentId = songId || albumId;
+                if (contentId) recentActivity[contentId] = (recentActivity[contentId] || 0) + 1;
             });
             previousReviews.forEach(r => {
                 const songId = r.SongId || r.songId;
-                if (songId) previousActivity[songId] = (previousActivity[songId] || 0) + 1;
+                const albumId = r.AlbumId || r.albumId;
+                const contentId = songId || albumId;
+                if (contentId) previousActivity[contentId] = (previousActivity[contentId] || 0) + 1;
             });
 
-            const growthRates = Object.keys(recentActivity).map(songId => {
-                const recent = recentActivity[songId] || 0;
-                const previous = previousActivity[songId] || 0;
+            const growthRates = Object.keys(recentActivity).map(contentId => {
+                const recent = recentActivity[contentId] || 0;
+                const previous = previousActivity[contentId] || 0;
                 const growth = previous === 0 ? (recent > 0 ? 100 : 0) : ((recent - previous) / previous) * 100;
-                return { songId, growthRate: growth };
+                // Determinar si es canción o álbum basándose en las reseñas
+                const review = recentReviews.find(r => (r.SongId || r.songId) === contentId || (r.AlbumId || r.albumId) === contentId);
+                const contentType = (review?.SongId || review?.songId) ? 'song' : 'album';
+                return { contentId, contentType, growthRate: growth };
             }).sort((a, b) => b.growthRate - a.growthRate).slice(0, 10);
 
-            const songsData = await Promise.all(
-                growthRates.map(s => getSongByApiId(s.songId).catch(() => null))
+            const contentData = await Promise.all(
+                growthRates.map(async (g) => {
+                    try {
+                        if (g.contentType === 'song') {
+                            const songData = await getSongById(g.contentId);
+                            if (songData && (songData.Title || songData.title)) {
+                                return { ...songData, contentType: 'song' };
+                            }
+                            if (songData) {
+                                const apiSongId = songData.apiSongId || songData.APISongId;
+                                if (apiSongId) {
+                                    const fullSongData = await getSongByApiId(apiSongId);
+                                    return fullSongData ? { ...fullSongData, contentType: 'song' } : null;
+                                }
+                            }
+                            return await getSongByApiId(g.contentId).then(data => data ? { ...data, contentType: 'song' } : null);
+                        } else {
+                            const albumData = await getAlbumById(g.contentId);
+                            if (albumData && (albumData.Title || albumData.title)) {
+                                return { ...albumData, contentType: 'album' };
+                            }
+                            if (albumData) {
+                                const apiAlbumId = albumData.apiAlbumId || albumData.APIAlbumId;
+                                if (apiAlbumId) {
+                                    const fullAlbumData = await getAlbumByApiId(apiAlbumId);
+                                    return fullAlbumData ? { ...fullAlbumData, contentType: 'album' } : null;
+                                }
+                            }
+                            return await getAlbumByApiId(g.contentId).then(data => data ? { ...data, contentType: 'album' } : null);
+                        }
+                    } catch (e) {
+                        return null;
+                    }
+                })
             );
 
-            return songsData.filter(Boolean).map((song, i) => ({
-                name: song.Title || song.title || song.Name || 'Canción',
-                artist: song.ArtistName || song.artistName || song.Artist || 'Artista',
-                image: song.Image || song.image || null,
-                growthRate: Math.round(growthRates[i]?.growthRate || 0)
+            return contentData.filter(Boolean).map((content, i) => ({
+                name: content.Title || content.title || content.Name || (content.contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: content.ArtistName || content.artistName || content.Artist || 'Artista',
+                image: content.Image || content.image || null,
+                growthRate: Math.round(growthRates[i]?.growthRate || 0),
+                contentType: content.contentType || 'song'
             }));
         }
 

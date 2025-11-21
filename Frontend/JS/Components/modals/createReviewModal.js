@@ -522,6 +522,13 @@ async function submitCreateReview(state) {
             }
 
             console.log('✅ Reseña editada exitosamente');
+            
+            // Recargar las reseñas si hay una función disponible
+            if (state && state.loadReviews && typeof state.loadReviews === 'function') {
+                await state.loadReviews();
+            } else if (typeof window.loadReviews === 'function') {
+                await window.loadReviews();
+            }
             showAlert('✅ Reseña editada exitosamente', 'success');
             hideCreateReviewModal(state);
             if (modal) modal.removeAttribute('data-edit-review-id');
@@ -729,9 +736,15 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
     const modalTitle = modal.querySelector('.create-review-title');
     if (modalTitle) modalTitle.textContent = 'Editar Reseña';
     
-    document.getElementById('createReviewContentSelector').style.display = 'none';
-    document.getElementById('createReviewContentInfo').style.display = 'block';
+    const contentSelector = document.getElementById('createReviewContentSelector');
+    const contentInfo = document.getElementById('createReviewContentInfo');
     
+    if (contentSelector) contentSelector.style.display = 'none';
+    if (contentInfo) contentInfo.style.display = 'block';
+    
+    // Asegurar que el modal se muestre
     modal.style.display = 'flex';
+    
+    console.log('✅ Modal de edición abierto correctamente');
 }
 

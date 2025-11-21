@@ -62,7 +62,51 @@ export async function loadCommentsIntoModal(reviewId, state) {
     commentsList.innerHTML = '<div class="comment-empty">Cargando...</div>';
     
     try {
-        const comments = await getCommentsByReview(reviewId);
+        let comments = await getCommentsByReview(reviewId);
+        
+        // Enriquecer comentarios con datos de usuario si no tienen username (igual que en profileHandler.js)
+        const { getUser } = await import('../../APIs/socialApi.js');
+        const getUserFn = window.socialApi?.getUser || getUser;
+        
+        comments = await Promise.all(comments.map(async (comment) => {
+            // Si ya tiene username, devolverlo tal cual
+            if (comment.UserName || comment.username) {
+                return comment;
+            }
+            
+            // Si no tiene username, obtenerlo del User Service
+            const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
+            if (userId) {
+                try {
+                    const userData = await getUserFn(userId);
+                    if (userData) {
+                        return {
+                            ...comment,
+                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                        };
+                    }
+                } catch (error) {
+                    console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
+                }
+            }
+            
+            // Fallback: usar el username del localStorage si es el comentario del usuario actual
+            const currentUserId = localStorage.getItem('userId');
+            if (userId && currentUserId && String(userId).trim() === String(currentUserId).trim()) {
+                const currentUsername = localStorage.getItem('username');
+                if (currentUsername) {
+                    return {
+                        ...comment,
+                        UserName: currentUsername,
+                        username: currentUsername
+                    };
+                }
+            }
+            
+            return comment;
+        }));
         
         commentsCount.textContent = comments.length;
         
@@ -88,8 +132,32 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     commentId = String(commentId).trim();
                 }
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
-                const likes = comment.Likes || comment.likes || 0;
-                const userLiked = comment.userLiked || false;
+                
+                // Verificar likes desde cache primero (igual que con reseñas)
+                const commentLikesCacheKey = `comment_likes_${commentId}`;
+                let cachedCommentLikes = null;
+                try {
+                    const cached = localStorage.getItem(commentLikesCacheKey);
+                    if (cached !== null) {
+                        cachedCommentLikes = parseInt(cached, 10);
+                        if (isNaN(cachedCommentLikes)) cachedCommentLikes = null;
+                    }
+                } catch (e) { /* ignore */ }
+                
+                const likes = cachedCommentLikes !== null ? cachedCommentLikes : (comment.Likes || comment.likes || 0);
+                
+                // Verificar si el usuario actual le dio like desde localStorage
+                let userLiked = false;
+                if (currentUserId) {
+                    const storedReactionId = localStorage.getItem(`reaction_comment_${commentId}_${currentUserId}`);
+                    const localLike = localStorage.getItem(`like_comment_${commentId}_${currentUserId}`);
+                    userLiked = storedReactionId !== null || localLike === 'true';
+                }
+                
+                // Si no hay en localStorage, usar el valor del backend
+                if (!userLiked && comment.userLiked) {
+                    userLiked = comment.userLiked;
+                }
                 
                 if (!commentId || commentId === '' || commentId === 'null' || commentId === 'undefined') {
                     console.error('❌ [DEBUG] commentId inválido o vacío para comentario:', comment);
@@ -251,20 +319,73 @@ async function toggleCommentLike(commentId, btn) {
     const likesSpan = btn.querySelector('.comment-likes-count');
     const isLiked = btn.classList.contains('liked');
     const currentLikes = parseInt(likesSpan.textContent) || 0;
+    const currentUserId = localStorage.getItem('userId');
     
     if (isLiked) {
+        // Quitar like (Optimistic Update)
         btn.classList.remove('liked');
         icon.style.color = 'rgba(255,255,255,0.6)';
-        likesSpan.textContent = Math.max(0, currentLikes - 1);
+        const newLikesCount = Math.max(0, currentLikes - 1);
+        likesSpan.textContent = newLikesCount;
+        
+        // Actualizar cache
+        const likesCacheKey = `comment_likes_${commentId}`;
+        try {
+            localStorage.setItem(likesCacheKey, String(newLikesCount));
+        } catch (e) { /* ignore */ }
+        
+        // Sincronizar con backend
+        const { deleteCommentReaction } = await import('../../APIs/socialApi.js');
+        deleteCommentReaction(commentId, currentUserId, authToken)
+            .then(() => {
+                localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
+                localStorage.removeItem(`reaction_comment_${commentId}_${currentUserId}`);
+            })
+            .catch(err => {
+                console.warn('No se pudo eliminar like del comentario en el backend', err);
+                // Revertir cambio si falla
+                btn.classList.add('liked');
+                icon.style.color = 'var(--magenta, #EC4899)';
+                likesSpan.textContent = currentLikes;
+                try {
+                    localStorage.setItem(likesCacheKey, String(currentLikes));
+                } catch (e) { /* ignore */ }
+            });
     } else {
+        // Agregar like (Optimistic Update)
         btn.classList.add('liked');
         icon.style.color = 'var(--magenta, #EC4899)';
-        likesSpan.textContent = currentLikes + 1;
-    }
-    
-    // TODO: Conectar esto con addCommentReaction y deleteCommentReaction
-    if (authToken.startsWith('dev-token-')) {
-        console.log('Like en comentario simulado:', commentId);
+        const newLikesCount = currentLikes + 1;
+        likesSpan.textContent = newLikesCount;
+        
+        // Actualizar cache
+        const likesCacheKey = `comment_likes_${commentId}`;
+        try {
+            localStorage.setItem(likesCacheKey, String(newLikesCount));
+        } catch (e) { /* ignore */ }
+        
+        localStorage.setItem(`like_comment_${commentId}_${currentUserId}`, 'true');
+        
+        // Sincronizar con backend
+        const { addCommentReaction } = await import('../../APIs/socialApi.js');
+        addCommentReaction(commentId, currentUserId, authToken)
+            .then(data => {
+                const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
+                if (reactionId) {
+                    localStorage.setItem(`reaction_comment_${commentId}_${currentUserId}`, String(reactionId));
+                }
+            })
+            .catch(err => {
+                console.warn('No se pudo guardar like del comentario en el backend', err);
+                // Revertir cambio si falla
+                btn.classList.remove('liked');
+                icon.style.color = 'rgba(255,255,255,0.6)';
+                likesSpan.textContent = currentLikes;
+                localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
+                try {
+                    localStorage.setItem(likesCacheKey, String(currentLikes));
+                } catch (e) { /* ignore */ }
+            });
     }
 }
     

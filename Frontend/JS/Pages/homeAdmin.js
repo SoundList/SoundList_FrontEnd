@@ -54,7 +54,7 @@ export function initializeHomePage() {
     
     // Hacer showCreateReviewModal disponible globalmente para que el headerHandler pueda usarla
     if (typeof window !== 'undefined') {
-        window.showCreateReviewModal = (contentData) => showCreateReviewModal(contentData, modalsState);
+        window.showCreateReviewModal = (contentData = null) => showCreateReviewModal(contentData, modalsState);
         window.showEditReviewModal = (reviewId, title, content, rating) => showEditReviewModal(reviewId, title, content, rating, modalsState);
         window.showCommentsModal = (reviewId) => showCommentsModal(reviewId, modalsState);
         window.showReviewDetailModal = (reviewId) => showReviewDetailModal(reviewId, modalsState);

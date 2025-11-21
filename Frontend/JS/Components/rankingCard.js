@@ -6,6 +6,7 @@ export function renderRankingList(items, tipo) {
     const rankingList = document.getElementById('rankingList');
     if (!rankingList) return;
 
+    // Ya filtramos en el handler, pero si queda vacía, mostramos estado vacío
     if (!items || items.length === 0) {
         showEmptyState();
         return;
@@ -15,12 +16,12 @@ export function renderRankingList(items, tipo) {
         const position = index + 1;
         const defaultImg = '../Assets/default-avatar.png';
 
-        // mapeamos los campos de SongResponse y AlbumResponse a un formato estándar
+        // Mapeamos los campos
         const name = item.title;
-        // 'artistName' solo existe en SongResponse, no en AlbumResponse (un fallo de tu API de Content)
         const artist = item.artistName || 'Artista Desconocido'; 
         const image = item.image || defaultImg;
         const rating = item.calification;
+        const reviews = item.reviewCount; // <--- USAMOS EL CAMPO ENRIQUECIDO
 
             return `
             <div class="ranking-item">
@@ -38,7 +39,7 @@ export function renderRankingList(items, tipo) {
                     <div class="ranking-rating">
                         ${generateStars(rating)}
                     </div>
-                    <div class="ranking-review-count"></div>
+                    <div class="ranking-review-count">${reviews} reviews</div>
                 </div>
             </div>
             `;

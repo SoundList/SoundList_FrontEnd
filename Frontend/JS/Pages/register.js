@@ -12,33 +12,46 @@ document.addEventListener('DOMContentLoaded', function() {
         const username = usernameInput.value.trim();
         const email = emailInput.value.trim();
         const password = passwordInput.value.trim();
-
-        // Basic validation
-        if (!username || !email || !password) {
-            if (!username) showFieldError(usernameInput, 'Este campo es requerido');
-            if (!email) showFieldError(emailInput, 'Este campo es requerido');
-            if (!password) showFieldError(passwordInput, 'Este campo es requerido');
-            return;
-        }
-
-        if (!isValidUsername(username)) {
-            showFieldError(usernameInput, 'El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones');
-            return;
-        }
-
-        if (!isValidEmail(email)) {
-            showFieldError(emailInput, 'Ingresa un email válido');
-            return;
-        }
-
-        if (password.length < 8) {
-            showFieldError(passwordInput, 'La contraseña debe tener al menos 8 caracteres');
-            return;
-        }
+        
+        let isValidForm = true;
+    if (typeof clearAllErrors === 'function') { 
+        clearAllErrors();
+    } else {
+        clearFieldError(usernameInput);
+        clearFieldError(emailInput);
+        clearFieldError(passwordInput);
+    }
+    
+    //Validación de Username
+    if (!username) {
+        showFieldError(usernameInput, 'Este campo es requerido');
+        isValidForm = false;
+    } else if (!isValidUsername(username)) {
+        showFieldError(usernameInput, 'El nombre de usuario debe tener entre 4 y 20 caracteres y solo puede contener letras, números y guiones');
+        isValidForm = false;
+    }
+    // Validación de Email
+    if (!email) {
+        showFieldError(emailInput, 'Este campo es requerido');
+        isValidForm = false;
+    } else if (!isValidEmail(email)) {
+        showFieldError(emailInput, 'Ingresa un email válido');
+        isValidForm = false;
+    }
+    // 3. Validación de Password
+    if (!password) {
+        showFieldError(passwordInput, 'Este campo es requerido');
+        isValidForm = false;
+    } else if (password.length < 8) {
+        showFieldError(passwordInput, 'La contraseña debe tener al menos 8 caracteres');
+        isValidForm = false;
+    }
+    if (!isValidForm) {
+        return; 
+    }
 
         const submitButton = registerForm.querySelector('button[type="submit"]');
         setButtonLoading(submitButton, true);
-        showAlert('Creando cuenta...', 'info');
         
         // Intentar primero el backend directo, luego el gateway como fallback
         const PORTS = [
@@ -48,16 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
         attemptRegisterWithPorts(username, email, password, PORTS, 0, submitButton);
     });
 
-    // Alternative registration method
-    const googleButton = document.querySelector('.btn-alternative');
-
-    googleButton.addEventListener('click', function() {
-        showAlert('Funcionalidad de registro con Google en desarrollo', 'info');
-    });
-
     // Username validation function
     function isValidUsername(username) {
-        const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+        const usernameRegex = /^[a-zA-Z0-9_-]{4,20}$/;
         return usernameRegex.test(username);
     }
 

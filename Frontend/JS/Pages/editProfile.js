@@ -35,17 +35,20 @@ async function loadCurrentProfileData() {
         
         const descTextarea = document.getElementById('current-description');
         if (descTextarea) {
-            // El backend devuelve Bio (con mayúscula)
-            descTextarea.value = profile.Bio || profile.bio || profile.userQuote || profile.quote || "Sin frase personal";
+            descTextarea.value = profile.userQuote || profile.quote || profile.Bio || profile.bio || profile.description || profile.Description || "Sin frase personal";
         }
 
         const avatarPreview = document.getElementById('avatar-preview');
         const imageUploadPreview = document.getElementById('image-upload-preview');
-        // El backend devuelve imgProfile (con minúscula)
-        const avatarUrl = profile.imgProfile || profile.Image || profile.image || profile.avatar || defaultAvatar;
+        const avatarUrl = profile.imgProfile || profile.avatar || defaultAvatar;
 
         if (avatarPreview) avatarPreview.src = avatarUrl;
         if (imageUploadPreview) imageUploadPreview.src = avatarUrl;
+
+        const usernameEl = document.getElementById('edit-profile-username');
+        if (usernameEl) {
+            usernameEl.textContent = profile.username || profile.Username || localStorage.getItem('username') || 'Cuenta';
+        }
         
     } catch (error) {
         console.error("Error al cargar datos del perfil:", error);
@@ -77,8 +80,12 @@ async function handleDescriptionSubmit(e) {
     let isSuccess = false; 
 
     try {
-        // El backend espera "Bio" (con mayúscula), no "userQuote"
-        const updateData = { Bio: newQuote };
+        // Enviar tanto userQuote como bio para compatibilidad con el backend
+        const updateData = { 
+            userQuote: newQuote,
+            bio: newQuote,
+            Bio: newQuote
+        };
         await window.userApi.updateUserProfile(currentUserId, updateData);
 
         (window.showAlert || alert)("Descripción actualizada exitosamente.", "success");
@@ -139,7 +146,6 @@ async function handleImageSubmit(e) {
         });
 
         const base64Image = reader.result; 
-        // El backend espera imgProfile (con minúscula), no avatarUrl
         const updateData = { imgProfile: base64Image };
         
         await window.userApi.updateUserProfile(currentUserId, updateData);
@@ -151,7 +157,7 @@ async function handleImageSubmit(e) {
 
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback');
-        (window.showAlert || alert)("Imagen de perfil actualizada.", "success");
+        (window.showAlert || alert)
         isSuccess = true; 
         
         // Recargar los datos del perfil para asegurar que todo esté actualizado

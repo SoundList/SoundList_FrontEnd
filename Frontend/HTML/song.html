@@ -58,14 +58,15 @@
 
                     <div class="song-info-primary">
                         <a href="#" id="songAlbumLink" class="song-type">ÁLBUM: CARGANDO...</a>
-                        <h1 class="song-title" id="songTitle">Cargando...</h1>
-                        
+                        <div class="song-title-row">
+                            <h1 class="song-title" id="songTitle">Cargando...</h1>
+                            
+                            <div id="audioPlayerContainer" class="hero-audio-player"></div>
+                        </div>
+
                         <h2 class="song-artist">
                             <a href="#" id="songArtistLink" class="text-decoration-none text-light">Cargando artista...</a>
                         </h2>
-
-                        <div id="audioPlayerContainer" class="my-3">
-                            </div>
                         <div class="song-rating-container">
                             <span class="rating-number" id="ratingNumber">-.-</span>
                             <div class="rating-stars" id="ratingStars"></div>
@@ -141,14 +142,17 @@
                     <div class="stars-input" id="starsRatingInput">
                         <i class="far fa-star" data-value="1"></i><i class="far fa-star" data-value="2"></i><i class="far fa-star" data-value="3"></i><i class="far fa-star" data-value="4"></i><i class="far fa-star" data-value="5"></i>
                     </div>
+                    <div class="invalid-feedback-custom" id="reviewRatingError"></div>
                 </div>
                 <div class="mb-3">
                     <label for="reviewTitleInput" class="form-label">Título de la reseña</label>
                     <input type="text" class="form-control" id="reviewTitleInput">
+                    <div class="invalid-feedback-custom" id="reviewTitleError"></div>
                 </div>
                 <div class="mb-3">
                     <label for="reviewTextInput" class="form-label">Escribe tu reseña</label>
                     <textarea class="form-control" id="reviewTextInput" rows="4"></textarea>
+                    <div class="invalid-feedback-custom" id="reviewTextError"></div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">SUBIR</button>
             </div>

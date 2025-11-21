@@ -74,9 +74,26 @@ function hideDeleteCommentModal(state) {
 async function confirmDeleteComment(state) {
     if (!state.deletingCommentId) return;
     
-    const modal = document.getElementById('commentsModalOverlay');
-    const reviewId = modal ? modal.getAttribute('data-review-id') : null;
-    if (!reviewId) return;
+    // Obtener reviewId desde diferentes modales posibles
+    let reviewId = null;
+    const commentsModal = document.getElementById('commentsModalOverlay');
+    const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
+    const deleteCommentModal = document.getElementById('deleteCommentModalOverlay');
+    
+    if (commentsModal && commentsModal.style.display === 'flex') {
+        reviewId = commentsModal.getAttribute('data-review-id');
+    } else if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
+        reviewId = reviewDetailModal.getAttribute('data-review-id');
+    } else if (deleteCommentModal) {
+        reviewId = deleteCommentModal.getAttribute('data-review-id');
+    }
+    
+    if (!reviewId) {
+        console.error('No se pudo obtener reviewId para eliminar comentario');
+        showAlert('Error: No se pudo identificar la reseña', 'danger');
+        hideDeleteCommentModal(state);
+        return;
+    }
     
     const authToken = localStorage.getItem('authToken');
     
@@ -85,12 +102,13 @@ async function confirmDeleteComment(state) {
         
         hideDeleteCommentModal(state);
         
-        // Recargar comentarios en el modal de comentarios
-        const { loadCommentsIntoModal } = await import('./commentsModal.js');
-        await loadCommentsIntoModal(reviewId, state);
+        // Recargar comentarios en el modal de comentarios si está abierto
+        if (commentsModal && commentsModal.style.display === 'flex') {
+            const { loadCommentsIntoModal } = await import('./commentsModal.js');
+            await loadCommentsIntoModal(reviewId, state);
+        }
         
         // Actualizar vista detallada si está abierta
-        const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
         if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
             const { loadReviewDetailComments } = await import('./reviewDetailModal.js');
             const comments = await getCommentsByReview(reviewId);
@@ -179,7 +197,7 @@ async function deleteReviewLogic(reviewId, state) {
     try {
         await deleteReview(reviewId, userId, authToken);
         
-        showAlert('✅ Reseña eliminada exitosamente', 'success');
+        showAlert('Reseña eliminada exitosamente', 'success');
         
         if (state.loadReviews && typeof state.loadReviews === 'function') {
             await state.loadReviews();

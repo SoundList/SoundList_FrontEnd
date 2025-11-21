@@ -13,7 +13,8 @@ import {
     getNotifications, 
     getReviews, 
     getReviewReactionCount, 
-    getCommentsByReview
+    getCommentsByReview,
+    getUser
 } from '../APIs/socialApi.js'; 
 
 // --- 2. VARIABLES GLOBALES DEL HEADER ---
@@ -21,6 +22,20 @@ let notificationConnection = null;
 let notifications = []; // Array para almacenar notificaciones
 let userReviewsState = {}; // Estado para polling
 let notificationPollingInterval = null; // Intervalo de polling
+
+function getLoginPath() {
+    const currentPath = window.location.pathname || '';
+    const currentFile = currentPath.split('/').pop();
+
+    if (currentPath.includes('/Pages/') ||
+        currentFile === 'profile.html' ||
+        currentFile === 'editProfile.html' ||
+        currentFile === 'ajustes.html') {
+        return '../login.html';
+    }
+
+    return 'login.html';
+}
 
 // --- 3. FUNCIÓN DE INICIALIZACIÓN PRINCIPAL ---
 /**
@@ -350,7 +365,7 @@ function navigateToContentView(type, id) {
     const encodedId = encodeURIComponent(id.trim());
     
     // Determinar la ruta correcta según dónde estemos
-    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
         // Estamos en Pages/, necesitamos subir un nivel para llegar a HTML/
         destinationUrl = `../${fileName}?id=${encodedId}`;
     } else if (currentPath.includes('/HTML/') || 
@@ -430,7 +445,7 @@ function initializeProfileDropdown() {
                 let profilePath = '';
                 
                 // Determinar la ruta correcta según dónde estemos
-                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
                     // Ya estamos en Pages/, solo necesitamos el nombre del archivo
                     profilePath = 'profile.html';
                 } else if (currentPath.includes('/HTML/') || currentFile === 'home.html' || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
@@ -453,12 +468,37 @@ function initializeProfileDropdown() {
         });
     }
 
-    if(ajustesBtn) {
-        ajustesBtn.addEventListener('click', function() {
-            profileDropdown.style.display = 'none';
-            showAlert('Funcionalidad de ajustes en desarrollo', 'info');
-        });
-    }
+    if(ajustesBtn) {
+        ajustesBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            profileDropdown.style.display = 'none';
+
+            const currentPath = window.location.pathname;
+            const currentFile = currentPath.split('/').pop();
+            let settingsPath = '';
+
+            if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
+                settingsPath = 'ajustes.html';
+            } else if (
+                currentPath.includes('/HTML/') ||
+                currentFile === 'home.html' ||
+                currentFile === 'album.html' ||
+                currentFile === 'song.html' ||
+                currentFile === 'artist.html' ||
+                currentFile === 'rankings.html' ||
+                currentFile === 'amigos.html' ||
+                currentFile === 'login.html' ||
+                currentFile === 'register.html'
+            ) {
+                settingsPath = 'Pages/ajustes.html';
+            } else {
+                settingsPath = '../Pages/ajustes.html';
+            }
+
+            window.location.href = settingsPath;
+        });
+    }
 
     if(cerrarSesionBtn) {
         cerrarSesionBtn.addEventListener('click', function() {
@@ -547,7 +587,7 @@ function initializeNavigation() {
                 
                 // Determinar la ruta correcta según dónde estemos
                 // Si estamos en Pages/ (profile, editProfile)
-                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
                     homePath = '../home.html';
                 } 
                 // Si estamos en HTML/ o en cualquier página del nivel raíz (home, album, song, artist, rankings, amigos)
@@ -585,7 +625,7 @@ function initializeNavigation() {
                 let rankingsPath = '';
                 
                 // Determinar la ruta correcta según dónde estemos
-                if (rankingsCurrentPath.includes('/Pages/') || rankingsCurrentFile === 'profile.html' || rankingsCurrentFile === 'editProfile.html') {
+                if (rankingsCurrentPath.includes('/Pages/') || rankingsCurrentFile === 'profile.html' || rankingsCurrentFile === 'editProfile.html' || rankingsCurrentFile === 'ajustes.html') {
                     // Estamos en Pages/, necesitamos subir un nivel
                     rankingsPath = '../rankings.html';
                 } else if (rankingsCurrentPath.includes('/HTML/') || rankingsCurrentFile === 'home.html' || rankingsCurrentFile === 'album.html' || rankingsCurrentFile === 'song.html' || rankingsCurrentFile === 'artist.html' || rankingsCurrentFile === 'amigos.html') {
@@ -608,7 +648,7 @@ function initializeNavigation() {
                 let amigosPath = '';
                 
                 // Determinar la ruta correcta según dónde estemos
-                if (amigosCurrentPath.includes('/Pages/') || amigosCurrentFile === 'profile.html' || amigosCurrentFile === 'editProfile.html') {
+                if (amigosCurrentPath.includes('/Pages/') || amigosCurrentFile === 'profile.html' || amigosCurrentFile === 'editProfile.html' || amigosCurrentFile === 'ajustes.html') {
                     // Estamos en Pages/, necesitamos subir un nivel
                     amigosPath = '../amigos.html';
                 } else if (amigosCurrentPath.includes('/HTML/') || amigosCurrentFile === 'home.html' || amigosCurrentFile === 'album.html' || amigosCurrentFile === 'song.html' || amigosCurrentFile === 'artist.html' || amigosCurrentFile === 'rankings.html') {
@@ -647,7 +687,7 @@ function loadUserData() {
         
         if (loginBtn) {
             loginBtn.addEventListener('click', function() {
-                window.location.href = 'login.html'; // (Ajustar ruta si es necesario)
+                window.location.href = getLoginPath();
             });
         }
     } else {
@@ -687,7 +727,7 @@ function loadUserData() {
                         const currentFile = currentPath.split('/').pop();
                         let homePath = '';
                         
-                        if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html') {
+                        if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
                             homePath = '../home.html';
                         } else if (currentPath.includes('/HTML/') || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
                             homePath = 'home.html';
@@ -729,8 +769,14 @@ function initializeLogoutModal() {
         
     if (confirmLogoutBtn) {
         confirmLogoutBtn.addEventListener('click', function() {
-            performLogout();
-        });
+                stopNotificationPolling();
+                userReviewsState = {};
+                notifications = [];
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            window.location.href = getLoginPath();
+            });
     }
         
     if (cancelLogoutBtn) {
@@ -970,47 +1016,73 @@ export function formatNotificationTime(dateString) {
 
 
 async function loadNotifications() {
-    const authToken = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-    if (!authToken || !userId) return;
-    
-    try {
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    if (!authToken || !userId) return;
+    
+    try {
         // ¡CAMBIO CLAVE! Usamos la función importada de socialApi.js
-        const notificationsData = await getNotifications(userId, authToken);
-        
-        notifications = []; // Limpiar notificaciones existentes
-        
-        notificationsData.forEach(notification => {
-            addNotification({
-                type: notification.Type || notification.type || 'NewNotification',
-                date: notification.Date || notification.date || new Date().toISOString(),
-                username: notification.Username || notification.username || 'Usuario',
-                songName: notification.SongName || notification.songName || null,
-                reviewId: notification.ReviewId || notification.reviewId || null
-            });
-        });
-        
-        renderNotifications();
-        
-    } catch (error) {
-        const status = error.response?.status;
-        const errorCode = error.code;
-        const errorMessage = error?.message || String(error);
-        
-        const isExpectedError = status === 404 || 
-                                  status === 502 || 
-                          status === 503 ||
-                                  errorCode === 'ECONNABORTED' ||
-                                  errorMessage.includes('timeout') ||
-                                  errorMessage.includes('Network Error') ||
-                                  errorMessage.includes('ERR_CONNECTION_REFUSED');
-        
-        if (!isExpectedError) {
-            console.error('Error cargando notificaciones:', error);
-        } else {
-            console.debug('Servicio de notificaciones no disponible');
-        }
-    }
+        const notificationsData = await getNotifications(userId, authToken);
+        
+        notifications = []; // Limpiar notificaciones existentes
+        
+        // Enriquecer notificaciones con datos de usuario en paralelo
+        const enrichedNotifications = await Promise.all(
+            notificationsData.map(async (notification) => {
+                // Obtener el UserId del actor (quien generó la notificación)
+                const actorUserId = notification.UserId || notification.userId;
+                let username = 'Usuario'; // Valor por defecto
+                
+                // Si hay un UserId, obtener el username del usuario
+                if (actorUserId && actorUserId !== '00000000-0000-0000-0000-000000000000') {
+                    try {
+                        const userData = await getUser(actorUserId);
+                        if (userData) {
+                            username = userData.Username || userData.username || 'Usuario';
+                        }
+                    } catch (userError) {
+                        console.debug('No se pudo obtener username para notificación:', actorUserId, userError);
+                        // Mantener 'Usuario' como fallback
+                    }
+                }
+                
+                return {
+                    type: notification.Type || notification.type || 'NewNotification',
+                    date: notification.Date || notification.date || new Date().toISOString(),
+                    username: username,
+                    songName: notification.SongName || notification.songName || null,
+                    reviewId: notification.ReviewId || notification.reviewId || null,
+                    userId: actorUserId // Guardar el userId para referencia
+                };
+            })
+        );
+        
+        // Agregar las notificaciones enriquecidas
+        enrichedNotifications.forEach(notification => {
+            addNotification(notification);
+        });
+        
+        renderNotifications();
+        
+    } catch (error) {
+        const status = error.response?.status;
+        const errorCode = error.code;
+        const errorMessage = error?.message || String(error);
+        
+        const isExpectedError = status === 404 || 
+                                status === 502 || 
+                                status === 503 ||
+                                errorCode === 'ECONNABORTED' ||
+                                errorMessage.includes('timeout') ||
+                                errorMessage.includes('Network Error') ||
+                                errorMessage.includes('ERR_CONNECTION_REFUSED');
+        
+        if (!isExpectedError) {
+            console.error('Error cargando notificaciones:', error);
+        } else {
+            console.debug('Servicio de notificaciones no disponible');
+        }
+    }
 }
 
 function initializeSignalR() {
@@ -1107,24 +1179,41 @@ function playNotificationSound() {
     }
 }
 
-function showNotificationAlert(notification) {
-    addNotification({
-        type: notification.Type || notification.type,
-        date: notification.Date || notification.date || new Date().toISOString(),
-        username: notification.Username || notification.username || 'Usuario',
-        songName: notification.SongName || notification.songName || null,
-        reviewId: notification.ReviewId || notification.reviewId || null
-    });
-    
-    let message = 'Nueva notificación';
-    if (notification.Type === 'NewReaction' || notification.type === 'NewReaction') {
-        message = '¡Alguien le dio me gusta a tu reseña!';
-    } else if (notification.Type === 'NewComment' || notification.type === 'NewComment') {
-        message = '¡Alguien comentó tu reseña!';
-    } else if (notification.Type === 'NewFollower' || notification.type === 'NewFollower') {
-        message = '¡Nuevo seguidor!';
-    }
-    showAlert(message, 'info');
+async function showNotificationAlert(notification) {
+    // Enriquecer con username si es necesario
+    const actorUserId = notification.UserId || notification.userId;
+    let username = notification.Username || notification.username || 'Usuario';
+    
+    // Si hay un UserId pero no hay username, obtenerlo
+    if (actorUserId && actorUserId !== '00000000-0000-0000-0000-000000000000' && (!username || username === 'Usuario')) {
+        try {
+            const userData = await getUser(actorUserId);
+            if (userData) {
+                username = userData.Username || userData.username || 'Usuario';
+            }
+        } catch (userError) {
+            console.debug('No se pudo obtener username para notificación en tiempo real:', actorUserId, userError);
+        }
+    }
+    
+    addNotification({
+        type: notification.Type || notification.type,
+        date: notification.Date || notification.date || new Date().toISOString(),
+        username: username,
+        songName: notification.SongName || notification.songName || null,
+        reviewId: notification.ReviewId || notification.reviewId || null,
+        userId: actorUserId
+    });
+    
+    let message = 'Nueva notificación';
+    if (notification.Type === 'NewReaction' || notification.type === 'NewReaction') {
+        message = '¡Alguien le dio me gusta a tu reseña!';
+    } else if (notification.Type === 'NewComment' || notification.type === 'NewComment') {
+        message = '¡Alguien comentó tu reseña!';
+    } else if (notification.Type === 'NewFollower' || notification.type === 'NewFollower') {
+        message = '¡Nuevo seguidor!';
+    }
+    showAlert(message, 'info');
 }
 
 // --- 7. POLLING DE NOTIFICACIONES ---
@@ -1298,9 +1387,8 @@ function initializeLoginRequiredModal() {
     const loginRequiredModalOverlay = document.getElementById('loginRequiredModalOverlay');
 
     if (goToLoginBtn) {
-        goToLoginBtn.addEventListener('click', function() {
-            // Asume que login.html está en la misma carpeta HTML
-          window.location.href = 'login.html'; 
+        goToLoginBtn.addEventListener('click', function() {
+            window.location.href = getLoginPath();
         });
     }
 

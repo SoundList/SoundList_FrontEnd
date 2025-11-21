@@ -2,7 +2,7 @@
 import {
     getSongByApiId,
     getOrCreateSong,
-    
+    updateSongRating
 } from './../APIs/contentApi.js'; 
 
 import { 
@@ -24,9 +24,11 @@ import {
     getReviewReactionCount,
     addReviewReaction,
     deleteReviewReaction,
+    getAverageRating,
     getUser
 } from './../APIs/socialApi.js';
 import { showAlert, showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { createAudioPlayer } from './../Components/audioPlayer.js';
 
 // --- 2. ESTADO GLOBAL ---
 let currentRating = 0;
@@ -36,7 +38,6 @@ let editingCommentId = null;
 let originalCommentText = null;
 let deletingReviewId = null;
 let deletingCommentId = null;
-let reportingCommentId = null;
 
 // --- 3. PUNTO DE ENTRADA (LLAMADO POR MAIN.JS) ---
 // ¡CORREGIDO! Ya no usa DOMContentLoaded
@@ -50,7 +51,6 @@ export function initializeSongPage() {
     // (Asegúrate de que tu song.html tenga los modals correspondientes)
     initializeCommentsModalLogic();
     initializeDeleteModalsLogic();
-    initializeReportModalLogic();
 }
 
 // --- 4. FUNCIONES PRINCIPALES ---
@@ -86,10 +86,22 @@ async function loadPageData() {
 
         // 3. Obtener reseñas (¡LÓGICA CORREGIDA!)
         const allReviews = await getReviews();
+        
+        // Normalizamos el ID local para comparar
+        const targetId = String(localSongId).trim().toLowerCase();
+
         const filteredReviews = allReviews.filter(review => {
-            // Comparamos el ID de canción (GUID)
-            return (review.songId === localSongId || review.SongId === localSongId);
-        });
+            // Obtenemos el ID de la reseña de forma segura
+            const reviewSongId = review.songId || review.SongId;
+            
+            // Si la reseña no tiene SongId, la descartamos
+            if (!reviewSongId) return false;
+
+            // Normalizamos y comparamos
+            return String(reviewSongId).trim().toLowerCase() === targetId;
+        });
+
+        console.log(`Reseñas filtradas: ${filteredReviews.length} de ${allReviews.length}`);
         
         // 4. Enriquecer reseñas (¡LÓGICA CORREGIDA!)
         const reviewsData = await Promise.all(
@@ -168,34 +180,13 @@ function renderSongHeader(song) {
     // 2. LÓGICA DE AUDIO (Plan Híbrido Spotify/Deezer)
     // ------------------------------------------------------
     const audioContainer = document.getElementById('audioPlayerContainer');
-    
     if (audioContainer) {
-        if (song.previewUrl) {
-            // Tenemos URL (Spotify o Deezer)
-            audioContainer.innerHTML = `
-                <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="fas fa-music me-2" style="color: #1DB954;"></i>
-                        <span style="font-size: 0.85rem; color: #ccc; font-weight: 500;">Vista previa (30 seg)</span>
-                    </div>
-                    <audio controls controlsList="nodownload" style="width: 100%; height: 32px; border-radius: 4px;">
-                        <source src="${song.previewUrl}" type="audio/mpeg">
-                        Tu navegador no soporta el elemento de audio.
-                    </audio>
-                </div>
-            `;
-        } else {
-            // No hay URL disponible
-            audioContainer.innerHTML = `
-                <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
-                    <small style="color: #888;">
-                        <i class="fas fa-volume-mute me-2"></i>Vista previa no disponible
-                    </small>
-                </div>
-            `;
-        }
+        // Usamos nuestro componente personalizado
+        // Pasamos la URL y el ID de la canción para generar IDs únicos en el DOM
+        audioContainer.innerHTML = createAudioPlayer(song.previewUrl, song.songId);
     }
 }
+
 
 function renderSongDetails(song) {
     const releaseDate = new Date(song.releaseDate).toLocaleDateString('es-ES', {
@@ -265,6 +256,7 @@ function showCreateReviewModal() {
     document.getElementById('reviewTitleInput').value = '';
     document.getElementById('reviewTextInput').value = '';
     setStarRating(0);
+clearReviewFormErrors();
     document.getElementById('createReviewModalOverlay').style.display = 'flex';
 }
 
@@ -280,44 +272,166 @@ function highlightStars(rating) {
     });
 }
 
+function displayFieldError(elementId, message) {
+    const inputElement = document.getElementById(elementId);
+    if (!inputElement) return;
+
+    const isStarsContainer = elementId === 'starsRatingInput';
+    
+    // El elemento donde se aplica el borde rojo.
+    // Esto es vital para que funcione el CSS: input para el texto, o el padre para las estrellas.
+    const borderElement = isStarsContainer ? inputElement.parentElement : inputElement;
+
+    // Aunque no mostraremos el texto, mantenemos la limpieza del div por si acaso.
+    // Usaremos el ID de error que enviaste en el HTML para evitar errores.
+    const errorElementId = (elementId === 'starsRatingInput') ? 'reviewRatingError' : elementId.replace('Input', 'Error');
+    const errorElement = document.getElementById(errorElementId);
+    
+    // Obtenemos el contenedor padre para la limpieza del texto (aunque esté oculto por CSS)
+    const textVisibilityContainer = isStarsContainer 
+        ? inputElement.parentElement 
+        : inputElement.closest('.mb-3'); 
+    
+
+    if (message) {
+        borderElement.classList.add('is-invalid-custom'); 
+        if (errorElement) {
+            errorElement.textContent = message;
+        }
+    } else {
+        borderElement.classList.remove('is-invalid-custom');
+        if (textVisibilityContainer) {
+            textVisibilityContainer.classList.remove('is-invalid-field');
+        }
+        if (errorElement) {
+            errorElement.textContent = '';
+            errorElement.style.display = 'none';
+        }
+    }
+}
+
+
+function clearReviewFormErrors() {
+    displayFieldError('reviewTitleInput', null);
+    displayFieldError('reviewTextInput', null);
+    displayFieldError('starsRatingInput', null);
+}
+
+
+
+
+
+
+
 async function handleSubmitReview() {
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
-    if (!authToken || !userId) {
-        showAlert('Debes iniciar sesión para crear una reseña', 'warning');
-        showLoginRequiredModal();
-        return;
-    }
+    
+    if (!authToken || !userId) {
+        showAlert('Debes iniciar sesión para crear una reseña', 'warning');
+        // showLoginRequiredModal(); // Descomentar si tienes esta función
+        return;
+    }
 
-    const reviewTitle = document.getElementById('reviewTitleInput').value.trim();
-    const reviewText = document.getElementById('reviewTextInput').value.trim();
+    const reviewTitle = document.getElementById('reviewTitleInput').value.trim();
+    const reviewText = document.getElementById('reviewTextInput').value.trim(); // <--- Aquí se define reviewText
 
-    if (!reviewTitle || !reviewText || currentRating === 0) {
-        showAlert('Por favor, completa todos los campos y la calificación.', 'warning');
-        return;
-    }
-    if (!currentSongData || !currentSongData.songId) {
-        showAlert('Error: No se pudo identificar la canción.', 'danger');
-      return;
-    }
+    let hasError = false;
 
-    const reviewData = {
-        Title: reviewTitle,
-        Content: reviewText, // <-- CORREGIDO
-        Rating: currentRating,
-        UserId: userId, // <-- AÑADIDO
-        SongId: currentSongData.songId, // <-- AÑADIDO (GUID local)
+    // 1. Validar Título
+    if (!reviewTitle) {
+        displayFieldError('reviewTitleInput', 'El título de la reseña es obligatorio.');
+        hasError = true;
+    }
+
+    // 2. Validar Texto
+    if (!reviewText) {
+        displayFieldError('reviewTextInput', 'El contenido de la reseña es obligatorio.');
+        hasError = true;
+    }
+
+    // 3. Validar Calificación
+    // currentRating se actualiza al hacer clic en las estrellas (lógica en setStarRating)
+    if (currentRating === 0) { 
+        displayFieldError('starsRatingInput', 'Debes seleccionar una calificación (1-5 estrellas).');
+        hasError = true;
+    }
+
+    if (hasError) {
+        // Detiene el proceso y muestra los errores localizados
+        return; 
+    }
+
+    if (!currentSongData || !currentSongData.songId) {
+        showAlert('Error: No se pudo identificar la canción.', 'danger');
+        return;
+    }
+
+    const reviewData = {
+        Title: reviewTitle,
+        Content: reviewText, // <--- CORRECCIÓN: Usamos 'reviewText', no 'content'
+        Rating: currentRating,
+        UserId: userId,
+        SongId: currentSongData.songId, // GUID Local
         AlbumId: null
-    };
-    
-    const submitBtn = document.getElementById('submitReviewBtn');
-    
-    try {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'SUBIENDO...';
+    };
+    
+    const submitBtn = document.getElementById('submitReviewBtn');
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'SUBIENDO...';
 
         // ¡LLAMADA A API CORREGIDA!
-        await createReview(reviewData, authToken); 
+        const response = await createReview(reviewData, authToken);
+        
+        // Guardar datos del contenido en localStorage para uso futuro (igual que en createReviewModal.js)
+        const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
+        if (reviewId) {
+            const storageKey = `review_content_${String(reviewId).trim()}`;
+            try {
+                // Obtener artista de todas las posibles fuentes
+                // Debug: ver qué campos tiene currentSongData
+                console.log('🔍 currentSongData completo:', currentSongData);
+                
+                const artistName = currentSongData.ArtistName || 
+                                  currentSongData.artistName || 
+                                  (currentSongData.artist ? (currentSongData.artist.name || currentSongData.artist.Name) : null) ||
+                                  (currentSongData.Artist ? (currentSongData.Artist.Name || currentSongData.Artist.name) : null) ||
+                                  'Artista';
+                
+                const contentData = {
+                    type: 'song',
+                    id: currentSongData.apiSongId || currentSongData.APISongId || currentSongData.id,
+                    name: currentSongData.title || currentSongData.Title || 'Canción',
+                    artist: artistName,
+                    image: currentSongData.image || currentSongData.Image || null
+                };
+                
+                localStorage.setItem(storageKey, JSON.stringify(contentData));
+                console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`, contentData);
+            } catch (e) {
+                console.warn('Error guardando datos en localStorage:', e);
+            }
+        }
+
+        // --- NUEVA LÓGICA DE SINCRONIZACIÓN ---
+        try {
+            console.log("🔄 Calculando promedio para actualizar Content...");
+            
+            // A. Pedimos el nuevo promedio a Social (Usando el GUID)
+            const newAverage = await getAverageRating(currentSongData.songId, 'song');
+            
+            if (newAverage > 0) {
+                // B. Enviamos el PATCH a Content (Usando el ID de Spotify)
+                // currentSongData.apiSongId es "0W3TCDzYM7xFrZSaXnQvs4"
+                await updateSongRating(currentSongData.apiSongId, newAverage);
+                console.log(`✅ Calificación actualizada a ${newAverage} en Content Service.`);
+            }
+        } catch (syncError) {
+            console.error("⚠️ Advertencia: La reseña se creó, pero falló el cálculo de promedio.", syncError);
+        }
+        // ---------------------------------------
         
         showAlert('¡Reseña de canción enviada!', 'success');
         hideCreateReviewModal();
@@ -363,17 +477,13 @@ async function handleSubmitReview() {
         );
         renderReviews(enrichedReviews.filter(r => r !== null));
 
-    } catch (error) {
-        console.error("Error al enviar la reseña:", error);
-        if (error.response?.status === 409) {
-            showAlert('Ya has enviado una reseña para esta canción.', 'warning');
-        } else {
-            showAlert(`Error al enviar reseña: ${error.message}`, 'danger');
-        }
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'SUBIR';
-content    }
+    } catch (error) {
+        console.error("Error al enviar:", error);
+        showAlert(`Error al enviar reseña: ${error.message}`, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SUBIR';
+    }
 }
 
 // --- 8. LÓGICA DE MODALS (COPIADA DE ALBUMADMIN) ---
@@ -445,13 +555,7 @@ function attachReviewActionListeners(reviewsListElement) {
             showDeleteReviewModal(reviewId, reviewTitle);
         });
     });
-    reviewsListElement.querySelectorAll('.btn-report').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const reviewId = this.getAttribute('data-review-id');
-            reportReview(reviewId);
-        });
-    });
-    reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
+    reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation(); 
             const authToken = localStorage.getItem('authToken');
@@ -465,7 +569,7 @@ function attachReviewActionListeners(reviewsListElement) {
     });
     reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
         element.addEventListener('click', function(e) {
-            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-report') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
+            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
                 return;
             }
             const reviewId = this.getAttribute('data-review-id');
@@ -546,13 +650,9 @@ async function loadCommentsIntoModal(reviewId) {
                             <button class="comment-action-btn comment-delete-btn" data-comment-id="${commentId}" title="Eliminar"><i class="fas fa-trash"></i></button>
                         </div>
                     `;
-                } else {
-                    actionButtons = `
-                        <div class="comment-actions">
-                            <button class="comment-action-btn comment-report-btn" data-comment-id="${commentId}" title="Reportar"><i class="fas fa-flag"></i></button>
-                        </div>
-                    `;
-                }
+                } else {
+                    actionButtons = '';
+                }
               
                 return `
                 <div class="comment-item" data-comment-id="${commentId}">
@@ -648,14 +748,7 @@ function attachCommentActionListeners() {
         });
     });
     
-    document.querySelectorAll('.comment-report-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const commentId = this.getAttribute('data-comment-id');
-            reportComment(commentId);
-        });
-    });
-    
-    document.querySelectorAll('.comment-like-btn').forEach(btn => {
+    document.querySelectorAll('.comment-like-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const commentId = this.getAttribute('data-comment-id');
@@ -978,7 +1071,7 @@ async function deleteReviewLogic(reviewId) {
     try {
         await deleteReview(reviewId, userId, authToken);
         
-        showAlert('✅ Reseña eliminada exitosamente', 'success');
+        showAlert('Reseña eliminada exitosamente', 'success');
         
         if (typeof loadReviews === 'function') {
             await loadPageData(); // Recargamos toda la data para que se actualice el contador
@@ -1008,99 +1101,6 @@ Indentation    }
     }
 }
     
-// --- MODAL DE REPORTAR ---
-
-function initializeReportModalLogic() {
-    const cancelReportCommentBtn = document.getElementById('cancelReportCommentBtn');
-    const confirmReportCommentBtn = document.getElementById('confirmReportCommentBtn');
-    const reportCommentModalOverlay = document.getElementById('reportCommentModalOverlay');
-    const reportRadios = document.querySelectorAll('.report-radio');
-    const reportCommentTextarea = document.getElementById('reportCommentTextarea');
-    
-    if (cancelReportCommentBtn) {
-        cancelReportCommentBtn.addEventListener('click', hideReportCommentModal);
-    }
-    if (confirmReportCommentBtn) {
-        confirmReportCommentBtn.addEventListener('click', confirmReportComment);
-    }
-    if (reportCommentModalOverlay) {
-        reportCommentModalOverlay.addEventListener('click', (e) => {
-            if (e.target === reportCommentModalOverlay) hideReportCommentModal();
-        });
-    }
-    
-    if (reportRadios.length > 0) {
-       reportRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                const confirmBtn = document.getElementById('confirmReportCommentBtn');
-                if (confirmBtn) confirmBtn.disabled = false;
-                
-                if (this.value === 'other' && reportCommentTextarea) {
-                    reportCommentTextarea.style.display = 'block';
-                } else if (reportCommentTextarea) {
-                    reportCommentTextarea.style.display = 'none';
-           }
-            });
-        });
-    }
-}
-
-function reportComment(commentId) {
-    showReportCommentModal(commentId);
-}
-function reportReview(reviewId) {
-    // TODO: Podríamos adaptar este modal para reportar reseñas también
-    showAlert('Funcionalidad de reportar reseña en desarrollo.', 'info');
-}
-
-function showReportCommentModal(commentId) {
-    reportingCommentId = commentId; // O 'reviewId' si adaptamos
-    const modal = document.getElementById('reportCommentModalOverlay');
-    const textarea = document.getElementById('reportCommentTextarea');
-    const confirmBtn = document.getElementById('confirmReportCommentBtn');
-    
-    document.querySelectorAll('.report-radio').forEach(radio => radio.checked = false);
-    if (textarea) {
-        textarea.value = '';
-        textarea.style.display = 'none';
-    }
-    if (confirmBtn) confirmBtn.disabled = true;
-    if (modal) modal.style.display = 'flex';
-}
-    
-function hideReportCommentModal() {
-    const modal = document.getElementById('reportCommentModalOverlay');
-   if(modal) modal.style.display = 'none';
-    reportingCommentId = null;
-}
-    
-async function confirmReportComment() {
-    if (!reportingCommentId) return;
-    
-    const selectedReason = document.querySelector('.report-radio:checked');
-    if (!selectedReason) {
-        showAlert('Por favor, selecciona un motivo para el reporte', 'warning');
-        return;
-    }
-    
-    const reason = selectedReason.value;
-    const textarea = document.getElementById('reportCommentTextarea');
-    const additionalInfo = textarea ? textarea.value.trim() : '';
-    
-    // TODO: Implementar 'reportComment' en socialApi.js
-   const reportData = {
-        commentId: reportingCommentId,
-        reason: reason,
-        additionalInfo: additionalInfo
-    };
-    
-    console.log('Reportar comentario:', reportData);
-    
-    hideReportCommentModal();
-    showAlert('Comentario reportado. Gracias por tu reporte.', 'success');
-}
-
-
 // --- 9. DATOS DE EJEMPLO ---
 function initializeSampleComments() {
         const authToken = localStorage.getItem('authToken');

@@ -4,7 +4,41 @@
  */
 
 import { getReviews, getCommentsByReview, getReviewReactionCount } from '../../APIs/socialApi.js';
-import { getSongByApiId } from '../../APIs/contentApi.js';
+import { getSongByApiId, getSongById, getAlbumById, getAlbumByApiId } from '../../APIs/contentApi.js';
+
+/**
+ * Función auxiliar para obtener datos de canción usando GUID interno o apiSongId
+ * @param {string} songId - Puede ser GUID interno o apiSongId
+ * @returns {Promise<Object|null>} Datos de la canción
+ */
+async function getSongData(songId) {
+    if (!songId) return null;
+    
+    try {
+        // Primero intentar con getSongById (GUID interno)
+        const songData = await getSongById(songId);
+        if (songData && (songData.Title || songData.title)) {
+            // Si getSongById devuelve datos completos, usarlos
+            return songData;
+        }
+        
+        // Si getSongById devolvió datos pero sin título, obtener el apiSongId
+        if (songData) {
+            const apiSongId = songData.apiSongId || songData.APISongId;
+            if (apiSongId) {
+                const fullSongData = await getSongByApiId(apiSongId);
+                return fullSongData || songData;
+            }
+        }
+        
+        // Si getSongById falló o no devolvió datos, intentar directamente con getSongByApiId
+        // (por si acaso el songId es un apiSongId)
+        return await getSongByApiId(songId);
+    } catch (e) {
+        console.debug('Error obteniendo datos de canción:', songId, e);
+        return null;
+    }
+}
 
 /**
  * LO MÁS RECOMENDADO
@@ -14,6 +48,7 @@ export async function getMasRecomendado() {
     try {
         // Obtener todas las reseñas
         const reviews = await getReviews();
+        console.log('🔍 getMasRecomendado: Reseñas obtenidas:', reviews?.length || 0);
         if (!reviews || reviews.length === 0) {
             return {
                 totalSongs: 0,
@@ -29,42 +64,64 @@ export async function getMasRecomendado() {
             };
         }
 
-        // Agrupar reseñas por SongId
-        const songsMap = {};
+        // Agrupar reseñas por SongId o AlbumId (canciones y álbumes)
+        const contentMap = {};
         reviews.forEach(review => {
             const songId = review.SongId || review.songId;
-            if (!songId) return;
+            const albumId = review.AlbumId || review.albumId;
+            const contentId = songId || albumId;
+            const contentType = songId ? 'song' : 'album';
+            
+            if (!contentId) return;
 
-            if (!songsMap[songId]) {
-                songsMap[songId] = {
-                    songId: songId,
+            if (!contentMap[contentId]) {
+                contentMap[contentId] = {
+                    contentId: contentId,
+                    contentType: contentType,
                     ratings: [],
                     reviewIds: []
                 };
             }
             const rating = review.Rating || review.rating || 0;
-            songsMap[songId].ratings.push(rating);
-            songsMap[songId].reviewIds.push(review.ReviewId || review.reviewId || review.id);
+            contentMap[contentId].ratings.push(rating);
+            contentMap[contentId].reviewIds.push(review.ReviewId || review.reviewId || review.id);
         });
 
-        // Calcular promedio de rating para cada canción (mínimo 10 reseñas)
-        const minReviews = 10;
-        const songsWithAvg = Object.values(songsMap)
-            .filter(song => song.ratings.length >= minReviews)
-            .map(song => ({
-                ...song,
-                avgRating: song.ratings.reduce((a, b) => a + b, 0) / song.ratings.length,
-                totalReviews: song.ratings.length
+        // Calcular promedio de rating para cada canción/álbum
+        // Si hay pocas reseñas en total, mostrar todas las canciones/álbumes con al menos 1 reseña
+        // Si hay muchas reseñas, usar mínimo 10 por contenido para mejor calidad
+        const totalReviewsCount = reviews.length;
+        const minReviews = totalReviewsCount < 50 ? 1 : 10; // Flexible: mínimo 1 si hay pocas reseñas totales
+        
+        console.log('🔍 getMasRecomendado: Contenido agrupado:', Object.keys(contentMap).length, 'items');
+        console.log('🔍 getMasRecomendado: minReviews requerido:', minReviews);
+        
+        const contentWithAvg = Object.values(contentMap)
+            .filter(content => content.ratings.length >= minReviews)
+            .map(content => ({
+                ...content,
+                avgRating: content.ratings.reduce((a, b) => a + b, 0) / content.ratings.length,
+                totalReviews: content.ratings.length
             }))
-            .sort((a, b) => b.avgRating - a.avgRating);
+            .sort((a, b) => {
+                // Ordenar primero por promedio de rating, luego por cantidad de reseñas
+                if (Math.abs(b.avgRating - a.avgRating) < 0.1) {
+                    return b.totalReviews - a.totalReviews;
+                }
+                return b.avgRating - a.avgRating;
+            });
 
-        if (songsWithAvg.length === 0) {
+        console.log('🔍 getMasRecomendado: Contenido filtrado (minReviews=' + minReviews + '):', contentWithAvg.length, 'items');
+        
+        if (contentWithAvg.length === 0) {
             return {
-                totalSongs: Object.keys(songsMap).length,
+                totalSongs: Object.keys(contentMap).length,
                 minReviews: minReviews,
                 topSong: {
                     name: 'No hay suficientes reseñas',
-                    artist: `Mínimo ${minReviews} reseñas por canción`,
+                    artist: totalReviewsCount < 50 
+                        ? 'Crea más reseñas para ver resultados' 
+                        : `Mínimo ${minReviews} reseñas por canción/álbum`,
                     avgRating: 0,
                     totalReviews: 0,
                     albumImage: null,
@@ -73,24 +130,68 @@ export async function getMasRecomendado() {
             };
         }
 
-        const topSong = songsWithAvg[0];
-        // Obtener datos de la canción
-        let songData = null;
-        try {
-            songData = await getSongByApiId(topSong.songId);
-        } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+        const topContent = contentWithAvg[0];
+        console.log('🔍 getMasRecomendado: Top contenido:', topContent);
+        
+        // Obtener datos del contenido (canción o álbum)
+        let contentData = null;
+        if (topContent.contentType === 'song') {
+            console.log('🔍 Obteniendo datos de canción:', topContent.contentId);
+            contentData = await getSongData(topContent.contentId);
+            console.log('🔍 Datos de canción obtenidos:', contentData ? 'OK' : 'NULL');
+        } else {
+            console.log('🔍 Obteniendo datos de álbum:', topContent.contentId);
+            // Para álbumes, usar getAlbumById y luego getAlbumByApiId si es necesario
+            try {
+                const albumData = await getAlbumById(topContent.contentId);
+                if (albumData && (albumData.Title || albumData.title)) {
+                    contentData = albumData;
+                } else if (albumData) {
+                    const apiAlbumId = albumData.apiAlbumId || albumData.APIAlbumId;
+                    if (apiAlbumId) {
+                        const fullAlbumData = await getAlbumByApiId(apiAlbumId);
+                        contentData = fullAlbumData || albumData;
+                    }
+                } else {
+                    contentData = await getAlbumByApiId(topContent.contentId);
+                }
+            } catch (e) {
+                console.debug('Error obteniendo datos de álbum:', topContent.contentId, e);
+                contentData = null;
+            }
         }
 
+        // Si no se pudieron obtener datos del contenido, usar valores por defecto pero mostrar la información de la reseña
+        let displayName = contentData?.Title || contentData?.title || contentData?.Name;
+        let displayArtist = contentData?.ArtistName || contentData?.artistName || contentData?.Artist;
+        const displayImage = contentData?.Image || contentData?.image || null;
+        
+        // Si no hay datos del contenido, mostrar información útil basada en las reseñas
+        if (!displayName) {
+            displayName = `${topContent.contentType === 'song' ? 'Canción' : 'Álbum'} con ${topContent.totalReviews} ${topContent.totalReviews === 1 ? 'reseña' : 'reseñas'}`;
+        }
+        if (!displayArtist) {
+            displayArtist = `Promedio: ${topContent.avgRating.toFixed(1)} ⭐`;
+        }
+        
+        console.log('🔍 getMasRecomendado: Datos finales:', {
+            name: displayName,
+            artist: displayArtist,
+            avgRating: topContent.avgRating,
+            totalReviews: topContent.totalReviews,
+            hasImage: !!displayImage,
+            hasContentData: !!contentData
+        });
+        
         return {
-            totalSongs: songsWithAvg.length,
+            totalSongs: contentWithAvg.length,
             minReviews: minReviews,
             topSong: {
-                name: songData?.Title || songData?.title || songData?.Name || 'Canción',
-                artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
-                avgRating: topSong.avgRating,
-                totalReviews: topSong.totalReviews,
-                albumImage: songData?.Image || songData?.image || null,
+                name: displayName,
+                artist: displayArtist,
+                avgRating: topContent.avgRating,
+                totalReviews: topContent.totalReviews,
+                albumImage: displayImage,
                 artistImage: null
             }
         };
@@ -189,13 +290,8 @@ export async function getMasComentado() {
         }
 
         const topSong = songsSorted[0];
-        // Obtener datos de la canción
-        let songData = null;
-        try {
-            songData = await getSongByApiId(topSong.songId);
-        } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSong.songId);
-        }
+        // Obtener datos de la canción usando la función auxiliar
+        const songData = await getSongData(topSong.songId);
 
         return {
             totalSongs: songsSorted.length,
@@ -576,12 +672,8 @@ export async function getTrending() {
         }
 
         const [topSongId, growthRate] = sorted[0];
-        let songData = null;
-        try {
-            songData = await getSongByApiId(topSongId);
-        } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSongId);
-        }
+        // Obtener datos de la canción usando la función auxiliar
+        const songData = await getSongData(topSongId);
 
         return {
             timeWindow: '48 horas',
@@ -613,6 +705,7 @@ export async function getTrending() {
  */
 export async function loadCarouselData() {
     try {
+        console.log('🚀 loadCarouselData: Iniciando carga de datos del carrusel...');
         const [masRecomendado, masComentado, top10Semana, top50Mes, trending] = await Promise.all([
             getMasRecomendado(),
             getMasComentado(),
@@ -620,6 +713,14 @@ export async function loadCarouselData() {
             getTop50Mes(),
             getTrending()
         ]);
+
+        console.log('🚀 loadCarouselData: Datos cargados:', {
+            masRecomendado: masRecomendado?.topSong?.name || 'sin datos',
+            masComentado: masComentado?.topSong?.name || 'sin datos',
+            top10Semana: top10Semana?.topSong?.name || 'sin datos',
+            top50Mes: top50Mes?.topSong?.name || 'sin datos',
+            trending: trending?.topSong?.name || 'sin datos'
+        });
 
         return {
             'lo-mas-recomendado': masRecomendado,
@@ -629,7 +730,7 @@ export async function loadCarouselData() {
             'trending': trending
         };
     } catch (error) {
-        console.error('Error cargando datos del carrusel:', error);
+        console.error('❌ Error cargando datos del carrusel:', error);
         return null;
     }
 }

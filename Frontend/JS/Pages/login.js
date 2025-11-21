@@ -36,11 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
         attemptLoginWithPorts(username, password, PORTS, 0, submitButton);
     });
 
-    const googleButton = document.querySelector('.btn-alternative');
-    googleButton.addEventListener('click', function() {
-        showAlert('Funcionalidad de login con Google en desarrollo', 'info');
-    });
-
     function showFieldError(field, message) {
         clearFieldError(field);
         field.classList.add('is-invalid');

@@ -109,69 +109,81 @@ export async function createComment(reviewId, text, userId, authToken) {
 /**
  * Actualiza un comentario existente.
  * Ruta: PUT /api/gateway/comments/{commentId}
+ * El backend espera: { CommentId: Guid, Text: string }
  */
 export async function updateComment(commentId, newText, authToken) {
+    // El backend espera CommentId en el body, no solo en la URL
+    const requestBody = {
+        CommentId: commentId, // Incluir CommentId en el body
+        Text: newText
+    };
+    
     try {
-        // Intentar primero con PATCH (método más común para actualizaciones parciales)
+        // El backend usa PUT según el controlador [HttpPut("{id}")]
+        const response = await axios.put(
+            `${API_BASE_URL}/api/gateway/comments/${commentId}`,
+            requestBody,
+            {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 5000,
+                validateStatus: (status) => status === 200 || status === 204 || status === 400 || status === 404 || status === 409
+            }
+        );
+        
+        // El backend devuelve 204 No Content cuando es exitoso
+        if (response.status === 204 || response.status === 200) {
+            return { success: true };
+        }
+        
+        return response.data;
+    } catch (error) {
+        console.error(`Error en updateComment (ID: ${commentId}):`, error);
+        
+        // Si falla el gateway, probamos la ruta directa
         try {
-            const response = await axios.patch(
-                `${API_BASE_URL}/api/gateway/comments/${commentId}`,
-                { Text: newText },
+            console.warn('Fallback: Intentando ruta directa de SocialAPI para updateComment');
+            const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
+            
+            const response = await axios.put(
+                `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
+                requestBody,
                 {
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
                         'Content-Type': 'application/json'
                     },
-                    timeout: 5000
+                    timeout: 5000,
+                    validateStatus: (status) => status === 200 || status === 204 || status === 400 || status === 404 || status === 409
                 }
             );
+            
+            // El backend devuelve 204 No Content cuando es exitoso
+            if (response.status === 204 || response.status === 200) {
+                return { success: true };
+            }
+            
             return response.data;
-        } catch (patchError) {
-            // Si PATCH falla con 405, intentar con PUT
-            if (patchError.response?.status === 405) {
-                const response = await axios.put(
-                    `${API_BASE_URL}/api/gateway/comments/${commentId}`,
-                    { Text: newText },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${authToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        timeout: 5000
-                    }
-                );
-                return response.data;
-            }
-            throw patchError;
-        }
-    } catch (error) {
-        console.error(`Error en updateComment (ID: ${commentId}):`, error);
-        // Si falla el gateway, probamos la ruta directa (lógica de home.js)
-        try {
-            console.warn('Fallback: Intentando ruta directa de SocialAPI para updateComment');
-            const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            try {
-                const response = await axios.patch(
-                    `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
-                    { Text: newText },
-                    { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
-                );
-                return response.data;
-            } catch (patchError) {
-                // Si PATCH falla, intentar PUT
-                if (patchError.response?.status === 405) {
-                    const response = await axios.put(
-                        `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
-                        { Text: newText },
-                        { headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }, timeout: 5000 }
-                    );
-                    return response.data;
-                }
-                throw patchError;
-            }
         } catch (directError) {
             console.error('Error en updateComment (Fallback):', directError);
-            throw directError; // Lanzamos el segundo error
+            
+            // Proporcionar mensaje de error más descriptivo
+            if (directError.response) {
+                const status = directError.response.status;
+                const errorData = directError.response.data;
+                
+                if (status === 400) {
+                    throw new Error(errorData?.message || 'Datos de entrada inválidos');
+                } else if (status === 404) {
+                    throw new Error('Comentario no encontrado');
+                } else if (status === 409) {
+                    throw new Error('El comentario no puede ser modificado porque ya tiene reacciones');
+                }
+            }
+            
+            throw directError;
         }
     }
 }
@@ -324,6 +336,64 @@ export async function deleteReviewReaction(reviewId, userId, authToken, reaction
 }
 
 /**
+ * Agrega un "like" (reacción) a un comentario.
+ * Ruta: POST /api/gateway/reviews/{reviewId}/reactions (con CommentId en el body)
+ */
+export async function addCommentReaction(commentId, userId, authToken) {
+    const reactionData = {
+        UserId: userId,
+        ReviewId: null,
+        CommentId: commentId
+    };
+
+    try {
+        // Intentar primero con el gateway
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews/00000000-0000-0000-0000-000000000000/reactions`, reactionData, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 5000
+        });
+        return response.data;
+    } catch (gatewayError) {
+        // Fallback a ruta directa
+        try {
+            console.warn('Fallback: Intentando ruta directa de SocialAPI para addCommentReaction');
+            const SOCIAL_API_BASE_URL = 'http://localhost:8002';
+            const response = await axios.post(`${SOCIAL_API_BASE_URL}/api/reactions`, reactionData, {
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                timeout: 5000
+            });
+            return response.data;
+        } catch (directError) {
+            console.error('Error en addCommentReaction (Fallback):', directError);
+            throw directError;
+        }
+    }
+}
+
+/**
+ * Elimina un "like" (reacción) de un comentario.
+ * Ruta: DELETE /api/reactions/comment/{commentId}/{userId}
+ */
+export async function deleteCommentReaction(commentId, userId, authToken) {
+    const SOCIAL_API_BASE_URL = 'http://localhost:8002';
+    try {
+        await axios.delete(`${SOCIAL_API_BASE_URL}/api/reactions/comment/${commentId}/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 5000
+        });
+    } catch (error) {
+        console.error('Error en deleteCommentReaction:', error);
+        throw error;
+    }
+}
+
+/**
  * Crea una nueva reseña.
  * Ruta: POST /api/gateway/reviews
  */
@@ -454,11 +524,74 @@ export async function getNotifications(userId, authToken) {
 export async function getUser(userId) {
     try {
         const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, {
-            timeout: 2000 
+            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        });
+        
+        // Si es 404 o 500, retornar null silenciosamente
+        if (response.status === 404 || response.status === 500) {
+            return null;
+        }
+        
+        return response.data;
+    } catch (error) {
+        // Manejar errores de red u otros errores silenciosamente
+        return null;
+    }
+}
+
+export async function getAverageRating(contentId, type) {
+    try {
+        // Construimos la URL. Asumo que usas API_BASE_URL importado en este archivo
+        // Si no tienes API_BASE_URL, usa la URL completa: 'http://localhost:5000/api/gateway'
+        
+        // Asegúrate de que esta variable exista o defínela aquí:
+        const baseUrl = 'http://localhost:5000/api/gateway'; // O usa import { API_BASE_URL } ...
+        
+        let queryString = '';
+        if (type === 'song') {
+            queryString = `songId=${contentId}`;
+        } else {
+            queryString = `albumId=${contentId}`;
+        }
+
+        const url = `${baseUrl}/reviews/average?${queryString}`;
+        
+        const token = localStorage.getItem('authToken');
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
+        // Asumo que usas axios (como en tus otros archivos)
+        const response = await axios.get(url, config);
+        return response.data; // Retorna el int (ej: 4)
+        
+    } catch (error) {
+        console.error("❌ Error obteniendo promedio:", error);
+        return 0; // Si falla, asumimos 0 para no romper el flujo
+    }
+}
+
+/**
+ * Obtiene todas las reseñas guardadas en el Social Service.
+ * @returns {Array} Lista de reseñas.
+ */
+export async function getAllReviews() { 
+    // Asegúrate de que API_BASE_URL (o la variable que uses) esté definida e importada.
+    const API_BASE_URL = 'http://localhost:5000'; 
+    const REVIEWS_ENDPOINT = `${API_BASE_URL}/api/gateway/reviews`;
+
+    function getAuthHeaders() {
+        const token = localStorage.getItem("authToken");
+        return { 'Authorization': `Bearer ${token}` };
+    }
+
+    try {
+        // Asumo que tienes axios disponible globalmente o importado en este archivo
+        const response = await axios.get(REVIEWS_ENDPOINT, {
+            headers: getAuthHeaders()
         });
         return response.data;
     } catch (error) {
-        console.error(`Error en getUser (ID: ${userId}):`, error);
-        throw error;
+        console.error("❌ Error en getAllReviews:", error.response?.data || error.message);
+        // Devolvemos lista vacía en caso de error, para que la página no se rompa.
+        return []; 
     }
 }

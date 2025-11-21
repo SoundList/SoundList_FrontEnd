@@ -58,6 +58,106 @@
         }
     }
 
+    async function updateUserEmail(userId, newEmail, confirmEmail) {
+        try {
+            // Endpoint: PUT /api/User/email o PUT /api/gateway/users/email
+            const PORTS = [
+                { url: 'http://localhost:5000', isGateway: true },
+                { url: 'http://localhost:8003', isGateway: false }
+            ];
+
+            const payload = {
+                Id: userId,
+                NewEmail: newEmail,
+                EmailConfirm: confirmEmail
+            };
+
+            let lastError = null;
+            for (const port of PORTS) {
+                try {
+                    const endpoint = port.isGateway 
+                        ? `${port.url}/api/gateway/users/email`
+                        : `${port.url}/api/User/email`;
+                    
+                    const response = await axios.put(endpoint, payload, getAuthHeaders());
+                    console.log("📧 Email actualizado:", response.data);
+                    return response.data;
+                } catch (error) {
+                    lastError = error;
+                    const isConnectionError = !error.response || 
+                        error.code === 'ECONNREFUSED' || 
+                        error.code === 'ERR_NETWORK' ||
+                        error.code === 'ERR_FAILED';
+                    
+                    // También tratar 405 (Method Not Allowed) como error que requiere fallback
+                    const isMethodNotAllowed = error.response && error.response.status === 405;
+                    
+                    if (!isConnectionError && !isMethodNotAllowed) {
+                        // Si no es error de conexión ni 405, lanzar el error
+                        throw error;
+                    }
+                    // Si es error de conexión o 405, intentar siguiente puerto
+                }
+            }
+            
+            // Si todos los puertos fallaron, lanzar el último error
+            throw lastError;
+        } catch (error) {
+            console.error("❌ Error en updateUserEmail:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    async function updateUserPassword(userId, oldPassword, newPassword) {
+        try {
+            // Endpoint: PUT /api/User/password o PUT /api/gateway/users/password
+            const PORTS = [
+                { url: 'http://localhost:5000', isGateway: true },
+                { url: 'http://localhost:8003', isGateway: false }
+            ];
+
+            const payload = {
+                Id: userId,
+                oldPassword: oldPassword,
+                newHashedPassword: newPassword
+            };
+
+            let lastError = null;
+            for (const port of PORTS) {
+                try {
+                    const endpoint = port.isGateway 
+                        ? `${port.url}/api/gateway/users/password`
+                        : `${port.url}/api/User/password`;
+                    
+                    const response = await axios.put(endpoint, payload, getAuthHeaders());
+                    console.log("🔐 Contraseña actualizada:", response.data);
+                    return response.data;
+                } catch (error) {
+                    lastError = error;
+                    const isConnectionError = !error.response || 
+                        error.code === 'ECONNREFUSED' || 
+                        error.code === 'ERR_NETWORK' ||
+                        error.code === 'ERR_FAILED';
+                    
+                    // También tratar 405 (Method Not Allowed) como error que requiere fallback
+                    const isMethodNotAllowed = error.response && error.response.status === 405;
+                    
+                    if (!isConnectionError && !isMethodNotAllowed) {
+                        // Si no es error de conexión ni 405, lanzar el error
+                        throw error;
+                    }
+                    // Si es error de conexión o 405, intentar siguiente puerto
+                }
+            }
+            
+            // Si todos los puertos fallaron, lanzar el último error
+            throw lastError;
+        } catch (error) {
+            console.error("❌ Error en updateUserPassword:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     // --- FOLLOWS ---
     async function getFollowerList(userId) {
         try {
@@ -170,9 +270,55 @@
         }
     }
 
+    async function deleteUserAccount(userId) {
+        try {
+            // Endpoint: DELETE /api/User/delete-self?id={userId} o DELETE /api/gateway/users/delete-self?id={userId}
+            const PORTS = [
+                { url: 'http://localhost:8003', isGateway: false },
+                { url: 'http://localhost:5000', isGateway: true }
+            ];
+
+            let lastError = null;
+            for (const port of PORTS) {
+                try {
+                    const endpoint = port.isGateway 
+                        ? `${port.url}/api/gateway/users/delete-self`
+                        : `${port.url}/api/User/delete-self`;
+                    
+                    // El endpoint espera el id como parámetro en la URL
+                    const urlWithId = `${endpoint}?id=${userId}`;
+                    const response = await axios.delete(urlWithId, getAuthHeaders());
+                    console.log("🗑️ Cuenta eliminada:", response.status);
+                    return response.data;
+                } catch (error) {
+                    lastError = error;
+                    const isConnectionError = !error.response || 
+                        error.code === 'ECONNREFUSED' || 
+                        error.code === 'ERR_NETWORK' ||
+                        error.code === 'ERR_FAILED';
+                    
+                    if (!isConnectionError) {
+                        // Si no es error de conexión, lanzar el error
+                        throw error;
+                    }
+                    // Si es error de conexión, intentar siguiente puerto
+                }
+            }
+            
+            // Si todos los puertos fallaron, lanzar el último error
+            throw lastError;
+        } catch (error) {
+            console.error("❌ Error en deleteUserAccount:", error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     window.userApi = {
         updateUserProfile,
         getUserProfile,
+        updateUserEmail,
+        updateUserPassword,
+        deleteUserAccount,
         getFollowerList,
         getFollowerCount,
         getFollowingCount,

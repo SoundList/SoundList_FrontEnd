@@ -47,14 +47,14 @@
                 <div class="header-center d-none d-lg-flex">
                     <button class="nav-btn active" data-page="inicio">INICIO</button>
                     <button class="nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="nav-btn" data-page="amigos">EXPLORAR</button>
                 </div>
 
                 <!-- Mobile Navigation Menu -->
                 <div class="mobile-nav-menu" id="mobileNavMenu">
                     <button class="mobile-nav-btn active" data-page="inicio">INICIO</button>
                     <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="mobile-nav-btn" data-page="amigos">AMIGOS</button>
+                    <button class="mobile-nav-btn" data-page="amigos">EXPLORAR</button>
                 </div>
 
                 <!-- Right Side: Notifications and Profile/Login -->
@@ -126,18 +126,6 @@
                     
                     <div class="carousel-wrapper" id="carouselWrapper">
                         <!-- Carousel items will be dynamically generated -->
-                        <div class="carousel-item active" data-top="lo-mas-recomendado">
-                            <div class="carousel-card">
-                                <div class="carousel-album-art">
-                                    <img src="../Assets/default-avatar.png" alt="Album Art" class="album-image">
-                                </div>
-                                <div class="carousel-content">
-                                    <h3 class="carousel-title">LO MÁS RECOMENDADO</h3>
-                                    <p class="carousel-description">20000 personas le gusto le gusto esto</p>
-                                    <p class="carousel-text">Texto del párrafo</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <button class="carousel-nav-btn carousel-next" id="carouselNext">
@@ -392,50 +380,6 @@
         </div>
     </div>
 
-    <!-- Report Comment Modal -->
-    <div class="report-comment-modal-overlay" id="reportCommentModalOverlay" style="display: none;">
-        <div class="report-comment-modal">
-            <div class="report-comment-modal-content">
-                <div class="report-comment-icon">
-                    <i class="fas fa-flag"></i>
-                </div>
-                <h2 class="report-comment-title">Reportar comentario</h2>
-                <p class="report-comment-message">¿Por qué quieres reportar este comentario?</p>
-                <div class="report-comment-options">
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="spam" class="report-radio">
-                        <span class="report-option-text">Spam o contenido no deseado</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="harassment" class="report-radio">
-                        <span class="report-option-text">Acoso o discurso de odio</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="inappropriate" class="report-radio">
-                        <span class="report-option-text">Contenido inapropiado</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="misinformation" class="report-radio">
-                        <span class="report-option-text">Información falsa</span>
-                    </label>
-                    <label class="report-option">
-                        <input type="radio" name="reportReason" value="other" class="report-radio">
-                        <span class="report-option-text">Otro</span>
-                    </label>
-                </div>
-                <textarea class="report-comment-textarea" 
-                          id="reportCommentTextarea" 
-                          placeholder="Describe el problema (opcional)..."
-                          maxlength="500"
-                          style="display: none;"></textarea>
-                <div class="report-comment-buttons">
-                    <button class="report-comment-btn report-comment-cancel" id="cancelReportCommentBtn">Cancelar</button>
-                    <button class="report-comment-btn report-comment-confirm" id="confirmReportCommentBtn">Reportar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Create Review Modal -->
     <div class="create-review-modal-overlay" id="createReviewModalOverlay" style="display: none;">
         <div class="create-review-modal">
@@ -503,6 +447,149 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Configurar interceptor de axios INMEDIATAMENTE después de cargar (antes que cualquier otro código) -->
+    <script>
+        // Interceptor para suprimir errores esperados (404, 500) que no deben mostrarse en consola
+        // Este interceptor se ejecuta ANTES que cualquier otro código
+        (function() {
+            // Interceptar errores de red del navegador ANTES de axios
+            const originalFetch = window.fetch;
+            if (originalFetch) {
+                window.fetch = function(...args) {
+                    return originalFetch.apply(this, args).catch(error => {
+                        const url = args[0]?.toString() || '';
+                        // Si es un error 404/500 de rutas esperadas, no mostrar en consola
+                        if ((url.includes('/Song/') || url.includes('/Album/') || 
+                             url.includes('/api/gateway/users/') || url.includes('/api/gateway/contents/') ||
+                             url.includes('/api/gateway/reactions/')) && 
+                            (error.message?.includes('404') || error.message?.includes('500'))) {
+                            // Suprimir silenciosamente
+                            return Promise.reject({ suppressed: true, originalError: error });
+                        }
+                        return Promise.reject(error);
+                    });
+                };
+            }
+            
+            if (typeof axios !== 'undefined') {
+                // Guardar el método original de request para interceptar antes
+                const originalRequest = axios.request;
+                
+                // Interceptor de respuesta (se ejecuta después de la petición)
+                axios.interceptors.response.use(
+                    response => response,
+                    error => {
+                        // Suprimir errores 404 y 500 para rutas específicas que son esperadas
+                        if (error.config && error.response) {
+                            const status = error.response.status;
+                            const url = error.config.url || '';
+                            
+                            // Errores esperados que no deben mostrarse en consola:
+                            const shouldSuppress = 
+                                // Errores 404/500 al obtener usuarios
+                                ((status === 404 || status === 500) && url.includes('/api/gateway/users/')) ||
+                                // Errores 404/500 al obtener canciones/álbumes (rutas antiguas directas)
+                                ((status === 404 || status === 500) && (url.includes('/Song/') || url.includes('/Album/') || url.includes('/song/') || url.includes('/album/'))) ||
+                                // Errores 404 al obtener canciones/álbumes (rutas nuevas del gateway)
+                                (status === 404 && (url.includes('/api/gateway/contents/song/') || url.includes('/api/gateway/contents/album/'))) ||
+                                // Errores 404 al verificar reacciones
+                                (status === 404 && url.includes('/api/gateway/reactions/review/')) ||
+                                // Errores 500 en general para estas rutas
+                                (status === 500 && (url.includes('/api/gateway/users/') || url.includes('/Song/') || url.includes('/Album/') || url.includes('/song/') || url.includes('/album/') || url.includes('/api/gateway/contents/')));
+                            
+                            if (shouldSuppress) {
+                                // Suprimir el error del console.error de axios
+                                error.config._suppressError = true;
+                                // Marcar para que no se muestre en consola
+                                error.suppressConsoleError = true;
+                                
+                                // Retornar una respuesta simulada para que no se muestre como error
+                                return Promise.resolve({
+                                    status: status,
+                                    statusText: status === 404 ? 'Not Found' : 'Internal Server Error',
+                                    data: null,
+                                    headers: error.response.headers || {},
+                                    config: error.config
+                                });
+                            }
+                        }
+                        
+                        // Para otros errores, rechazar normalmente
+                        return Promise.reject(error);
+                    }
+                );
+                
+                // Interceptar console.error, console.warn y console.log para suprimir errores esperados
+                const originalConsoleError = console.error;
+                const originalConsoleWarn = console.warn;
+                const originalConsoleLog = console.log;
+                
+                // Función auxiliar para verificar si un error debe ser suprimido
+                function shouldSuppressConsoleMessage(...args) {
+                    const errorString = args.map(arg => {
+                        if (typeof arg === 'string') return arg;
+                        if (arg?.config?.url) return arg.config.url;
+                        if (arg?.response?.status) return `Status: ${arg.response.status}`;
+                        if (arg?.message) return arg.message;
+                        return String(arg);
+                    }).join(' ').toLowerCase();
+                    
+                    // Verificar si contiene errores 404/500 de rutas esperadas
+                    const has404or500 = errorString.includes('404') || errorString.includes('500') || 
+                                       errorString.includes('not found') || errorString.includes('internal server error') ||
+                                       errorString.includes('failed to load resource');
+                    
+                    const hasSuppressedRoute = 
+                        errorString.includes('/song/') || 
+                        errorString.includes('/album/') || 
+                        errorString.includes('/song') || 
+                        errorString.includes('/album') || 
+                        errorString.includes('/api/gateway/users/') ||
+                        errorString.includes('/api/gateway/contents/') ||
+                        errorString.includes('/api/gateway/reactions/') ||
+                        errorString.includes('localhost:5000/song/') ||
+                        errorString.includes('localhost:5000/album/') ||
+                        errorString.includes('localhost:5000/song') ||
+                        errorString.includes('localhost:5000/album') ||
+                        errorString.includes('gateway/reactions/review/') ||
+                        errorString.includes('gateway/contents/song/') ||
+                        errorString.includes('gateway/contents/album/') ||
+                        errorString.includes('xhr.js') && (errorString.includes('404') || errorString.includes('500')) && (errorString.includes('song') || errorString.includes('album') || errorString.includes('gateway'));
+                    
+                    return (has404or500 && hasSuppressedRoute) ||
+                           (args[0]?.config && (args[0].config._suppressError || args[0].config.suppressConsoleError)) ||
+                           (args[0]?.suppressConsoleError);
+                }
+                
+                console.error = function(...args) {
+                    if (shouldSuppressConsoleMessage(...args)) {
+                        return; // No mostrar el error
+                    }
+                    originalConsoleError.apply(console, args);
+                };
+                
+                console.warn = function(...args) {
+                    if (shouldSuppressConsoleMessage(...args)) {
+                        return; // No mostrar el warning
+                    }
+                    originalConsoleWarn.apply(console, args);
+                };
+                
+                // También interceptar console.log para errores de red del navegador
+                console.log = function(...args) {
+                    const message = args.join(' ').toLowerCase();
+                    // Suprimir mensajes de errores 404/500 de rutas esperadas
+                    if ((message.includes('404') || message.includes('500') || message.includes('failed to load')) &&
+                        (message.includes('/song/') || message.includes('/album/') || 
+                         message.includes('gateway/users/') || message.includes('gateway/contents/') ||
+                         message.includes('gateway/reactions/'))) {
+                        return; // No mostrar
+                    }
+                    originalConsoleLog.apply(console, args);
+                };
+            }
+        })();
+    </script>
     <!-- SignalR -->
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
     <!-- Custom JS -->

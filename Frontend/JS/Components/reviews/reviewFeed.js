@@ -1,539 +1,424 @@
-
+/**
+ * Módulo de feed de reseñas
+ * Carga reseñas y busca sus datos de canción/álbum correspondientes.
+ */
 
 import { API_BASE_URL } from '../../APIs/configApi.js';
+import { getReviews, getUser, getReviewReactionCount, getCommentsByReview } from '../../APIs/socialApi.js';
+import { getSongByApiId, getAlbumByApiId, getSongById, getAlbumById } from '../../APIs/contentApi.js';
 import { renderReviews } from './reviewRenderer.js';
 import { showAlert } from '../../Utils/reviewHelpers.js';
 import { setReviewFilter } from './reviewUtils.js';
 
-/**
- * Inicializa el feed de reseñas
- * @param {Object} commentsData - Objeto para almacenar comentarios simulados (key: reviewId)
- * @param {Function} setLoadReviews - Función para establecer la función loadReviews globalmente
- * @param {Function} getCurrentFilter - Función para obtener el filtro actual
- * @param {Function} setCurrentFilter - Función para actualizar el filtro actual
-* @param {Function} enrichReviewsUtility -  Función para añadir el estado social 
-*/
 export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter, setCurrentFilter) {
     const reviewsList = document.getElementById('reviewsList');
     if (!reviewsList) return;
 
-    const sampleReviews = [
-        {
-            username: 'DeniDen',
-            song: 'Love Story',
-            artist: 'Taylor Swift',
-            comment: 'Buena cancion',
-            rating: 3,
-            likes: 45,
-            comments: 12
-        },
-        {
-            username: 'Luli',
-            song: 'Niño',
-            artist: 'Milo J',
-            comment: 'Canción nostalgica',
-            rating: 5,
-            likes: 89,
-            comments: 23
-        },
-        {
-            username: 'Miri ✨',
-            song: 'Ya no vuelvas',
-            artist: 'Luck Ra',
-            comment: 'Se lucio Luck Ra',
-            rating: 4,
-            likes: 67,
-            comments: 18
-        }
-    ];
-
+    // --- 1. DEFINICIÓN DE FILTROS (ESTO FALTABA) ---
     function initializeReviewFilters() {
         const filterButtons = document.querySelectorAll('.filter-btn');
         filterButtons.forEach(btn => {
             btn.addEventListener('click', () => {
+                // Remover clase active de todos
+                filterButtons.forEach(b => b.classList.remove('active'));
+                // Agregar a este
+                btn.classList.add('active');
+                
                 const filter = btn.dataset.filter;
-                setReviewFilter(filter, setCurrentFilter, loadReviewsFunction);
+                if (typeof setCurrentFilter === 'function') {
+                    setReviewFilter(filter, setCurrentFilter, loadReviewsFunction);
+                }
             });
         });
     }
-    
+
+    // --- 2. FUNCIÓN PRINCIPAL DE CARGA ---
     async function loadReviewsFunction() {
-        const currentUserId = localStorage.getItem('userId') ? localStorage.getItem('userId') : null;
+        const currentUserId = localStorage.getItem('userId');
         
+        // Mostrar Spinner
+        reviewsList.innerHTML = '<div class="text-center text-light py-4"><div class="spinner-border" role="status"></div></div>';
+
         try {
-            // 1. Obtener todas las reseñas a través del gateway (con timeout de 5 segundos)
+            // A. Obtener reseñas de SocialAPI
             let reviews = [];
             try {
-                const reviewsResponse = await axios.get(`${API_BASE_URL}/api/gateway/reviews`, {
-                    timeout: 5000
-                });
-                reviews = reviewsResponse.data || [];
+                const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                if (!axiosInstance) {
+                    throw new Error('axios no está disponible');
+                }
+                const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/reviews`, { timeout: 5000 });
+                reviews = response.data || [];
             } catch (error) {
-                // Si hay un error 502 (Bad Gateway) o de conexión, mostrar mensaje pero no fallar completamente
-                if (error.response?.status === 502 || error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
-                    console.warn('⚠️ No se pudo conectar con el servicio de reseñas. El servicio puede estar iniciando...');
-                    // Renderizar lista vacía en lugar de mostrar error crítico
-                    renderReviews([]);
-                    return;
-                }
-                // Para otros errores, lanzar la excepción
-                throw error;
+                console.warn("API de reseñas no disponible.");
+                reviewsList.innerHTML = '<p class="text-light text-center p-4">No se pudieron cargar las reseñas.</p>';
+                return;
             }
-            
+
             if (!reviews || reviews.length === 0) {
-                renderReviews([]);
+                reviewsList.innerHTML = '<p class="text-light text-center p-4">No hay reseñas aún.</p>';
                 return;
             }
-            if (enrichReviewsUtility) {
-                // La utilidad añade la bandera isFollowingAuthor a cada review
-                reviews = await enrichReviewsUtility(reviews); 
-            } else {
-                console.warn("⚠️ Utilidad social (enrichReviewsUtility) no definida. Los botones 'Seguir' no aparecerán.");
-                // Si la utilidad no existe, agregamos la propiedad isFollowingAuthor como false por defecto
-                reviews = reviews.map(review => ({ ...review, isFollowingAuthor: false }));
-            }
 
-            const reviewsWithDetails = await Promise.all(
-                reviews.map(async (review) => {
-                    try {
+            // B. ENRIQUECIMIENTO DE DATOS
+            const enrichedReviews = await Promise.all(reviews.map(async (review) => {
+                try {
+                    // Normalizar IDs
+                    const reviewId = review.ReviewId || review.reviewId || review.id;
+                    const userId = review.UserId || review.userId;
+                    const songId = review.SongId || review.songId;
+                    const albumId = review.AlbumId || review.albumId;
 
-                        let reviewId = review.ReviewId || review.reviewId || review.id || 
-                                    review.Id_Review || review.id_Review || review.Id_Review;
-                        
-                        if (!reviewId) {
-                            console.warn('⚠️ Reseña sin ID válido, omitiendo:', review);
-                            return null;
-                        }
-                        
-                        // Normalizar el reviewId (convertir a string y trim)
-                        reviewId = String(reviewId).trim();
-                        
-                        // Validar que después de normalizar no esté vacío o sea "null"/"undefined"
-                        if (!reviewId || reviewId === 'null' || reviewId === 'undefined' || reviewId === '00000000-0000-0000-0000-000000000000') {
-                            console.warn('⚠️ Reseña con ID inválido después de normalizar, omitiendo:', { review, reviewId });
-                            return null;
-                        }
-                        
-                        // Intentar obtener detalles completos usando el endpoint agregador
-                        let reviewDetails = null;
-                        // Validar que UserId existe antes de hacer toString()
-                        const userIdStr = review.UserId ? (review.UserId.toString ? review.UserId.toString() : String(review.UserId)) : 'unknown';
-                        let username = `Usuario ${userIdStr.substring(0, 8)}`;
-                        let avatar = '../Assets/default-avatar.png';
-                        
+                    // Valores por defecto (igual que en profileHandler.js)
+                    let songName = songId ? 'Canción' : 'Álbum';
+                    let albumName = 'Álbum';
+                    let artistName = 'Artista';
+                    let contentType = songId ? 'song' : 'album';
+                    let image = "../Assets/default-avatar.png";
+
+                    // Intentar desde localStorage primero (igual que en profileHandler.js)
+                    const storageKey = `review_content_${reviewId}`;
+                    const storedContentData = localStorage.getItem(storageKey);
+                    let contentData = null;
+                    
+                    if (storedContentData) {
                         try {
-                            const detailsResponse = await axios.get(
-                                `${API_BASE_URL}/api/review-details/${reviewId}`,
-                                { timeout: 3000 }
-                            );
-                            reviewDetails = detailsResponse.data;
-                            if (reviewDetails?.user) {
-                                username = reviewDetails.user.username || reviewDetails.user.Username || username;
-                                avatar = reviewDetails.user.imgProfile || reviewDetails.user.imgProfile || avatar;
-                            }
-                        } catch (error) {
-                            // Silenciar errores 404, 500 y 502 del endpoint agregador (son esperados cuando el servicio no está disponible)
-                            const status = error.response?.status;
-                            if (status !== 404 && status !== 500 && status !== 502) {
-                                console.debug(`No se pudieron obtener detalles completos para review ${reviewId}, intentando obtener usuario directamente`);
-                            }
-                            
-                            // Intentar obtener el usuario directamente del User Service
-                            if (review.UserId || review.userId) {
-                                try {
-                                    const userId = review.UserId || review.userId;
-                                    const userResponse = await axios.get(
-                                        `${API_BASE_URL}/api/gateway/users/${userId}`,
-                                        { timeout: 2000 }
-                                    );
-                                    if (userResponse.data) {
-                                        username = userResponse.data.Username || userResponse.data.username || username;
-                                        avatar = userResponse.data.imgProfile || userResponse.data.ImgProfile || avatar;
-                                    }
-                                } catch (userError) {
-                                    // Silenciar errores de usuario también
-                                    if (userError.response?.status !== 404 && userError.response?.status !== 500 && userError.response?.status !== 502) {
-                                        console.debug(`No se pudo obtener usuario ${review.UserId || review.userId} del User Service`);
-                                    }
+                            contentData = JSON.parse(storedContentData);
+                            if (contentData && contentData.name && contentData.name !== 'Canción' && contentData.name !== 'Álbum') {
+                                if (contentData.type === 'song') {
+                                    songName = contentData.name;
+                                    artistName = contentData.artist || artistName;
+                                } else if (contentData.type === 'album') {
+                                    albumName = contentData.name;
+                                    artistName = contentData.artist || artistName;
                                 }
+                                contentType = contentData.type;
                             }
+                        } catch (e) {
+                            console.debug('Error parseando datos de contenido:', e);
                         }
-                        
-                        // Obtener cantidad de likes (reacciones) a través del gateway
-                        let likes = 0;
-                        try {
-                            const likesResponse = await axios.get(
-                                `${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions/count`,
-                                { timeout: 3000 }
-                            );
-                            likes = likesResponse.data || 0;
-                        } catch (error) {
-                            // Si no hay ruta en gateway, intentar directo (fallback)
-                            try {
-                                const likesResponse = await axios.get(
-                                    `http://localhost:8002/Reaction/${reviewId}/Reviews/count`,
-                                    { timeout: 3000 }
-                                );
-                                likes = likesResponse.data || 0;
-                            } catch (e) {
-                                // Silenciar el error si el reviewId es válido pero no hay likes
-                                if (reviewId && reviewId !== 'undefined') {
-                                    console.debug(`No se pudieron obtener likes para review ${reviewId}`);
-                                }
-                                likes = 0;
-                            }
-                        }
-                        
-                        // Obtener cantidad de comentarios
-                        let comments = 0;
-                        const authToken = localStorage.getItem('authToken');
-                        
-                        // Si es modo desarrollo, usar comentarios simulados
-                        if (authToken && authToken.startsWith('dev-token-')) {
-                            comments = commentsData[reviewId] ? commentsData[reviewId].length : 0;
-                        } else {
-                            // Modo real: obtener del backend a través del gateway
-                            try {
-                                const commentsResponse = await axios.get(
-                                    `${API_BASE_URL}/api/gateway/reviews/${reviewId}/comments`,
-                                    { timeout: 3000 }
-                                );
-                                comments = Array.isArray(commentsResponse.data) ? commentsResponse.data.length : 0;
-                            } catch (error) {
-                                // Si no hay ruta en gateway, intentar directo (fallback)
-                                try {
-                                    const commentsResponse = await axios.get(
-                                        `${API_BASE_URL}/api/gateway/comments/review/${reviewId}`,
-                                        { timeout: 3000 }
-                                    );
-                                    comments = Array.isArray(commentsResponse.data) ? commentsResponse.data.length : 0;
-                                } catch (e) {
-                                    // Silenciar el error si el reviewId es válido pero no hay comentarios
-                                    if (reviewId && reviewId !== 'undefined') {
-                                        console.debug(`No se pudieron obtener comentarios para review ${reviewId}`);
-                                    }
-                                    comments = 0;
-                                }
-                            }
-                        }
-                        
-                        // Verificar si el usuario actual dio like
-                        let userLiked = false;
-                        if (currentUserId) {
-                            // Verificar si hay un reactionId guardado en localStorage (del backend)
-                            const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-                            // También verificar el estado local (fallback si el backend falló)
-                            const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-                            userLiked = storedReactionId !== null || localLike === 'true';
-                        }
-                        
-                        // Intentar obtener nombres reales de canción/álbum desde el Content Service
-                        let songName = review.SongId ? 'Canción' : 'Álbum';
-                        let albumName = 'Álbum';
-                        let artistName = 'Artista';
-                        
-                        // PRIMERO: Intentar obtener desde localStorage (SIEMPRE tiene prioridad si existe)
-                        let contentData = null;
-                        if (reviewId) {
-                            const normalizedReviewId = String(reviewId).trim();
-                            const storageKey = `review_content_${normalizedReviewId}`;
-                            const storedContentData = localStorage.getItem(storageKey);
-                            
-                            if (storedContentData) {
-                                try {
-                                    contentData = JSON.parse(storedContentData);
-                                    console.log(`📦 [DEBUG] Datos encontrados en localStorage para review ${reviewId}:`, contentData);
-                                    
-                                    // Si tenemos datos válidos en localStorage, USARLOS DIRECTAMENTE
-                                    if (contentData && contentData.name && contentData.name !== 'Canción' && contentData.name !== 'Álbum' && contentData.name.trim() !== '') {
-                                        // Usar los datos guardados directamente
-                                        if (contentData.type === 'song') {
-                                            songName = contentData.name;
-                                            artistName = contentData.artist || artistName;
-                                            console.log(`✅ [DEBUG] Usando datos de localStorage para canción:`, { songName, artistName });
-                                        } else if (contentData.type === 'album') {
-                                            albumName = contentData.name;
-                                            artistName = contentData.artist || artistName;
-                                            console.log(`✅ [DEBUG] Usando datos de localStorage para álbum:`, { albumName, artistName });
-                                        }
-                                        // Marcar que ya tenemos los datos, no necesitamos buscar más
-                                        // IMPORTANTE: Mantener contentData con todos sus datos para usarlo después
-                                        contentData._used = true;
-                                    }
-                                } catch (e) {
-                                    console.error('❌ Error parseando datos de contenido guardados:', e);
-                                }
-                            } else {
-                                console.log(`⚠️ [DEBUG] No se encontraron datos en localStorage para review ${reviewId}`);
-                            }
-                        }
-                            
-                        // SEGUNDO: Si no hay datos válidos en localStorage, intentar obtener directamente desde Content Service usando los IDs de la reseña
-                        if (!contentData || !contentData._used) {
-                            // Intentar obtener desde Content Service usando SongId o AlbumId de la reseña
-                            if (review.SongId) {
-                                try {
-                                    const songIdStr = String(review.SongId).trim();
-                                    console.log(`🔍 [DEBUG] Obteniendo datos de canción desde Content Service con ID: ${songIdStr}`);
-                                    console.log(`🔍 [DEBUG] review.SongId original:`, review.SongId);
-                                    const songResponse = await axios.get(
-                                        `${API_BASE_URL}/api/gateway/contents/song/${songIdStr}`,
-                                        { timeout: 3000 }
-                                    );
-                                    console.log(`🔍 [DEBUG] Respuesta del Content Service:`, songResponse.data);
-                                    if (songResponse.data) {
-                                        const newSongName = songResponse.data.Title || songResponse.data.title || songResponse.data.Name || songResponse.data.name;
-                                        const newArtistName = songResponse.data.ArtistName || songResponse.data.artistName || songResponse.data.Artist || songResponse.data.artist;
-                                        
-                                        if (newSongName && newSongName !== 'Canción') {
-                                            songName = newSongName;
-                                        }
-                                        if (newArtistName && newArtistName !== 'Artista') {
-                                            artistName = newArtistName;
-                                        }
-                                        
-                                        console.log(`✅ [DEBUG] Datos obtenidos desde Content Service para canción:`, { 
-                                            songName, 
-                                            artistName,
-                                            originalData: songResponse.data 
-                                        });
-                                        
-                                        // Guardar en localStorage para próximas veces
-                                        if (reviewId) {
-                                            const normalizedReviewId = String(reviewId).trim();
-                                            const storageKey = `review_content_${normalizedReviewId}`;
-                                            const contentDataToStore = {
-                                                type: 'song',
-                                                name: songName,
-                                                artist: artistName,
-                                                id: songIdStr,
-                                                image: songResponse.data.Image || songResponse.data.image || '../Assets/default-avatar.png'
-                                            };
-                                            localStorage.setItem(storageKey, JSON.stringify(contentDataToStore));
-                                            console.log(`💾 [DEBUG] Datos guardados en localStorage:`, contentDataToStore);
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.error(`❌ [DEBUG] Error obteniendo canción desde Content Service:`, e);
-                                    console.error(`❌ [DEBUG] URL intentada: ${API_BASE_URL}/api/gateway/contents/song/${String(review.SongId).trim()}`);
-                                    console.debug(`⚠️ No se pudo obtener canción desde Content Service:`, e.message);
-                                }
-                            } else if (review.AlbumId) {
-                                try {
-                                    const albumIdStr = String(review.AlbumId).trim();
-                                    console.debug(`🔍 Obteniendo datos de álbum desde Content Service con ID: ${albumIdStr}`);
-                                    const albumResponse = await axios.get(
-                                        `${API_BASE_URL}/api/gateway/contents/album/${albumIdStr}`,
-                                        { timeout: 3000 }
-                                    );
-                                    if (albumResponse.data) {
-                                        albumName = albumResponse.data.Title || albumResponse.data.title || albumName;
-                                    
-                                        // Para álbumes, intentar obtener el artista desde la primera canción del álbum
-                                        if (albumResponse.data.Songs && albumResponse.data.Songs.length > 0) {
-                                            const firstSong = albumResponse.data.Songs[0];
-                                            const foundArtist = firstSong.ArtistName || firstSong.artistName || firstSong.Artist || firstSong.artist;
-                                            if (foundArtist && foundArtist !== 'Artista') {
-                                                artistName = foundArtist;
-                                                console.debug(`✅ Artista obtenido desde primera canción del álbum:`, artistName);
-                                            }
-                                        }
-                                        
-                                        // Si aún no tenemos artista, intentar desde ArtistName del álbum (si existe)
-                                        if (artistName === 'Artista' && albumResponse.data.ArtistName) {
-                                            artistName = albumResponse.data.ArtistName;
-                                        }
-                                        
-                                        console.debug(`✅ Datos obtenidos desde Content Service para álbum:`, { albumName, artistName });
-                                        
-                                        // Guardar en localStorage para próximas veces (SIEMPRE guardar, incluso si el artista es 'Artista')
-                                        if (reviewId) {
-                                            const normalizedReviewId = String(reviewId).trim();
-                                            const storageKey = `review_content_${normalizedReviewId}`;
-                                            const contentDataToStore = {
-                                                type: 'album',
-                                                name: albumName,
-                                                artist: artistName, // Guardar el artista obtenido (o 'Artista' si no se encontró)
-                                                id: albumIdStr,
-                                                image: albumResponse.data.Image || albumResponse.data.image || '../Assets/default-avatar.png'
-                                            };
-                                            localStorage.setItem(storageKey, JSON.stringify(contentDataToStore));
-                                            console.debug(`💾 Datos guardados en localStorage:`, contentDataToStore);
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.debug(`⚠️ No se pudo obtener álbum desde Content Service:`, e.message);
-                                }
-                            }
-                        }
-                        
-                        // TERCERO: Intentar obtener desde reviewDetails si aún no tenemos datos (fallback final)
-                        if ((songName === 'Canción' || albumName === 'Álbum' || artistName === 'Artista') && reviewDetails) {
-                            if (reviewDetails.song) {
-                                songName = reviewDetails.song.Title || reviewDetails.song.title || songName;
-                                artistName = reviewDetails.song.ArtistName || reviewDetails.song.artistName || artistName;
-                            } else if (reviewDetails.album) {
-                                albumName = reviewDetails.album.Title || reviewDetails.album.title || albumName;
-                                artistName = reviewDetails.album.ArtistName || reviewDetails.album.artistName || artistName;
-                            }
-                        }
-                        
-                        // Mapear datos del backend al formato del frontend
-                        // Intentar obtener la fecha de creación (puede venir como CreatedAt, Created, Date, etc.)
-                        const createdAt = review.CreatedAt || review.Created || review.Date || review.Timestamp || new Date();
-                        const createdAtDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
-                        
-                        // Determinar el tipo de contenido y el nombre a mostrar
-                        // PRIORIDAD: Usar el tipo de contentData si está disponible, sino usar review.SongId/AlbumId
-                        let contentType;
-                        let contentName;
-                        
-                        if (contentData && contentData.type) {
-                            // Usar el tipo de localStorage (más confiable)
-                            contentType = contentData.type;
-                            contentName = contentData.type === 'song' ? songName : albumName;
-                            console.log(`✅ [DEBUG] Usando contentType desde localStorage: ${contentType}, contentName: ${contentName}`);
-                        } else {
-                            // Fallback: usar review.SongId/AlbumId
-                            contentType = review.SongId ? 'song' : 'album';
-                            contentName = review.SongId ? songName : albumName;
-                            console.log(`⚠️ [DEBUG] Usando contentType desde review (fallback): ${contentType}, contentName: ${contentName}`);
-                        }
-                        
-                        // DEBUG: Log final antes de retornar
-                        console.log(`🔍 [DEBUG] Datos finales para review ${reviewId}:`, {
-                            contentType,
-                            contentName,
-                            songName,
-                            albumName,
-                            artistName,
-                            hasContentData: !!contentData,
-                            contentDataFromStorage: contentData
-                        });
-                        
-                        return {
-                            id: reviewId,
-                            username: username,
-                            song: contentName, // Nombre de la canción o álbum
-                            artist: artistName,
-                            contentType: contentType, // 'song' o 'album'
-                            title: review.Title || review.title || '', // Título de la reseña
-                            comment: review.Content || review.content || 'Sin contenido', // Contenido/descripción de la reseña
-                            rating: review.Rating || review.rating || 0,
-                            likes: likes,
-                            comments: comments,
-                            userLiked: userLiked,
-                            avatar: avatar,
-                            userId: review.UserId || review.userId,
-                            songId: review.SongId || review.songId,
-                            albumId: review.AlbumId || review.albumId,
-                            createdAt: createdAtDate,
-                            isFollowingAuthor: review.isFollowingAuthor || false
-                        };
-                    } catch (error) {
-                        // Validar que ReviewId existe
-                        const reviewId = review.ReviewId || review.reviewId || review.id;
-                        if (!reviewId) {
-                            console.warn('⚠️ Reseña sin ID válido en catch, omitiendo:', review);
-                            return null;
-                        }
-                        
-                        console.error(`Error obteniendo detalles de review ${reviewId}:`, error);
-                        // Retornar review con datos básicos si falla obtener detalles
-                        // Intentar obtener la fecha de creación
-                        const createdAt = review.CreatedAt || review.Created || review.Date || review.Timestamp || new Date();
-                        const createdAtDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
-                        
-                        // Validar que UserId existe antes de hacer toString()
-                        const userIdStr = review.UserId ? (review.UserId.toString ? review.UserId.toString() : String(review.UserId)) : 'unknown';
-                        
-                        return {
-                            id: reviewId,
-                            username: `Usuario ${userIdStr.substring(0, 8)}`,
-                            song: review.SongId ? 'Canción' : 'Álbum',
-                            artist: 'Artista',
-                            contentType: review.SongId ? 'song' : 'album',
-                            title: review.Title || review.title || '', // Título de la reseña
-                            comment: review.Content || review.content || 'Sin contenido', // Contenido/descripción de la reseña
-                            rating: review.Rating || review.rating || 0,
-                            likes: 0,
-                            comments: 0,
-                            userLiked: false,
-                            avatar: '../Assets/default-avatar.png',
-                            userId: review.UserId || review.userId,
-                            createdAt: createdAtDate
-                        };
                     }
-                })
-            );
-            
-            // Filtrar reseñas nulas (que no tienen ID válido)
-            const validReviews = reviewsWithDetails.filter(review => review !== null);
-            
-            if (validReviews.length === 0) {
-                showAlert('No hay reseñas válidas disponibles', 'info');
-                renderReviews([]);
-                return;
-            }
-            
-            // 3. Ordenar según el filtro seleccionado
-            let sortedReviews;
-            const currentFilter = getCurrentFilter ? getCurrentFilter() : 'popular';
-            if (currentFilter === 'recent') {
-                // Ordenar por fecha de creación (más recientes primero)
-                sortedReviews = validReviews.sort((a, b) => {
-                    const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-                    const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-                    return dateB - dateA; // Más recientes primero
-                });
-            } else {
-                // Ordenar por likes (más populares primero)
-                sortedReviews = validReviews.sort((a, b) => b.likes - a.likes);
-            }
-            
-            // 4. Renderizar reseñas
-            renderReviews(sortedReviews);
-            
-        } catch (error) {
-            console.error('Error cargando reseñas:', error);
-            
-            // Si ya manejamos el error 502 arriba, no mostrar otro mensaje
-            if (error.response?.status === 502 || error.code === 'ECONNABORTED') {
-                // Ya se manejó arriba, solo renderizar lista vacía
-                renderReviews([]);
-                return;
-            }
-            
-            if (error.response) {
-                // Error del servidor
-                const status = error.response.status;
-                console.warn(`Error del servidor: ${status}`);
-                
-                if (status === 404) {
-                    // No hay reseñas, renderizar lista vacía
-                    renderReviews([]);
-                } else {
-                    // Para otros errores, usar datos de ejemplo como fallback silencioso
-                    const sortedReviews = [...sampleReviews].sort((a, b) => b.likes - a.likes);
-                    renderReviews(sortedReviews);
+
+                    // Si no hay datos en localStorage, intentar desde Content Service
+                    // IMPORTANTE: songId y albumId son GUIDs locales, necesitamos usar getSongById/getAlbumById
+                    if (!contentData || ((!songName || songName === 'Canción') && (!albumName || albumName === 'Álbum'))) {
+                        if (songId && typeof getSongById === 'function') {
+                            try {
+                                const songData = await getSongById(String(songId).trim());
+                                if (songData) {
+                                    songName = songData.Title || songData.title || songData.Name || songName;
+                                    artistName = songData.ArtistName || songData.artistName || songData.Artist || artistName;
+                                    image = songData.image || songData.Image || image;
+                                    
+                                    // Si tenemos el apiSongId, guardar en localStorage para futuras referencias
+                                    if (songData.apiSongId || songData.APISongId) {
+                                        const apiId = songData.apiSongId || songData.APISongId;
+                                        const storageKey = `review_content_${reviewId}`;
+                                        const contentDataToSave = {
+                                            type: 'song',
+                                            id: apiId,
+                                            name: songName,
+                                            artist: artistName,
+                                            image: image
+                                        };
+                                        try {
+                                            localStorage.setItem(storageKey, JSON.stringify(contentDataToSave));
+                                        } catch (e) {
+                                            // Ignorar errores de localStorage
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // Manejar errores silenciosamente (404, etc.)
+                                // Usar valores por defecto que ya están establecidos
+                            }
+                        } else if (albumId && typeof getAlbumById === 'function') {
+                            try {
+                                const albumData = await getAlbumById(String(albumId).trim());
+                                if (albumData) {
+                                    albumName = albumData.Title || albumData.title || albumData.Name || albumName;
+                                    // Intentar obtener artista de todas las posibles fuentes (igual que en albumAdmin.js)
+                                    artistName = albumData.ArtistName || 
+                                                albumData.artistName || 
+                                                (albumData.artist ? (albumData.artist.name || albumData.artist.Name) : null) ||
+                                                (albumData.Artist ? (albumData.Artist.Name || albumData.Artist.name) : null) ||
+                                                artistName;
+                                    
+                                    // Si no hay artista directo, intentar desde las canciones del álbum
+                                    if ((!artistName || artistName === 'Artista') && albumData.Songs && albumData.Songs.length > 0) {
+                                        const firstSong = albumData.Songs[0];
+                                        artistName = firstSong.ArtistName || 
+                                                    firstSong.artistName ||
+                                                    (firstSong.artist ? (firstSong.artist.name || firstSong.artist.Name) : null) ||
+                                                    (firstSong.Artist ? (firstSong.Artist.Name || firstSong.Artist.name) : null) ||
+                                                    artistName;
+                                    }
+                                    image = albumData.image || albumData.Image || image;
+                                    
+                                    // Si tenemos el apiAlbumId, guardar en localStorage para futuras referencias
+                                    if (albumData.apiAlbumId || albumData.APIAlbumId) {
+                                        const apiId = albumData.apiAlbumId || albumData.APIAlbumId;
+                                        const storageKey = `review_content_${reviewId}`;
+                                        const contentDataToSave = {
+                                            type: 'album',
+                                            id: apiId,
+                                            name: albumName,
+                                            artist: artistName,
+                                            image: image
+                                        };
+                                        try {
+                                            localStorage.setItem(storageKey, JSON.stringify(contentDataToSave));
+                                        } catch (e) {
+                                            // Ignorar errores de localStorage
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // Manejar errores silenciosamente (404, etc.)
+                                // Usar valores por defecto que ya están establecidos
+                            }
+                        }
+                    }
+
+                    // Determinar el nombre del contenido (igual que en profileHandler.js)
+                    const itemTitle = contentType === 'song' ? songName : albumName;
+
+                    // Intentar obtener likes desde cache primero (FUENTE DE VERDAD INICIAL)
+                    const likesCacheKey = `review_likes_${reviewId}`;
+                    let cachedLikes = null;
+                    try {
+                        const cached = localStorage.getItem(likesCacheKey);
+                        if (cached !== null) {
+                            cachedLikes = parseInt(cached, 10);
+                            if (isNaN(cachedLikes)) cachedLikes = null;
+                        }
+                    } catch (e) {
+                        // Ignorar errores de localStorage
+                    }
+
+                    // Datos de Usuario y Social
+                    // IMPORTANTE: Usar cache como valor inicial, luego sincronizar con backend
+                    const [userData, likesFromBackend, comments] = await Promise.all([
+                        getUser(userId).catch((err) => {
+                            // Manejar errores silenciosamente (404, 500, etc.)
+                            if (err.response && (err.response.status === 404 || err.response.status === 500)) {
+                                // Usuario no encontrado o error del servidor - usar valores por defecto
+                                return null;
+                            }
+                            // Otros errores también se manejan silenciosamente
+                            return null;
+                        }),
+                        getReviewReactionCount(reviewId)
+                            .then((count) => {
+                                // Sincronizar con backend, pero solo actualizar cache si es diferente
+                                if (typeof count === 'number' && !isNaN(count) && count >= 0) {
+                                    try {
+                                        // Si hay cache y es diferente, usar el mayor (para evitar perder likes)
+                                        if (cachedLikes !== null && cachedLikes !== count) {
+                                            // Si el cache es mayor, mantenerlo (puede ser que el backend no se haya actualizado aún)
+                                            const finalCount = Math.max(cachedLikes, count);
+                                            localStorage.setItem(likesCacheKey, String(finalCount));
+                                            return finalCount;
+                                        } else {
+                                            // Si no hay cache o son iguales, usar el valor del backend
+                                            localStorage.setItem(likesCacheKey, String(count));
+                                            return count;
+                                        }
+                                    } catch (e) {
+                                        // Ignorar errores de localStorage
+                                        return count;
+                                    }
+                                }
+                                return count;
+                            })
+                            .catch((err) => {
+                                // Manejar errores silenciosamente
+                                // Usar cache si está disponible, sino 0
+                                return cachedLikes !== null ? cachedLikes : 0;
+                            }),
+                        getCommentsByReview(reviewId).catch((err) => {
+                            // Manejar errores silenciosamente
+                            return []; // Retornar array vacío en caso de error
+                        })
+                    ]);
+                    
+                    // Usar cache como valor inicial si está disponible, sino usar backend
+                    const likes = (cachedLikes !== null) ? cachedLikes : (likesFromBackend || 0);
+
+                    // Verificar si el usuario actual le dio like a esta reseña
+                    // IMPORTANTE: localStorage es la fuente de verdad inicial
+                    const reviewCurrentUserId = localStorage.getItem('userId');
+                    let userLiked = false;
+                    
+                    if (reviewCurrentUserId) {
+                        // Verificar localStorage PRIMERO (fuente de verdad)
+                        const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${reviewCurrentUserId}`);
+                        const localLike = localStorage.getItem(`like_${reviewId}_${reviewCurrentUserId}`);
+                        userLiked = storedReactionId !== null || localLike === 'true';
+                        
+                        // Sincronizar con backend en segundo plano (solo si no hay en localStorage)
+                        // Esto asegura que si el usuario dio like en otra pestaña, se sincronice
+                        if (!userLiked) {
+                            try {
+                                const authToken = localStorage.getItem('authToken');
+                                if (authToken) {
+                                    // Intentar obtener la reacción desde el backend (en segundo plano, no bloquea)
+                                    const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                                    if (axiosInstance) {
+                                        // No usar await aquí, hacer la verificación en paralelo sin bloquear
+                                        axiosInstance.get(
+                                            `${API_BASE_URL}/api/gateway/reactions/review/${reviewId}/${reviewCurrentUserId}`,
+                                            {
+                                                headers: { 'Authorization': `Bearer ${authToken}` },
+                                                timeout: 2000,
+                                                validateStatus: (status) => status === 200 || status === 404 || status === 500
+                                            }
+                                        ).then(reactionResponse => {
+                                            if (reactionResponse.status === 200 && reactionResponse.data) {
+                                                // Si el backend confirma que hay like, actualizar localStorage
+                                                const reactionId = reactionResponse.data.Id_Reaction || reactionResponse.data.id || reactionResponse.data.id_Reaction;
+                                                if (reactionId) {
+                                                    localStorage.setItem(`reaction_${reviewId}_${reviewCurrentUserId}`, String(reactionId));
+                                                    localStorage.setItem(`like_${reviewId}_${reviewCurrentUserId}`, 'true');
+                                                    // Actualizar UI si la reseña está visible
+                                                    const likeBtn = document.querySelector(`.btn-like[data-review-id="${reviewId}"]`);
+                                                    if (likeBtn && !likeBtn.classList.contains('liked')) {
+                                                        likeBtn.classList.add('liked');
+                                                        const icon = likeBtn.querySelector('i');
+                                                        if (icon) icon.style.color = 'var(--magenta, #EC4899)';
+                                                    }
+                                                }
+                                            }
+                                        }).catch(reactionError => {
+                                            // Ignorar errores silenciosamente (404 es esperado si no hay like)
+                                            if (reactionError.response && reactionError.response.status !== 404) {
+                                                console.debug(`No se pudo verificar like desde backend para review ${reviewId}`);
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (e) {
+                                // Ignorar errores y usar localStorage como fallback
+                                console.debug('Error verificando like desde backend:', e);
+                            }
+                        }
+                    }
+
+                    // contentType ya está en formato correcto ('song' o 'album')
+                    const contentTypeNormalized = contentType;
+
+                    // Asegurar que likes sea un número válido
+                    let likesCount = 0;
+                    if (typeof likes === 'number' && !isNaN(likes) && likes >= 0) {
+                        likesCount = Math.floor(likes); // Asegurar que sea entero
+                    } else if (typeof likes === 'string') {
+                        const parsed = parseInt(likes, 10);
+                        likesCount = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                    }
+                    
+                    // Asegurar que comments sea un número válido
+                    let commentsCount = 0;
+                    if (Array.isArray(comments)) {
+                        commentsCount = comments.length;
+                    } else if (typeof comments === 'number' && !isNaN(comments) && comments >= 0) {
+                        commentsCount = Math.floor(comments);
+                    } else if (typeof comments === 'string') {
+                        const parsed = parseInt(comments, 10);
+                        commentsCount = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                    }
+                    
+                    // Debug: Verificar que los datos se están obteniendo correctamente
+                    if (likesCount === 0 && likes !== 0) {
+                        console.debug(`🔍 Review ${reviewId}: likes obtenido=${likes}, normalizado=${likesCount}`);
+                    }
+                    
+                    // Asegurar que createdAt sea parseable correctamente
+                    const createdAtRaw = review.CreatedAt || review.Created || review.createdAt || new Date();
+                    const createdAtDate = createdAtRaw instanceof Date 
+                        ? createdAtRaw 
+                        : (createdAtRaw ? new Date(createdAtRaw) : new Date());
+
+                    // Retornar objeto final en formato esperado por renderReviews
+                    return {
+                        id: reviewId,
+                        username: userData?.username || userData?.Username || 'Usuario',
+                        avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
+                        contentType: contentTypeNormalized,
+                        song: itemTitle,  // renderReviews espera 'song' no 'itemTitle'
+                        artist: artistName,  // renderReviews espera 'artist' no 'artistName'
+                        image: image,
+                        
+                        title: review.Title || review.title || '',
+                        comment: review.Content || review.content || '',
+                        rating: review.Rating || review.rating || 0,
+                        likes: likesCount,  // Aseguramos que sea número
+                        comments: commentsCount,  // Aseguramos que sea número
+                        userId: userId,
+                        userLiked: userLiked,  // Necesario para renderReviews
+                        createdAt: createdAtDate  // Aseguramos que sea Date o string parseable
+                    };
+
+                } catch (err) {
+                    console.error("Error procesando reseña:", err);
+                    return null;
                 }
-            } else if (error.request) {
-                // No se pudo conectar al servidor - usar datos de ejemplo sin mostrar alerta molesta
-                console.warn('No se pudo conectar al servidor. Usando datos de ejemplo.');
-                const sortedReviews = [...sampleReviews].sort((a, b) => b.likes - a.likes);
-                renderReviews(sortedReviews);
-            } else {
-                console.error('Error inesperado al cargar reseñas:', error);
-                // Usar datos de ejemplo como fallback
-                const sortedReviews = [...sampleReviews].sort((a, b) => b.likes - a.likes);
-                renderReviews(sortedReviews);
+            }));
+
+            // C. Renderizar
+            const validReviews = enrichedReviews.filter(r => r !== null);
+            
+            // Debug removido - las reseñas se cargan correctamente
+            
+            // Ordenar según el filtro actual
+            const currentFilter = typeof getCurrentFilter === 'function' ? getCurrentFilter() : 'popular';
+            
+            if (currentFilter === 'popular') {
+                // Ordenar por likes (más populares primero)
+                validReviews.sort((a, b) => {
+                    const likesA = Number(a.likes) || 0;
+                    const likesB = Number(b.likes) || 0;
+                    // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
+                    if (likesB === likesA) {
+                        const dateA = a.createdAt instanceof Date 
+                            ? a.createdAt.getTime() 
+                            : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+                        const dateB = b.createdAt instanceof Date 
+                            ? b.createdAt.getTime() 
+                            : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+                        return dateB - dateA;
+                    }
+                    return likesB - likesA; // Más likes primero
+                });
+            } else if (currentFilter === 'recent') {
+                // Ordenar por fecha (más recientes primero)
+                validReviews.sort((a, b) => {
+                    const dateA = a.createdAt instanceof Date 
+                        ? a.createdAt.getTime() 
+                        : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+                    const dateB = b.createdAt instanceof Date 
+                        ? b.createdAt.getTime() 
+                        : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+                    return dateB - dateA;
+                });
             }
+
+            // Usar renderReviews de reviewRenderer.js (formato correcto como en perfil)
+            renderReviews(validReviews);
+
+        } catch (error) {
+            console.error("Error fatal en feed:", error);
+            reviewsList.innerHTML = '<p class="text-danger text-center">Error al cargar el feed.</p>';
         }
     }
 
-    // --- Inicialización ---
-    setLoadReviews(loadReviewsFunction);
-    loadReviewsFunction();
+    // --- 3. INICIALIZACIÓN ---
+    if (typeof setLoadReviews === 'function') {
+        setLoadReviews(loadReviewsFunction);
+    }
+    
+    // Inicializar filtros
     initializeReviewFilters();
+    
+    // Cargar reseñas
+    loadReviewsFunction();
 }
-

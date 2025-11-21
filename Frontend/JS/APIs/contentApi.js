@@ -1,12 +1,6 @@
-/*
- * JavaScript/API/contentApi.js
- *
- * RESPONSABILIDAD: Todas las llamadas al ContentAPI, a través del Gateway.
- * ¡VERSION CORREGIDA! Las rutas y parámetros coinciden con appsettings.json
- */
+
 
 import { API_BASE_URL } from './configApi.js'; // (Debe ser 'http://localhost:5000')
-
 /**
  * Helper unificado para manejar las respuestas de fetch y parsear el JSON.
  */
@@ -28,9 +22,28 @@ async function handleResponse(response) {
  * YARP Path: /api/gateway/contents/album/{id}
  */
 export async function getAlbumByApiId(id) {
-    console.log(`(API Real) Buscando álbum: ${id}`);
-    const url = `${API_BASE_URL}/api/gateway/contents/album/${id}`;
-    return fetch(url).then(handleResponse);
+    try {
+        const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+        if (axiosInstance) {
+            const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/contents/album/${id}`, {
+                validateStatus: (status) => status === 200 || status === 404 || status === 500
+            });
+            
+            // Si es 404 o 500, retornar null silenciosamente
+            if (response.status === 404 || response.status === 500) {
+                return null;
+            }
+            
+            return response.data;
+        } else {
+            // Fallback a fetch si axios no está disponible
+            const url = `${API_BASE_URL}/api/gateway/contents/album/${id}`;
+            return fetch(url).then(handleResponse).catch(() => null);
+        }
+    } catch (error) {
+        // Manejar errores silenciosamente
+        return null;
+    }
 }
 
 /**
@@ -91,9 +104,28 @@ export async function getArtistAlbumsByApiId(artistId) {
  * YARP Path: /api/gateway/contents/song/{id}
  */
 export async function getSongByApiId(id) {
-    console.log(`(API Real) Buscando canción: ${id}`);
-    const url = `${API_BASE_URL}/api/gateway/contents/song/${id}`;
-    return fetch(url).then(handleResponse);
+    try {
+        const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+        if (axiosInstance) {
+            const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/contents/song/${id}`, {
+                validateStatus: (status) => status === 200 || status === 404 || status === 500
+            });
+            
+            // Si es 404 o 500, retornar null silenciosamente
+            if (response.status === 404 || response.status === 500) {
+                return null;
+            }
+            
+            return response.data;
+        } else {
+            // Fallback a fetch si axios no está disponible
+            const url = `${API_BASE_URL}/api/gateway/contents/song/${id}`;
+            return fetch(url).then(handleResponse).catch(() => null);
+        }
+    } catch (error) {
+        // Manejar errores silenciosamente
+        return null;
+    }
 }
 
 /**
@@ -140,4 +172,67 @@ export async function getOrCreateSong(apiSongId) {
 export async function getOrCreateAlbum(apiAlbumId) {
     console.log(`(API) Obteniendo o creando álbum: ${apiAlbumId}`);
     return await getAlbumByApiId(apiAlbumId); // Reutiliza la función GET
+}
+
+/**
+ * Busca una canción por su ID (GUID) de base de datos.
+ * Endpoint: GET /api/Song/{id}
+ */
+export async function getSongById(songId) {
+    try {
+        // Llamamos al endpoint estándar pasándole el GUID
+        const response = await axios.get(`${API_BASE_URL}/Song/${songId}`, {
+            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        });
+        
+        // Si es 404 o 500, retornar null silenciosamente
+        if (response.status === 404 || response.status === 500) {
+            return null;
+        }
+        
+        return response.data;
+    } catch (error) {
+        // Si falla (ej. timeout, network error), retornamos null silenciosamente para no romper la UI
+        return null;
+    }
+}
+
+/**
+ * Busca un álbum por su ID (GUID) de base de datos.
+ * Endpoint: GET /api/Album/{id}
+ */
+export async function getAlbumById(albumId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/Album/${albumId}`, {
+            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        });
+        
+        // Si es 404 o 500, retornar null silenciosamente
+        if (response.status === 404 || response.status === 500) {
+            return null;
+        }
+        
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+}
+
+export async function updateSongRating(apiSongId, newRating) {
+    console.log(`(API) Actualizando rating Canción ${apiSongId} a ${newRating}`);
+    const url = `${API_BASE_URL}/api/gateway/contents/song/${apiSongId}/Calificacion?newCalification=${newRating}`;
+    
+    // PATCH suele requerir body, aunque sea vacío, axios lo maneja mejor así
+    return axios.patch(url, {}, {
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
+export async function updateAlbumRating(apiAlbumId, newRating) {
+    console.log(`(API) Actualizando rating Álbum ${apiAlbumId} a ${newRating}`);
+    const url = `${API_BASE_URL}/api/gateway/contents/album/${apiAlbumId}/Calificacion?newCalification=${newRating}`;
+    
+    return axios.patch(url, {}, {
+        headers: { 'Content-Type': 'application/json' }
+    });
 }

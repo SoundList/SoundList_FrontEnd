@@ -83,9 +83,6 @@ async function executeUserSearch(query, state) {
     userSearchResults.innerHTML = `<div class="p-3 text-center text-white"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>`;
 
     try {
-        const countSeguidos = state && state.followingUsers ? state.followingUsers.size : 0;
-        console.log(`🔎 Buscando '${query}'. Tienes ${countSeguidos} seguidos en memoria.`);
-
         const users = await searchUsers(query);
 
         if (!users || users.length === 0) {
@@ -106,13 +103,56 @@ async function executeUserSearch(query, state) {
             };
         });
 
+        // 1. Renderizamos el HTML
         userSearchResults.innerHTML = normalizedUsers.map(user => renderAmigoCard(user)).join('');
+        
+        // 2. Adjuntamos listeners para el BOTÓN SEGUIR
         attachFollowButtonListeners(userSearchResults, state);
+
+        // 3. NUEVO: Adjuntamos listeners para REDIRECCIÓN AL PERFIL
+        attachProfileRedirectionListeners(userSearchResults);
 
     } catch (err) {
         console.error("Error búsqueda:", err);
         userSearchResults.innerHTML = '<div class="p-3 text-center text-danger">Error al buscar.</div>';
     }
+}
+
+// --- NUEVA FUNCIÓN PARA REDIRECCIÓN ---
+function attachProfileRedirectionListeners(container) {
+    console.log("1. Intentando adjuntar listeners de redirección...");
+    const cards = container.querySelectorAll('.user-result-item');
+    console.log(`2. Se encontraron ${cards.length} tarjetas.`);
+
+    cards.forEach(card => {
+        card.style.cursor = 'pointer';
+
+        card.addEventListener('click', (e) => {
+            console.log("3. Click detectado en la tarjeta!");
+            
+            if (e.target.closest('.follow-btn')) {
+                console.log("   -> Click fue en el botón seguir, ignorando redirección.");
+                return;
+            }
+
+            const followBtn = card.querySelector('.follow-btn');
+            if (!followBtn) {
+                console.error("   ❌ Error: No se encontró el botón .follow-btn dentro de la tarjeta.");
+                return;
+            }
+
+            const userId = followBtn.getAttribute('data-user-id');
+            console.log(`   -> ID encontrado en el botón: ${userId}`);
+
+            if (userId) {
+                console.log(`   ✅ RUTA FINAL: profile.html?userId=${userId}`);
+                window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
+            } else {
+                console.error("   ❌ Error: El botón tiene el atributo data-user-id vacío o nulo.");
+            }
+        });
+    });
+
 }
 
 function attachFollowButtonListeners(container, state) {

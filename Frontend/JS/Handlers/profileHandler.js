@@ -614,9 +614,8 @@ async function loadUserProfile(userIdToLoad) {
     
     console.log(`👤 Cargando perfil para ID: ${userIdToLoad}...`);
 
-    profileUserId = userIdToLoad; // Guardar para usar en otras funciones
-    const currentUserId = localStorage.getItem('userId');
-    const isOwnProfile = currentUserId && String(currentUserId).trim() === String(userIdToLoad).trim();
+    profileUserId = userIdToLoad; 
+    const isOwnProfile = loggedInUserId && String(loggedInUserId).trim() === String(userIdToLoad).trim();
 
     const recentContainerId = "recent-reviews"; 
     const userAvatarEl = document.querySelector(".profile-avatar");
@@ -627,9 +626,27 @@ async function loadUserProfile(userIdToLoad) {
     const followingCountEl = document.getElementById("user-following");
     const defaultAvatar ="../../Assets/default-avatar.png";
 
-    const editBtn = document.querySelector(".btn-edit");
+    // 1. Manejo de Botones (Editar vs Seguir)
+    const btnContainer = document.querySelector(".btn-container");
+    const editBtn = document.querySelector(".btn-edit"); // El botón original del HTML
 
-    if (editBtn) editBtn.style.display = 'none'; 
+    // Limpiamos botones previos dinámicos si existen
+    const existingFollowBtn = document.getElementById("profile-follow-btn");
+    if (existingFollowBtn) existingFollowBtn.remove();
+
+    if (editBtn) {
+        if (isOwnProfile) {
+            // CASO 1: TU PERFIL -> Mostrar botón Editar
+            editBtn.style.display = 'block';
+            editBtn.onclick = () => window.location.href = 'editProfile.html';
+        } else {
+            // CASO 2: PERFIL AJENO -> Ocultar Editar e inyectar Seguir
+            editBtn.style.display = 'none';
+            if (btnContainer && loggedInUserId) {
+                await setupFollowButton(btnContainer, userIdToLoad);
+            }
+        }
+    }
 
     const recentContainer = document.getElementById(recentContainerId);
     if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>Cargando reseñas...</p>";
@@ -762,6 +779,139 @@ async function loadUserProfile(userIdToLoad) {
         console.error("❌ Error al cargar reseñas:", reviewError);
         if (recentContainer) recentContainer.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
         if (reviewCountEl) reviewCountEl.textContent = 0;
+    }
+}
+
+/**
+ * Configura e inyecta el botón de Seguir en el perfil
+ * VERSIÓN BLINDADA: Maneja errores de lista y autocorrige el estado con error 409
+ */
+async function setupFollowButton(container, targetUserId) {
+    const followBtn = document.createElement("button");
+    followBtn.id = "profile-follow-btn";
+    followBtn.className = "btn-edit"; 
+    followBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+    followBtn.style.minWidth = "180px"; 
+    
+    container.appendChild(followBtn);
+
+    const currentUserId = localStorage.getItem("userId");
+    let isFollowing = false;
+
+    // --- FASE 1: DETECCIÓN DE ESTADO INICIAL ---
+    try {
+        // INTENTO 1: API directa (suele fallar con 405, pero lo dejamos por si acaso)
+        try {
+            isFollowing = await window.userApi.checkFollowStatus(targetUserId);
+        } catch (e) { /* Ignoramos fallo directo */ }
+
+        // INTENTO 2: Fallback Manual (Descargar lista de seguidos)
+        if (!isFollowing && currentUserId) {
+            try {
+                const API_BASE = window.API_BASE_URL || 'http://localhost:5000';
+                const token = localStorage.getItem("authToken");
+                
+                // Pedimos la lista de a quién sigo yo
+                const response = await axios.get(`${API_BASE}/api/gateway/users/${currentUserId}/follow`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                // 🛡️ PROTECCIÓN CONTRA EL ERROR "some is not a function"
+                // Nos aseguramos de extraer el array correctamente, venga como venga
+                let list = [];
+                if (Array.isArray(response.data)) {
+                    list = response.data;
+                } else if (response.data && Array.isArray(response.data.Items)) {
+                    list = response.data.Items;
+                } else if (response.data && Array.isArray(response.data.items)) {
+                    list = response.data.items;
+                }
+
+                // Buscamos si el ID está en la lista
+                isFollowing = list.some(f => {
+                    // Mapeo robusto de propiedades (el backend a veces cambia mayúsculas/minúsculas)
+                    const fId = f.FollowingId || f.followingId || f.id || f.UserId || f.userId;
+                    return String(fId).toLowerCase().trim() === String(targetUserId).toLowerCase().trim();
+                });
+
+            } catch (err) {
+                console.warn("⚠️ Fallback de verificación falló, asumiendo 'No Seguido'", err);
+            }
+        }
+    } catch (fatal) {
+        console.error("Error fatal en setup", fatal);
+    }
+
+    // Renderizamos el estado inicial detectado
+    updateFollowBtnUI(followBtn, isFollowing);
+
+
+    // --- FASE 2: MANEJO DEL CLIC ---
+    followBtn.onclick = async () => {
+        const currentState = followBtn.getAttribute("data-following") === "true";
+        
+        // UI Optimista: Cambiamos visualmente antes de esperar (opcional, aquí bloqueo para seguridad)
+        followBtn.disabled = true;
+        followBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            if (currentState) {
+                // DEJAR DE SEGUIR
+                await window.userApi.unfollowUser(targetUserId);
+                updateFollowBtnUI(followBtn, false);
+                updateFollowerCount(-1);
+            } else {
+                // SEGUIR
+                await window.userApi.followUser(targetUserId);
+                updateFollowBtnUI(followBtn, true);
+                updateFollowerCount(1);
+            }
+        } catch (error) {
+            console.error("Error acción follow:", error);
+
+            // 🚑 AUTOCORRECCIÓN POR ERROR 409 (CONFLICTO)
+            // Si el backend dice "Ya lo sigues", le creemos al backend y actualizamos el botón.
+            if (error.response && error.response.status === 409) {
+                console.log("🔄 Sincronizando: El backend dice que ya lo seguimos.");
+                updateFollowBtnUI(followBtn, true); // Forzamos estado "Siguiendo"
+            } else {
+                // Si es otro error, revertimos el botón a como estaba
+                updateFollowBtnUI(followBtn, currentState);
+                alert("Hubo un error al conectar con el servidor.");
+            }
+        } finally {
+            followBtn.disabled = false;
+        }
+    };
+}
+
+/**
+ * Actualiza el estilo y texto del botón según el estado
+ */
+function updateFollowBtnUI(btn, isFollowing) {
+    btn.setAttribute("data-following", isFollowing);
+    
+    if (isFollowing) {
+        btn.innerHTML = 'Siguiendo <i class="fas fa-check"></i>';
+        // Estilo "Siguiendo": Fondo transparente con borde (Simulado sobre la clase btn-edit)
+        btn.style.background = "rgba(255, 255, 255, 0.1)";
+        btn.style.border = "2px solid rgba(255, 255, 255, 0.3)";
+    } else {
+        btn.innerHTML = 'Seguir <i class="fas fa-user-plus"></i>';
+        // Estilo "Seguir": Gradiente original
+        btn.style.background = ""; // Vuelve al gradiente del CSS original
+        btn.style.border = "none";
+    }
+}
+
+/**
+ * Actualiza el contador de seguidores en la UI visualmente
+ */
+function updateFollowerCount(change) {
+    const followerCountEl = document.getElementById("user-followers");
+    if (followerCountEl) {
+        let current = parseInt(followerCountEl.textContent) || 0;
+        followerCountEl.textContent = Math.max(0, current + change);
     }
 }
 

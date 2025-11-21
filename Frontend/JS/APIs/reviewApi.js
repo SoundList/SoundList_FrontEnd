@@ -112,7 +112,11 @@ export const ReviewApi = {
             
             // Tu lógica original (Fallback): Traer todas y filtrar en el cliente
             const allReviews = await ReviewApi.getAllReviews();
-            return allReviews.filter(r => r.userId == userId);
+            // Filtrar por userId o UserId (el backend puede usar cualquiera)
+            return allReviews.filter(r => {
+                const reviewUserId = r.userId || r.UserId;
+                return String(reviewUserId).trim() === String(userId).trim();
+            });
         } catch (error) {
             console.error("Error getReviewsByUser:", error);
             return [];

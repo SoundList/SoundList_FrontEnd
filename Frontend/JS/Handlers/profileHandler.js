@@ -369,18 +369,47 @@ async function loadUserReviews(userIdToLoad) {
     try {
         // Obtener todas las reseñas
         let allReviews = [];
+        
+        // Intentar primero con reviewApi
         if (typeof window.reviewApi !== 'undefined' && window.reviewApi.getReviewsByUser) {
             allReviews = await window.reviewApi.getReviewsByUser(userIdToLoad);
-        } else if (typeof getReviews === 'function') {
+        } 
+        // Fallback: usar socialApi.getReviews y filtrar
+        else if (typeof window.socialApi !== 'undefined' && window.socialApi.getReviews) {
+            const allReviewsData = await window.socialApi.getReviews();
+            // Filtrar solo las reseñas del usuario
+            allReviews = allReviewsData.filter(review => {
+                const reviewUserId = review.UserId || review.userId;
+                return String(reviewUserId).trim() === String(userIdToLoad).trim();
+            });
+        } 
+        // Fallback: usar función global getReviews si está disponible
+        else if (typeof getReviews === 'function') {
             const allReviewsData = await getReviews();
             // Filtrar solo las reseñas del usuario
             allReviews = allReviewsData.filter(review => {
                 const reviewUserId = review.UserId || review.userId;
                 return String(reviewUserId).trim() === String(userIdToLoad).trim();
             });
-        } else {
-            console.warn('No se encontró método para obtener reseñas');
-            return [];
+        } 
+        // Último fallback: intentar importar dinámicamente
+        else {
+            try {
+                const socialApiModule = await import('../../APIs/socialApi.js');
+                if (socialApiModule && socialApiModule.getReviews) {
+                    const allReviewsData = await socialApiModule.getReviews();
+                    allReviews = allReviewsData.filter(review => {
+                        const reviewUserId = review.UserId || review.userId;
+                        return String(reviewUserId).trim() === String(userIdToLoad).trim();
+                    });
+                } else {
+                    console.warn('No se encontró método para obtener reseñas');
+                    return [];
+                }
+            } catch (importError) {
+                console.error('Error importando socialApi:', importError);
+                return [];
+            }
         }
         
         if (!allReviews || allReviews.length === 0) {

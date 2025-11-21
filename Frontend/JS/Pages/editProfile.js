@@ -161,7 +161,7 @@ async function handleImageSubmit(e) {
 
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback');
-        (window.showAlert || alert)("Imagen de perfil actualizada.", "success");
+        (window.showAlert || alert)
         isSuccess = true; 
         
         // Recargar los datos del perfil para asegurar que todo esté actualizado

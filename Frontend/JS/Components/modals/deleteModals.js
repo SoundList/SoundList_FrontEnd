@@ -179,7 +179,7 @@ async function deleteReviewLogic(reviewId, state) {
     try {
         await deleteReview(reviewId, userId, authToken);
         
-        showAlert('✅ Reseña eliminada exitosamente', 'success');
+        showAlert('Reseña eliminada exitosamente', 'success');
         
         if (state.loadReviews && typeof state.loadReviews === 'function') {
             await state.loadReviews();

@@ -256,6 +256,7 @@ function showCreateReviewModal() {
     document.getElementById('reviewTitleInput').value = '';
     document.getElementById('reviewTextInput').value = '';
     setStarRating(0);
+clearReviewFormErrors();
     document.getElementById('createReviewModalOverlay').style.display = 'flex';
 }
 
@@ -271,6 +272,57 @@ function highlightStars(rating) {
     });
 }
 
+function displayFieldError(elementId, message) {
+    const inputElement = document.getElementById(elementId);
+    if (!inputElement) return;
+
+    const isStarsContainer = elementId === 'starsRatingInput';
+    
+    // El elemento donde se aplica el borde rojo.
+    // Esto es vital para que funcione el CSS: input para el texto, o el padre para las estrellas.
+    const borderElement = isStarsContainer ? inputElement.parentElement : inputElement;
+
+    // Aunque no mostraremos el texto, mantenemos la limpieza del div por si acaso.
+    // Usaremos el ID de error que enviaste en el HTML para evitar errores.
+    const errorElementId = (elementId === 'starsRatingInput') ? 'reviewRatingError' : elementId.replace('Input', 'Error');
+    const errorElement = document.getElementById(errorElementId);
+    
+    // Obtenemos el contenedor padre para la limpieza del texto (aunque esté oculto por CSS)
+    const textVisibilityContainer = isStarsContainer 
+        ? inputElement.parentElement 
+        : inputElement.closest('.mb-3'); 
+    
+
+    if (message) {
+        borderElement.classList.add('is-invalid-custom'); 
+        if (errorElement) {
+            errorElement.textContent = message;
+        }
+    } else {
+        borderElement.classList.remove('is-invalid-custom');
+        if (textVisibilityContainer) {
+            textVisibilityContainer.classList.remove('is-invalid-field');
+        }
+        if (errorElement) {
+            errorElement.textContent = '';
+            errorElement.style.display = 'none';
+        }
+    }
+}
+
+
+function clearReviewFormErrors() {
+    displayFieldError('reviewTitleInput', null);
+    displayFieldError('reviewTextInput', null);
+    displayFieldError('starsRatingInput', null);
+}
+
+
+
+
+
+
+
 async function handleSubmitReview() {
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
@@ -284,9 +336,30 @@ async function handleSubmitReview() {
     const reviewTitle = document.getElementById('reviewTitleInput').value.trim();
     const reviewText = document.getElementById('reviewTextInput').value.trim(); // <--- Aquí se define reviewText
 
-    if (!reviewTitle || !reviewText || currentRating === 0) {
-        showAlert('Por favor, completa todos los campos y la calificación.', 'warning');
-        return;
+    let hasError = false;
+
+    // 1. Validar Título
+    if (!reviewTitle) {
+        displayFieldError('reviewTitleInput', 'El título de la reseña es obligatorio.');
+        hasError = true;
+    }
+
+    // 2. Validar Texto
+    if (!reviewText) {
+        displayFieldError('reviewTextInput', 'El contenido de la reseña es obligatorio.');
+        hasError = true;
+    }
+
+    // 3. Validar Calificación
+    // currentRating se actualiza al hacer clic en las estrellas (lógica en setStarRating)
+    if (currentRating === 0) { 
+        displayFieldError('starsRatingInput', 'Debes seleccionar una calificación (1-5 estrellas).');
+        hasError = true;
+    }
+
+    if (hasError) {
+        // Detiene el proceso y muestra los errores localizados
+        return; 
     }
 
     if (!currentSongData || !currentSongData.songId) {
@@ -998,7 +1071,7 @@ async function deleteReviewLogic(reviewId) {
     try {
         await deleteReview(reviewId, userId, authToken);
         
-        showAlert('✅ Reseña eliminada exitosamente', 'success');
+        showAlert('Reseña eliminada exitosamente', 'success');
         
         if (typeof loadReviews === 'function') {
             await loadPageData(); // Recargamos toda la data para que se actualice el contador

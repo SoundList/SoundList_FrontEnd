@@ -908,9 +908,9 @@ async function deleteReviewLogic(reviewId) {
         
         if (deleteSuccess) {
             if (typeof showAlert === 'function') {
-                showAlert('✅ Reseña eliminada exitosamente', 'success');
+                showAlert(' Reseña eliminada exitosamente', 'success');
             } else {
-                alert('✅ Reseña eliminada exitosamente');
+                alert(' Reseña eliminada exitosamente');
             }
         
             // Recargar el perfil completo para actualizar todas las secciones (recientes y mejores)

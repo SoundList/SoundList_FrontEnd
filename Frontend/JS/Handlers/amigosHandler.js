@@ -12,11 +12,22 @@ function debounce(func, delay = DEBOUNCE_DELAY) {
         }, delay);
     };
 }
-export async function toggleFollow(userId, username, buttonElement, state) {
-    const isFollowing = state ? state.followingUsers.has(userId) : buttonElement.classList.contains('following');
+const normalizeId = (id) => String(id || '').toLowerCase().trim();
 
-    if (!window.userApi || !window.userApi.unfollowUser || !window.userApi.followUser) {
-        alert('Error: La API de usuario no está disponible.');
+
+export async function toggleFollow(userId, username, buttonElement, state) {
+
+    state = state || window._amigosState;
+    if (!state || !state.followingUsers) {
+        console.error("Estado no inicializado, creando uno temporal.");
+        state = { followingUsers: new Set() }; 
+    }
+
+    const targetId = normalizeId(userId);
+    const isFollowing = state.followingUsers.has(targetId);
+
+    if (!window.userApi) {
+        alert('Error: API de usuario no cargada.');
         return;
     }
 
@@ -26,30 +37,38 @@ export async function toggleFollow(userId, username, buttonElement, state) {
 
     try {
         if (isFollowing) {
+            // ➖ UNFOLLOW (Dejar de seguir)
             await window.userApi.unfollowUser(userId);
-            if (state) state.followingUsers.delete(userId);
-            
-            buttonElement.classList.remove('following');
-            buttonElement.classList.add('follow');
+            state.followingUsers.delete(targetId); 
+
+            buttonElement.className = 'follow-btn follow';
             buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
             
         } else {
+            // ➕ FOLLOW (Seguir)
             await window.userApi.followUser(userId);
-            if (state) state.followingUsers.add(userId);
-            
-            buttonElement.classList.remove('follow');
-            buttonElement.classList.add('following');
+            state.followingUsers.add(targetId); 
+            buttonElement.className = 'follow-btn following';
             buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
         }
 
-        if (state && typeof state.loadReviews === 'function') {
-            state.loadReviews(); 
+        if (typeof state.loadReviews === 'function') {
+            setTimeout(() => state.loadReviews(), 100); 
         }
 
     } catch (error) {
-        console.error(`Error follow/unfollow ${username}:`, error);
-        alert(`No se pudo completar la acción.`);
-        buttonElement.innerHTML = originalHTML;
+ 
+        if (error.response && error.response.status === 409) {
+            console.warn(`Sincronizando: Ya seguías a ${username} (409 Conflict).`);
+            state.followingUsers.add(targetId);
+            
+            buttonElement.className = 'follow-btn following';
+            buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
+        } else {
+            console.error(`Error en toggleFollow:`, error);
+            alert(`No se pudo completar la acción.`);
+            buttonElement.innerHTML = originalHTML;
+        }
     } finally {
         buttonElement.disabled = false;
     }
@@ -64,18 +83,32 @@ async function executeUserSearch(query, state) {
     userSearchResults.innerHTML = `<div class="p-3 text-center text-white"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>`;
 
     try {
+        const countSeguidos = state && state.followingUsers ? state.followingUsers.size : 0;
+        console.log(`🔎 Buscando '${query}'. Tienes ${countSeguidos} seguidos en memoria.`);
+
         const users = await searchUsers(query);
 
         if (!users || users.length === 0) {
             userSearchResults.innerHTML = `<div class="p-3 text-center text-white">No se encontraron usuarios.</div>`;
-        } else {
-            userSearchResults.innerHTML = users.map(user => {
-                const isFollowing = state ? state.followingUsers.has(user.id) : false;
-                return renderAmigoCard({ ...user, isFollowing }); 
-            }).join('');
-
-            attachFollowButtonListeners(userSearchResults, state);
+            return;
         }
+
+        const normalizedUsers = users.map(u => {
+            const resolvedId = u.userId || u.UserId || u.id;
+            const cleanId = normalizeId(resolvedId);
+            
+            return {
+                userId: resolvedId,
+                username: u.username,
+                imgProfile: u.imgProfile,
+                bio: u.bio,
+                isFollowing: state && state.followingUsers ? state.followingUsers.has(cleanId) : false
+            };
+        });
+
+        userSearchResults.innerHTML = normalizedUsers.map(user => renderAmigoCard(user)).join('');
+        attachFollowButtonListeners(userSearchResults, state);
+
     } catch (err) {
         console.error("Error búsqueda:", err);
         userSearchResults.innerHTML = '<div class="p-3 text-center text-danger">Error al buscar.</div>';
@@ -100,7 +133,7 @@ export function initializeUserSearch(state) {
     const userSearchResults = document.getElementById('userSearchResults');
     
     if (!userSearchInput) return;
-
+    const debouncedSearch = debounce((query) => executeUserSearch(query, state));
     userSearchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         if (userSearchClear) userSearchClear.style.display = query ? 'block' : 'none';
@@ -109,7 +142,8 @@ export function initializeUserSearch(state) {
             if (userSearchResults) userSearchResults.style.display = 'none';
             return;
         }
-        debounce(() => executeUserSearch(query, state))();
+        
+        debouncedSearch(query);
     });
 
     if (userSearchClear) {
@@ -120,8 +154,10 @@ export function initializeUserSearch(state) {
         });
     }
 
-    document.addEventListener('click', (e) => {
-        if (userSearchInput && userSearchResults && !userSearchInput.contains(e.target) && !userSearchResults.contains(e.target)) {
+document.addEventListener('click', (e) => {
+        if (userSearchInput && userSearchResults && 
+            !userSearchInput.contains(e.target) && 
+            !userSearchResults.contains(e.target)) {
             if (userSearchInput.value === '') userSearchResults.style.display = 'none';
         }
     });
@@ -188,29 +224,26 @@ export function addReviewEventListeners(reviewsListElement, state) {
 export async function initializeFollowData(state) {
     if (!state) return;
     try {
-        // Cargar seguidores
-        const followers = await getFollowers();
-        state.followerUsers.clear();
-        followers.forEach(id => state.followerUsers.add(id));
+        const [followers, following] = await Promise.all([getFollowers(), getFollowing()]);
 
-        // Cargar seguidos
-        const following = await getFollowing();
-        state.followingUsers.clear();
-        following.forEach(id => state.followingUsers.add(id));
+        state.followerUsers = new Set(followers);
+        state.followingUsers = new Set(following);
         
-        console.log(`Datos de seguimiento cargados. Sigues a: ${state.followingUsers.size}, Te siguen: ${state.followerUsers.size}`);
+        console.log(`✅ Estado inicializado. Sigues a: ${state.followingUsers.size} personas.`);
     } catch (e) {
-        console.error('Error cargando datos de seguimiento:', e);
+        console.error('Error inicializando datos de seguimiento:', e);
     }
 }
+
 export const AmigosHandler = {
-    init: (state) => {
-        initializeUserSearch(state); 
-        initializeReviewFilters(state); 
+    init: async (state) => {
+        await initializeFollowData(state); // Esperamos carga de datos antes de habilitar UI
+        initializeUserSearch(state);
+        initializeReviewFilters(state);
     },
-    addReviewEventListeners: addReviewEventListeners,
-    initializeFollowData: initializeFollowData
+    addReviewEventListeners,
+    initializeFollowData
 };
 
-export function showReviewDetailModal(reviewId) { console.log("Modal Stub", reviewId); }
-export function showLoginRequiredModal() { alert("Inicia sesión."); }
+export function showReviewDetailModal(id) { console.log("Detalle reseña:", id); }
+export function showLoginRequiredModal() { alert("Debes iniciar sesión"); }

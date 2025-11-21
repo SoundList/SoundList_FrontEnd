@@ -1,4 +1,6 @@
-import { API_BASE_URL } from './configApi.js';
+
+const API_BASE_URL = "http://localhost:5000"; 
+
 const getAuthHeaders = () => {
     const token = localStorage.getItem('authToken');
     return {
@@ -7,12 +9,15 @@ const getAuthHeaders = () => {
     };
 };
 
-// 1. BUSCADOR 
+const normalizeId = (id) => String(id || '').toLowerCase().trim();
+
+
 export async function searchUsers(query) {
     if (!query || query.trim().length < 1) return [];
     
     try {
         const url = `${API_BASE_URL}/api/gateway/search/users?term=${encodeURIComponent(query)}`;
+        console.log(`🔍 Buscando en: ${url}`);
 
         const response = await fetch(url, {
             method: 'GET',
@@ -22,12 +27,12 @@ export async function searchUsers(query) {
         if (!response.ok) return [];
         
         const data = await response.json();
-        const results = Array.isArray(data) ? data : (data.Items || data.items || [data]);
+        const results = Array.isArray(data) ? data : (data.Items || data.items || []);
         
         return results.map(user => ({
-            id: user.UserId || user.id,
+            userId: user.UserId || user.userId || user.id, 
             username: user.Username || user.username || 'Usuario',
-            avatar: user.imgProfile || user.avatar || null,
+            imgProfile: user.imgProfile || user.ImgProfile || user.avatar || null,
             bio: user.Bio || user.bio || ''
         }));
 
@@ -36,6 +41,7 @@ export async function searchUsers(query) {
         return [];
     }
 }
+
 // 2. OBTENER LISTAS 
 export async function getFollowers() {
     try {
@@ -49,7 +55,11 @@ export async function getFollowers() {
         
         const data = await response.json();
         const results = data.Items || data.items || [];
-        return results.map(f => f.followerId || f.FollowerId).filter(Boolean);
+
+        return results.map(f => {
+            const id = f.FollowerId || f.followerId || f.UserId || f.userId || f.id;
+            return normalizeId(id);
+        }).filter(id => id.length > 0);
 
     } catch (error) {
         console.error('Error al obtener Seguidores:', error);
@@ -70,7 +80,12 @@ export async function getFollowing() {
         const data = await response.json();
         const results = data.Items || data.items || [];
 
-        return results.map(f => f.followingId || f.FollowingId).filter(Boolean);
+        console.log("📈 [API] Datos Raw Seguidos:", results); 
+
+        return results.map(f => {
+            const id = f.FollowingId || f.followingId || f.UserId || f.userId || f.id;
+            return normalizeId(id);
+        }).filter(id => id.length > 0);
 
     } catch (error) {
         console.warn('Error al obtener Seguidos:', error);

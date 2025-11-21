@@ -146,31 +146,46 @@ export function attachReviewActionListeners(reviewsListElement) {
                 // Quitar like (Optimistic Update)
                 this.classList.remove('liked');
                 icon.style.color = 'rgba(255,255,255,0.7)';
-                const currentLikes = parseInt(likesSpan.textContent);
+                const currentLikes = parseInt(likesSpan.textContent) || 0;
                 const newLikesCount = Math.max(0, currentLikes - 1);
                 likesSpan.textContent = newLikesCount;
                 
-                // Actualizar cache de likes
+                // ACTUALIZAR CACHE INMEDIATAMENTE (fuente de verdad)
+                const likesCacheKey = `review_likes_${reviewId}`;
                 try {
-                    localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                    localStorage.setItem(likesCacheKey, String(newLikesCount));
                 } catch (e) {
                     // Ignorar errores de localStorage
                 }
                 
                 const userId = localStorage.getItem('userId');
                 const reactionId = localStorage.getItem(`reaction_${reviewId}_${userId}`);
+                
+                // Sincronizar con backend
                 deleteReviewReaction(reviewId, userId, authToken, reactionId)
                     .then(() => {
+                        // Confirmar eliminación en localStorage
                         localStorage.removeItem(`like_${reviewId}_${userId}`);
-                        // Actualizar cache después de confirmar en backend
+                        localStorage.removeItem(`reaction_${reviewId}_${userId}`);
+                        // Mantener el cache actualizado
                         try {
-                            localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                            localStorage.setItem(likesCacheKey, String(newLikesCount));
                         } catch (e) {
                             // Ignorar errores de localStorage
                         }
                     })
                     .catch(err => {
                         console.warn('No se pudo eliminar like del backend', err);
+                        // Revertir cambio si falla
+                        this.classList.add('liked');
+                        icon.style.color = 'var(--magenta, #EC4899)';
+                        likesSpan.textContent = currentLikes;
+                        // Revertir cache
+                        try {
+                            localStorage.setItem(likesCacheKey, String(currentLikes));
+                        } catch (e) {
+                            // Ignorar errores de localStorage
+                        }
                     });
             } else {
                 // Agregar like (Optimistic Update)
@@ -180,31 +195,45 @@ export function attachReviewActionListeners(reviewsListElement) {
                 const newLikesCount = currentLikes + 1;
                 likesSpan.textContent = newLikesCount;
                 
-                // Actualizar cache de likes
+                // ACTUALIZAR CACHE INMEDIATAMENTE (fuente de verdad)
+                const likesCacheKey = `review_likes_${reviewId}`;
                 try {
-                    localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                    localStorage.setItem(likesCacheKey, String(newLikesCount));
                 } catch (e) {
                     // Ignorar errores de localStorage
                 }
                 
                 const currentUserId = localStorage.getItem('userId');
+                // Guardar estado de like en localStorage INMEDIATAMENTE
                 localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
                 
+                // Sincronizar con backend
                 addReviewReaction(reviewId, currentUserId, authToken)
                     .then(data => {
                         const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
                         if (reactionId) {
-                            localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, reactionId);
+                            localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
                         }
-                        // Actualizar cache después de confirmar en backend
+                        // Mantener el cache actualizado
                         try {
-                            localStorage.setItem(`review_likes_${reviewId}`, String(newLikesCount));
+                            localStorage.setItem(likesCacheKey, String(newLikesCount));
                         } catch (e) {
                             // Ignorar errores de localStorage
                         }
                     })
                     .catch(err => {
                         console.warn('No se pudo guardar like en el backend', err);
+                        // Revertir cambio si falla
+                        this.classList.remove('liked');
+                        icon.style.color = 'rgba(255,255,255,0.7)';
+                        likesSpan.textContent = currentLikes;
+                        localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
+                        // Revertir cache
+                        try {
+                            localStorage.setItem(likesCacheKey, String(currentLikes));
+                        } catch (e) {
+                            // Ignorar errores de localStorage
+                        }
                     });
             }
         });

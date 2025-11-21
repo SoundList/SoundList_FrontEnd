@@ -61,13 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
         attemptRegisterWithPorts(username, email, password, PORTS, 0, submitButton);
     });
 
-    // Alternative registration method
-    const googleButton = document.querySelector('.btn-alternative');
-
-    googleButton.addEventListener('click', function() {
-        showAlert('Funcionalidad de registro con Google en desarrollo', 'info');
-    });
-
     // Username validation function
     function isValidUsername(username) {
         const usernameRegex = /^[a-zA-Z0-9_-]{4,20}$/;

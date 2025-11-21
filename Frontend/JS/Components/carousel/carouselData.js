@@ -4,7 +4,41 @@
  */
 
 import { getReviews, getCommentsByReview, getReviewReactionCount } from '../../APIs/socialApi.js';
-import { getSongByApiId } from '../../APIs/contentApi.js';
+import { getSongByApiId, getSongById, getAlbumById } from '../../APIs/contentApi.js';
+
+/**
+ * Función auxiliar para obtener datos de canción usando GUID interno o apiSongId
+ * @param {string} songId - Puede ser GUID interno o apiSongId
+ * @returns {Promise<Object|null>} Datos de la canción
+ */
+async function getSongData(songId) {
+    if (!songId) return null;
+    
+    try {
+        // Primero intentar con getSongById (GUID interno)
+        const songData = await getSongById(songId);
+        if (songData && (songData.Title || songData.title)) {
+            // Si getSongById devuelve datos completos, usarlos
+            return songData;
+        }
+        
+        // Si getSongById devolvió datos pero sin título, obtener el apiSongId
+        if (songData) {
+            const apiSongId = songData.apiSongId || songData.APISongId;
+            if (apiSongId) {
+                const fullSongData = await getSongByApiId(apiSongId);
+                return fullSongData || songData;
+            }
+        }
+        
+        // Si getSongById falló o no devolvió datos, intentar directamente con getSongByApiId
+        // (por si acaso el songId es un apiSongId)
+        return await getSongByApiId(songId);
+    } catch (e) {
+        console.debug('Error obteniendo datos de canción:', songId, e);
+        return null;
+    }
+}
 
 /**
  * LO MÁS RECOMENDADO
@@ -74,13 +108,8 @@ export async function getMasRecomendado() {
         }
 
         const topSong = songsWithAvg[0];
-        // Obtener datos de la canción
-        let songData = null;
-        try {
-            songData = await getSongByApiId(topSong.songId);
-        } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSong.songId);
-        }
+        // Obtener datos de la canción usando la función auxiliar
+        const songData = await getSongData(topSong.songId);
 
         return {
             totalSongs: songsWithAvg.length,
@@ -189,13 +218,8 @@ export async function getMasComentado() {
         }
 
         const topSong = songsSorted[0];
-        // Obtener datos de la canción
-        let songData = null;
-        try {
-            songData = await getSongByApiId(topSong.songId);
-        } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSong.songId);
-        }
+        // Obtener datos de la canción usando la función auxiliar
+        const songData = await getSongData(topSong.songId);
 
         return {
             totalSongs: songsSorted.length,
@@ -576,12 +600,8 @@ export async function getTrending() {
         }
 
         const [topSongId, growthRate] = sorted[0];
-        let songData = null;
-        try {
-            songData = await getSongByApiId(topSongId);
-        } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSongId);
-        }
+        // Obtener datos de la canción usando la función auxiliar
+        const songData = await getSongData(topSongId);
 
         return {
             timeWindow: '48 horas',

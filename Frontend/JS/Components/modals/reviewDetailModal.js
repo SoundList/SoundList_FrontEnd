@@ -157,6 +157,21 @@ export async function showReviewDetailModal(reviewId, state = null) {
         const reviewUserId = fullReview.UserId || fullReview.userId || '';
         const isOwnReview = currentUserId && (String(reviewUserId) === String(currentUserId));
         
+        // Verificar likes desde cache primero (igual que en reviewFeed.js)
+        const reviewLikesCacheKey = `review_likes_${reviewId}`;
+        let cachedReviewLikes = null;
+        try {
+            const cached = localStorage.getItem(reviewLikesCacheKey);
+            if (cached !== null) {
+                cachedReviewLikes = parseInt(cached, 10);
+                if (isNaN(cachedReviewLikes)) cachedReviewLikes = null;
+            }
+        } catch (e) { /* ignore */ }
+        
+        // Usar cache si está disponible, sino usar backend
+        const finalLikes = cachedReviewLikes !== null ? cachedReviewLikes : (likes || 0);
+        
+        // Verificar si el usuario actual le dio like desde localStorage (fuente de verdad)
         let userLiked = false;
         if (currentUserId) {
             const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
@@ -192,7 +207,7 @@ export async function showReviewDetailModal(reviewId, state = null) {
                         <button class="review-detail-interaction-btn ${userLiked ? 'liked' : ''}" 
                                 data-review-id="${reviewId}" id="reviewDetailLikeBtn">
                                 <i class="fas fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'};"></i>
-                                <span class="review-detail-likes-count">${likes}</span>
+                                <span class="review-detail-likes-count">${finalLikes}</span>
                             </button>
                             <span class="review-detail-comments-icon">
                                 <i class="fas fa-comment"></i>
@@ -251,6 +266,50 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
             comments = await getCommentsByReview(reviewId);
         }
         
+        // Enriquecer comentarios con datos de usuario si no tienen username (igual que en profileHandler.js)
+        const getUserFn = window.socialApi?.getUser || getUser;
+        const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+        
+        comments = await Promise.all(comments.map(async (comment) => {
+            // Si ya tiene username, devolverlo tal cual
+            if (comment.UserName || comment.username) {
+                return comment;
+            }
+            
+            // Si no tiene username, obtenerlo del User Service
+            const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
+            if (userId) {
+                try {
+                    const userData = await getUserFn(userId);
+                    if (userData) {
+                        return {
+                            ...comment,
+                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                        };
+                    }
+                } catch (error) {
+                    console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
+                }
+            }
+            
+            // Fallback: usar el username del localStorage si es el comentario del usuario actual
+            const currentUserId = localStorage.getItem('userId');
+            if (userId && currentUserId && String(userId).trim() === String(currentUserId).trim()) {
+                const currentUsername = localStorage.getItem('username');
+                if (currentUsername) {
+                    return {
+                        ...comment,
+                        UserName: currentUsername,
+                        username: currentUsername
+                    };
+                }
+            }
+            
+            return comment;
+        }));
+        
         if (commentsCountEl) commentsCountEl.textContent = comments.length;
         
         const currentUserIdRaw = localStorage.getItem('userId');
@@ -265,7 +324,7 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
             `;
         } else {
             commentsList.innerHTML = comments.map(comment => {
-                const timeAgo = formatNotificationTime(comment.Created || comment.Created || comment.date);
+                const timeAgo = formatNotificationTime(comment.Created || comment.CreatedAt || comment.date);
                 const username = comment.UserName || comment.username || 'Usuario';
                 const text = comment.Text || comment.text || '';
                 let commentId = comment.Id_Comment || comment.id_Comment || comment.IdComment || comment.idComment || comment.id || comment.Id || '';
@@ -273,8 +332,32 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                     commentId = String(commentId).trim();
                 }
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
-                const likes = comment.Likes || comment.likes || 0;
-                const userLiked = comment.userLiked || false;
+                
+                // Verificar likes desde cache primero (igual que con reseñas)
+                const commentLikesCacheKey = `comment_likes_${commentId}`;
+                let cachedCommentLikes = null;
+                try {
+                    const cached = localStorage.getItem(commentLikesCacheKey);
+                    if (cached !== null) {
+                        cachedCommentLikes = parseInt(cached, 10);
+                        if (isNaN(cachedCommentLikes)) cachedCommentLikes = null;
+                    }
+                } catch (e) { /* ignore */ }
+                
+                const likes = cachedCommentLikes !== null ? cachedCommentLikes : (comment.Likes || comment.likes || 0);
+                
+                // Verificar si el usuario actual le dio like desde localStorage
+                let userLiked = false;
+                if (currentUserId) {
+                    const storedReactionId = localStorage.getItem(`reaction_comment_${commentId}_${currentUserId}`);
+                    const localLike = localStorage.getItem(`like_comment_${commentId}_${currentUserId}`);
+                    userLiked = storedReactionId !== null || localLike === 'true';
+                }
+                
+                // Si no hay en localStorage, usar el valor del backend
+                if (!userLiked && comment.userLiked) {
+                    userLiked = comment.userLiked;
+                }
                 
                 const normalizedCommentUserId = commentUserId ? String(commentUserId).trim() : '';
                 const normalizedCurrentUserId = currentUserId ? String(currentUserId).trim() : '';
@@ -386,19 +469,99 @@ async function toggleCommentLikeInDetail(commentId, btn, reviewId) {
     const likesSpan = btn.querySelector('.review-detail-comment-likes-count');
     const isLiked = btn.classList.contains('liked');
     const currentLikes = parseInt(likesSpan.textContent) || 0;
+    const currentUserId = localStorage.getItem('userId');
     
     if (isLiked) {
+        // Quitar like (Optimistic Update)
         btn.classList.remove('liked');
         icon.style.color = 'rgba(255,255,255,0.6)';
-        likesSpan.textContent = Math.max(0, currentLikes - 1);
+        const newLikesCount = Math.max(0, currentLikes - 1);
+        likesSpan.textContent = newLikesCount;
+        
+        // Actualizar cache
+        const likesCacheKey = `comment_likes_${commentId}`;
+        try {
+            localStorage.setItem(likesCacheKey, String(newLikesCount));
+        } catch (e) { /* ignore */ }
+        
+        // Sincronizar con backend
+        const { deleteCommentReaction } = await import('../../APIs/socialApi.js');
+        deleteCommentReaction(commentId, currentUserId, authToken)
+            .then(() => {
+                localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
+                localStorage.removeItem(`reaction_comment_${commentId}_${currentUserId}`);
+                
+                // Sincronizar con el modal de comentarios si está abierto
+                const commentsModal = document.getElementById('commentsModalOverlay');
+                if (commentsModal && commentsModal.style.display === 'flex') {
+                    const commentLikeBtn = document.querySelector(`.comment-like-btn[data-comment-id="${commentId}"]`);
+                    if (commentLikeBtn && commentLikeBtn.classList.contains('liked')) {
+                        commentLikeBtn.classList.remove('liked');
+                        const commentIcon = commentLikeBtn.querySelector('i');
+                        const commentLikesSpan = commentLikeBtn.querySelector('.comment-likes-count');
+                        if (commentIcon) commentIcon.style.color = 'rgba(255,255,255,0.6)';
+                        if (commentLikesSpan) commentLikesSpan.textContent = newLikesCount;
+                    }
+                }
+            })
+            .catch(err => {
+                console.warn('No se pudo eliminar like del comentario en el backend', err);
+                // Revertir cambio si falla
+                btn.classList.add('liked');
+                icon.style.color = 'var(--magenta, #EC4899)';
+                likesSpan.textContent = currentLikes;
+                try {
+                    localStorage.setItem(likesCacheKey, String(currentLikes));
+                } catch (e) { /* ignore */ }
+            });
     } else {
+        // Agregar like (Optimistic Update)
         btn.classList.add('liked');
         icon.style.color = 'var(--magenta, #EC4899)';
-        likesSpan.textContent = currentLikes + 1;
-    }
-    
-    if (authToken.startsWith('dev-token-')) {
-        console.log('Like en comentario simulado (vista detallada):', commentId);
+        const newLikesCount = currentLikes + 1;
+        likesSpan.textContent = newLikesCount;
+        
+        // Actualizar cache
+        const likesCacheKey = `comment_likes_${commentId}`;
+        try {
+            localStorage.setItem(likesCacheKey, String(newLikesCount));
+        } catch (e) { /* ignore */ }
+        
+        localStorage.setItem(`like_comment_${commentId}_${currentUserId}`, 'true');
+        
+        // Sincronizar con backend
+        const { addCommentReaction } = await import('../../APIs/socialApi.js');
+        addCommentReaction(commentId, currentUserId, authToken)
+            .then(data => {
+                const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
+                if (reactionId) {
+                    localStorage.setItem(`reaction_comment_${commentId}_${currentUserId}`, String(reactionId));
+                }
+                
+                // Sincronizar con el modal de comentarios si está abierto
+                const commentsModal = document.getElementById('commentsModalOverlay');
+                if (commentsModal && commentsModal.style.display === 'flex') {
+                    const commentLikeBtn = document.querySelector(`.comment-like-btn[data-comment-id="${commentId}"]`);
+                    if (commentLikeBtn && !commentLikeBtn.classList.contains('liked')) {
+                        commentLikeBtn.classList.add('liked');
+                        const commentIcon = commentLikeBtn.querySelector('i');
+                        const commentLikesSpan = commentLikeBtn.querySelector('.comment-likes-count');
+                        if (commentIcon) commentIcon.style.color = 'var(--magenta, #EC4899)';
+                        if (commentLikesSpan) commentLikesSpan.textContent = newLikesCount;
+                    }
+                }
+            })
+            .catch(err => {
+                console.warn('No se pudo guardar like del comentario en el backend', err);
+                // Revertir cambio si falla
+                btn.classList.remove('liked');
+                icon.style.color = 'rgba(255,255,255,0.6)';
+                likesSpan.textContent = currentLikes;
+                localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
+                try {
+                    localStorage.setItem(likesCacheKey, String(currentLikes));
+                } catch (e) { /* ignore */ }
+            });
     }
 }
 
@@ -571,28 +734,44 @@ async function deleteCommentInDetail(commentId, reviewId, state) {
         return;
     }
     
-    if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
-        return;
-    }
-    
-    try {
-        const { deleteComment } = await import('../../APIs/socialApi.js');
-        if (!authToken.startsWith('dev-token-')) {
-            await deleteComment(commentId, authToken);
+    // Usar modal bonito en lugar de confirm()
+    const { showDeleteCommentModal } = await import('./deleteModals.js');
+    if (typeof showDeleteCommentModal === 'function') {
+        // Guardar el reviewId y commentId en el state para que el modal los use
+        if (!state.deletingCommentId) {
+            state.deletingCommentId = commentId;
+        }
+        // Guardar el reviewId en el modal para que se pueda usar después
+        const deleteCommentModal = document.getElementById('deleteCommentModalOverlay');
+        if (deleteCommentModal) {
+            deleteCommentModal.setAttribute('data-review-id', reviewId);
+        }
+        showDeleteCommentModal(commentId, state);
+    } else {
+        // Fallback a confirm si el modal no está disponible
+        if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
+            return;
         }
         
-        await loadReviewDetailComments(reviewId, null, state);
-        
-        const commentsCount = document.getElementById('reviewDetailCommentsCount');
-        if (commentsCount) {
-            const comments = await getCommentsByReview(reviewId);
-            commentsCount.textContent = comments.length;
+        try {
+            const { deleteComment } = await import('../../APIs/socialApi.js');
+            if (!authToken.startsWith('dev-token-')) {
+                await deleteComment(commentId, authToken);
+            }
+            
+            await loadReviewDetailComments(reviewId, null, state);
+            
+            const commentsCount = document.getElementById('reviewDetailCommentsCount');
+            if (commentsCount) {
+                const comments = await getCommentsByReview(reviewId);
+                commentsCount.textContent = comments.length;
+            }
+            
+            showAlert('Comentario eliminado exitosamente', 'success');
+        } catch (error) {
+            console.error('Error eliminando comentario:', error);
+            showAlert('Error al eliminar el comentario', 'danger');
         }
-        
-        showAlert('Comentario eliminado exitosamente', 'success');
-    } catch (error) {
-        console.error('Error eliminando comentario:', error);
-        showAlert('Error al eliminar el comentario', 'danger');
     }
 }
 
@@ -610,37 +789,90 @@ async function toggleReviewLikeInDetail(reviewId, btn) {
     const icon = btn.querySelector('i');
     const likesSpan = btn.querySelector('.review-detail-likes-count');
     const isLiked = btn.classList.contains('liked');
+    const currentLikes = parseInt(likesSpan.textContent) || 0;
     
     if (isLiked) {
+        // Quitar like (Optimistic Update)
         btn.classList.remove('liked');
         icon.style.color = 'rgba(255,255,255,0.7)';
-        const currentLikes = parseInt(likesSpan.textContent) || 0;
-        likesSpan.textContent = Math.max(0, currentLikes - 1);
+        const newLikesCount = Math.max(0, currentLikes - 1);
+        likesSpan.textContent = newLikesCount;
+        
+        // Actualizar cache
+        const likesCacheKey = `review_likes_${reviewId}`;
+        try {
+            localStorage.setItem(likesCacheKey, String(newLikesCount));
+        } catch (e) { /* ignore */ }
         
         const reactionId = localStorage.getItem(`reaction_${reviewId}_${userId}`);
-        try {
-            await deleteReviewReaction(reviewId, userId, authToken, reactionId);
-            localStorage.removeItem(`like_${reviewId}_${userId}`);
-            localStorage.removeItem(`reaction_${reviewId}_${userId}`);
-        } catch (err) {
-            console.warn('No se pudo eliminar like del backend', err);
-        }
+        deleteReviewReaction(reviewId, userId, authToken, reactionId)
+            .then(() => {
+                localStorage.removeItem(`like_${reviewId}_${userId}`);
+                localStorage.removeItem(`reaction_${reviewId}_${userId}`);
+                
+                // Sincronizar con el feed si la reseña está visible
+                const feedLikeBtn = document.querySelector(`.btn-like[data-review-id="${reviewId}"]`);
+                if (feedLikeBtn && feedLikeBtn.classList.contains('liked')) {
+                    feedLikeBtn.classList.remove('liked');
+                    const feedIcon = feedLikeBtn.querySelector('i');
+                    const feedLikesSpan = feedLikeBtn.parentElement.querySelector('.review-likes-count');
+                    if (feedIcon) feedIcon.style.color = 'rgba(255,255,255,0.7)';
+                    if (feedLikesSpan) feedLikesSpan.textContent = newLikesCount;
+                }
+            })
+            .catch(err => {
+                console.warn('No se pudo eliminar like del backend', err);
+                // Revertir cambio si falla
+                btn.classList.add('liked');
+                icon.style.color = 'var(--magenta, #EC4899)';
+                likesSpan.textContent = currentLikes;
+                try {
+                    localStorage.setItem(likesCacheKey, String(currentLikes));
+                } catch (e) { /* ignore */ }
+            });
     } else {
+        // Agregar like (Optimistic Update)
         btn.classList.add('liked');
         icon.style.color = 'var(--magenta, #EC4899)';
-        const currentLikes = parseInt(likesSpan.textContent) || 0;
-        likesSpan.textContent = currentLikes + 1;
+        const newLikesCount = currentLikes + 1;
+        likesSpan.textContent = newLikesCount;
+        
+        // Actualizar cache
+        const likesCacheKey = `review_likes_${reviewId}`;
+        try {
+            localStorage.setItem(likesCacheKey, String(newLikesCount));
+        } catch (e) { /* ignore */ }
         
         localStorage.setItem(`like_${reviewId}_${userId}`, 'true');
-        try {
-            const data = await addReviewReaction(reviewId, userId, authToken);
-            const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-            if (reactionId) {
-                localStorage.setItem(`reaction_${reviewId}_${userId}`, reactionId);
-            }
-        } catch (err) {
-            console.warn('No se pudo guardar like en el backend', err);
-        }
+        
+        addReviewReaction(reviewId, userId, authToken)
+            .then(data => {
+                const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
+                if (reactionId) {
+                    localStorage.setItem(`reaction_${reviewId}_${userId}`, String(reactionId));
+                }
+                
+                // Sincronizar con el feed si la reseña está visible
+                const feedLikeBtn = document.querySelector(`.btn-like[data-review-id="${reviewId}"]`);
+                if (feedLikeBtn && !feedLikeBtn.classList.contains('liked')) {
+                    feedLikeBtn.classList.add('liked');
+                    const feedIcon = feedLikeBtn.querySelector('i');
+                    const feedLikesSpan = feedLikeBtn.parentElement.querySelector('.review-likes-count');
+                    if (feedIcon) feedIcon.style.color = 'var(--magenta, #EC4899)';
+                    if (feedLikesSpan) feedLikesSpan.textContent = newLikesCount;
+                }
+            })
+            .catch(err => {
+                console.warn('No se pudo guardar like en el backend', err);
+                // Revertir cambio si falla
+                btn.classList.remove('liked');
+                icon.style.color = 'rgba(255,255,255,0.7)';
+                likesSpan.textContent = currentLikes;
+                localStorage.removeItem(`like_${reviewId}_${userId}`);
+                try {
+                    localStorage.setItem(likesCacheKey, String(currentLikes));
+                } catch (e) { /* ignore */ }
+            });
     }
 }
 

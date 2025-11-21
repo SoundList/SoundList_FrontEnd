@@ -1020,8 +1020,8 @@ button.nav-btn.active:hover {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    /* Altura máxima para aproximadamente 10 reseñas (cada reseña ~150px + gap 1rem) */
-    max-height: calc(10 * 150px + 9 * 1rem); /* 10 reseñas de ~150px + 9 gaps de 1rem */
+    /* Altura máxima para aproximadamente 2 reseñas (cada reseña ~150px + gap 1rem) */
+    max-height: calc(2 * 150px + 1 * 1rem); /* 2 reseñas de ~150px + 1 gap de 1rem */
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.5rem; /* Espacio para el scrollbar */

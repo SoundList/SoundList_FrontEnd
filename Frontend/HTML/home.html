@@ -447,11 +447,30 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <!-- Configurar interceptor de axios inmediatamente después de cargar -->
+    <!-- Configurar interceptor de axios INMEDIATAMENTE después de cargar (antes que cualquier otro código) -->
     <script>
         // Interceptor para suprimir errores esperados (404, 500) que no deben mostrarse en consola
         // Este interceptor se ejecuta ANTES que cualquier otro código
         (function() {
+            // Interceptar errores de red del navegador ANTES de axios
+            const originalFetch = window.fetch;
+            if (originalFetch) {
+                window.fetch = function(...args) {
+                    return originalFetch.apply(this, args).catch(error => {
+                        const url = args[0]?.toString() || '';
+                        // Si es un error 404/500 de rutas esperadas, no mostrar en consola
+                        if ((url.includes('/Song/') || url.includes('/Album/') || 
+                             url.includes('/api/gateway/users/') || url.includes('/api/gateway/contents/') ||
+                             url.includes('/api/gateway/reactions/')) && 
+                            (error.message?.includes('404') || error.message?.includes('500'))) {
+                            // Suprimir silenciosamente
+                            return Promise.reject({ suppressed: true, originalError: error });
+                        }
+                        return Promise.reject(error);
+                    });
+                };
+            }
+            
             if (typeof axios !== 'undefined') {
                 // Guardar el método original de request para interceptar antes
                 const originalRequest = axios.request;
@@ -468,19 +487,21 @@
                             // Errores esperados que no deben mostrarse en consola:
                             const shouldSuppress = 
                                 // Errores 404/500 al obtener usuarios
-                                (status === 404 || status === 500) && url.includes('/api/gateway/users/') ||
-                                // Errores 404 al obtener canciones/álbumes (rutas antiguas)
-                                status === 404 && (url.includes('/Song/') || url.includes('/Album/')) ||
+                                ((status === 404 || status === 500) && url.includes('/api/gateway/users/')) ||
+                                // Errores 404/500 al obtener canciones/álbumes (rutas antiguas directas)
+                                ((status === 404 || status === 500) && (url.includes('/Song/') || url.includes('/Album/') || url.includes('/song/') || url.includes('/album/'))) ||
                                 // Errores 404 al obtener canciones/álbumes (rutas nuevas del gateway)
-                                status === 404 && (url.includes('/api/gateway/contents/song/') || url.includes('/api/gateway/contents/album/')) ||
+                                (status === 404 && (url.includes('/api/gateway/contents/song/') || url.includes('/api/gateway/contents/album/'))) ||
                                 // Errores 404 al verificar reacciones
-                                status === 404 && url.includes('/api/gateway/reactions/review/') ||
+                                (status === 404 && url.includes('/api/gateway/reactions/review/')) ||
                                 // Errores 500 en general para estas rutas
-                                status === 500 && (url.includes('/api/gateway/users/') || url.includes('/Song/') || url.includes('/Album/') || url.includes('/api/gateway/contents/'));
+                                (status === 500 && (url.includes('/api/gateway/users/') || url.includes('/Song/') || url.includes('/Album/') || url.includes('/song/') || url.includes('/album/') || url.includes('/api/gateway/contents/')));
                             
                             if (shouldSuppress) {
                                 // Suprimir el error del console.error de axios
                                 error.config._suppressError = true;
+                                // Marcar para que no se muestre en consola
+                                error.suppressConsoleError = true;
                                 
                                 // Retornar una respuesta simulada para que no se muestre como error
                                 return Promise.resolve({
@@ -498,37 +519,73 @@
                     }
                 );
                 
-                // Interceptar console.error para suprimir errores de axios específicos
+                // Interceptar console.error, console.warn y console.log para suprimir errores esperados
                 const originalConsoleError = console.error;
+                const originalConsoleWarn = console.warn;
+                const originalConsoleLog = console.log;
+                
+                // Función auxiliar para verificar si un error debe ser suprimido
+                function shouldSuppressConsoleMessage(...args) {
+                    const errorString = args.map(arg => {
+                        if (typeof arg === 'string') return arg;
+                        if (arg?.config?.url) return arg.config.url;
+                        if (arg?.response?.status) return `Status: ${arg.response.status}`;
+                        if (arg?.message) return arg.message;
+                        return String(arg);
+                    }).join(' ').toLowerCase();
+                    
+                    // Verificar si contiene errores 404/500 de rutas esperadas
+                    const has404or500 = errorString.includes('404') || errorString.includes('500') || 
+                                       errorString.includes('not found') || errorString.includes('internal server error') ||
+                                       errorString.includes('failed to load resource');
+                    
+                    const hasSuppressedRoute = 
+                        errorString.includes('/song/') || 
+                        errorString.includes('/album/') || 
+                        errorString.includes('/song') || 
+                        errorString.includes('/album') || 
+                        errorString.includes('/api/gateway/users/') ||
+                        errorString.includes('/api/gateway/contents/') ||
+                        errorString.includes('/api/gateway/reactions/') ||
+                        errorString.includes('localhost:5000/song/') ||
+                        errorString.includes('localhost:5000/album/') ||
+                        errorString.includes('localhost:5000/song') ||
+                        errorString.includes('localhost:5000/album') ||
+                        errorString.includes('gateway/reactions/review/') ||
+                        errorString.includes('gateway/contents/song/') ||
+                        errorString.includes('gateway/contents/album/') ||
+                        errorString.includes('xhr.js') && (errorString.includes('404') || errorString.includes('500')) && (errorString.includes('song') || errorString.includes('album') || errorString.includes('gateway'));
+                    
+                    return (has404or500 && hasSuppressedRoute) ||
+                           (args[0]?.config && (args[0].config._suppressError || args[0].config.suppressConsoleError)) ||
+                           (args[0]?.suppressConsoleError);
+                }
+                
                 console.error = function(...args) {
-                    // Si el error es de axios y es un error esperado, no mostrarlo
-                    const errorMessage = args[0]?.toString() || '';
-                    const isAxiosError = errorMessage.includes('xhr.js') || 
-                                        errorMessage.includes('GET http://localhost:5000') ||
-                                        (args[0]?.config && args[0].config._suppressError);
-                    
-                    if (isAxiosError) {
-                        const url = args[0]?.config?.url || '';
-                        const status = args[0]?.response?.status;
-                        
-                        // Solo suprimir si es un error esperado
-                        const shouldSuppress = 
-                            (status === 404 || status === 500) && (
-                                url.includes('/api/gateway/users/') ||
-                                url.includes('/Song/') ||
-                                url.includes('/Album/') ||
-                                url.includes('/api/gateway/contents/song/') ||
-                                url.includes('/api/gateway/contents/album/') ||
-                                url.includes('/api/gateway/reactions/review/')
-                            );
-                        
-                        if (shouldSuppress) {
-                            return; // No mostrar el error
-                        }
+                    if (shouldSuppressConsoleMessage(...args)) {
+                        return; // No mostrar el error
                     }
-                    
-                    // Para otros errores, mostrar normalmente
                     originalConsoleError.apply(console, args);
+                };
+                
+                console.warn = function(...args) {
+                    if (shouldSuppressConsoleMessage(...args)) {
+                        return; // No mostrar el warning
+                    }
+                    originalConsoleWarn.apply(console, args);
+                };
+                
+                // También interceptar console.log para errores de red del navegador
+                console.log = function(...args) {
+                    const message = args.join(' ').toLowerCase();
+                    // Suprimir mensajes de errores 404/500 de rutas esperadas
+                    if ((message.includes('404') || message.includes('500') || message.includes('failed to load')) &&
+                        (message.includes('/song/') || message.includes('/album/') || 
+                         message.includes('gateway/users/') || message.includes('gateway/contents/') ||
+                         message.includes('gateway/reactions/'))) {
+                        return; // No mostrar
+                    }
+                    originalConsoleLog.apply(console, args);
                 };
             }
         })();

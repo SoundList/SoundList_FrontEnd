@@ -367,16 +367,7 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
             // C. Renderizar
             const validReviews = enrichedReviews.filter(r => r !== null);
             
-            // Debug: Verificar que los likes se están guardando correctamente
-            const reviewsWithLikes = validReviews.filter(r => r.likes > 0);
-            console.log(`📊 Reseñas cargadas: ${validReviews.length}, con likes: ${reviewsWithLikes.length}`);
-            if (reviewsWithLikes.length > 0) {
-                console.log(`✅ Ejemplo de reseña con likes:`, {
-                    id: reviewsWithLikes[0].id,
-                    likes: reviewsWithLikes[0].likes,
-                    comments: reviewsWithLikes[0].comments
-                });
-            }
+            // Debug removido - las reseñas se cargan correctamente
             
             // Ordenar según el filtro actual
             const currentFilter = typeof getCurrentFilter === 'function' ? getCurrentFilter() : 'popular';

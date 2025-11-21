@@ -64,11 +64,11 @@ async function loadPageData() {
         const params = new URLSearchParams(window.location.search);
         const apiAlbumId = params.get('id'); 
         
-        // Validación más estricta del ID
+        // Validación estricta del ID
         if (!apiAlbumId || apiAlbumId.trim() === '' || 
             apiAlbumId === 'undefined' || apiAlbumId === 'null' ||
-            apiAlbumId.toLowerCase() === 'album' || apiAlbumId.toLowerCase() === 'artist' || apiAlbumId.toLowerCase() === 'song') {
-            throw new Error("ID de álbum inválido en la URL. Por favor, busca el álbum nuevamente.");
+            apiAlbumId.toLowerCase() === 'album' || apiAlbumId.toLowerCase() === 'artist') {
+            throw new Error("ID de álbum inválido. Busca nuevamente.");
         }
         
         console.log(`Cargando álbum con ID: ${apiAlbumId}`);
@@ -77,51 +77,51 @@ async function loadPageData() {
         contentEl.style.display = 'none';
         loadingEl.style.display = 'block';
 
-        // 3. Obtener datos principales del álbum (desde ContentAPI)
+        // 3. Obtener datos principales del álbum
         const albumData = await getAlbumByApiId(apiAlbumId);
         currentAlbumData = albumData; // Guardamos globalmente
-        const localAlbumId = albumData.albumId; // GUID local
+        const localAlbumId = albumData.albumId; 
 
-        // 4. Renderizar el header (ya tenemos los datos)
+        // 4. Renderizar el header INMEDIATAMENTE (Mejor UX)
+        // Ya no esperamos a las canciones porque el backend C# ya manda el artista bien.
         renderAlbumHeader(albumData);
         
-        // 5. Obtener canciones (de ContentAPI) y TODAS las reseñas (de SocialAPI)
+        // 5. Obtener canciones y reseñas en paralelo
         const [songsData, allReviews] = await Promise.all([
-            getAlbumSongsByApiId(apiAlbumId), // Usamos el ID de Spotify
+            getAlbumSongsByApiId(apiAlbumId),
             getReviews()
         ]);
 
-        // 6. Filtrar las reseñas solo para este álbum
+        // --- (AQUÍ BORRAMOS EL PARCHE DEL ARTISTA) ---
+
+        // 6. Filtrar reseñas
         const filteredReviews = allReviews.filter(review => {
             return (review.albumId === localAlbumId || review.AlbumId === localAlbumId);
         });
 
-        // --- ¡ESTE ES EL PASO CLAVE QUE FALTABA! ---
-        // 7. Enriquecer las reseñas filtradas con datos de Usuario
+        // 7. Enriquecer reseñas (Lógica optimizada que hicimos antes)
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
                 try {
                     const reviewId = review.reviewId || review.ReviewId || review.id;
                     const userId = review.userId || review.UserId;
                     
-                    // Paralelizar llamadas para user, likes y comments
                     const [userData, likes, comments] = await Promise.all([
-                        getUser(userId).catch(e => null), // Llama a socialApi.js
+                        getUser(userId).catch(e => null),
                         getReviewReactionCount(reviewId).catch(e => 0),
                         getCommentsByReview(reviewId).catch(e => [])
                     ]);
                     
                     const currentUserId = localStorage.getItem('userId');
-                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true'; // (O lógica de 'reactionId')
+                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true';
 
-                    // Devolvemos el objeto COMPLETO que 'renderReviews' espera
                     return {
                         id: reviewId,
                         username: userData?.username || userData?.Username || 'Usuario',
                         avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
-                        contentType: 'Álbum', // Ya sabemos que es un álbum
-                        song: albumData.title, // Nombre del álbum
-                        artist: albumData.artistName, // Nombre del artista
+                        contentType: 'Álbum',
+                        song: albumData.title,
+                        artist: albumData.artistName, // Ahora viene limpio del backend
                         title: review.title || review.Title,
                         comment: review.content || review.Content,
                         rating: review.rating || review.Rating,
@@ -131,26 +131,28 @@ async function loadPageData() {
                         userId: userId
                     };
                 } catch (error) {
-                    console.error("Error enriqueciendo reseña:", error, review);
-                    return null; // Omitir esta reseña si falla
+                    console.warn("Error procesando una reseña individual:", error);
+                    return null;
                 }
             })
         );
 
         const validReviews = reviewsData.filter(r => r !== null);
-        // --- FIN DEL PASO CLAVE ---
 
-        // 8. Renderizar el resto del contenido
+        // Actualizar estadísticas (estrellas) con el cálculo de promedio
+        updateHeaderStatistics(filteredReviews);
+
+        // 8. Renderizar resto del contenido
         renderSongList(songsData);
-        renderAlbumDetails(albumData, songsData.length);
-        renderReviews(validReviews); // <-- Pasamos los datos enriquecidos
+        renderAlbumDetails(albumData, songsData ? songsData.length : 0);
+        renderReviews(validReviews);
 
-        // 9. Mostrar contenido, ocultar spinner
+        // 9. Finalizar carga
         contentEl.style.display = 'block';
         
     } catch (error) {
-        console.error("Error fatal al cargar la página:", error);
-        contentEl.innerHTML = `<h2 class="text-light text-center py-5">Error al cargar el álbum: ${error.message}</h2>`;
+        console.error("Error fatal:", error);
+        contentEl.innerHTML = `<h2 class="text-light text-center py-5">Error: ${error.message}</h2>`;
         contentEl.style.display = 'block';
     } finally {
         loadingEl.style.display = 'none';
@@ -159,26 +161,47 @@ async function loadPageData() {
 //  ---  FUNCIONES  DE  RENDERIZADO  (Sin  cambios)  ---
 
 function renderAlbumHeader(album) {
-    document.getElementById('albumCover').src = album.image || './../../Assets/album-de-musica.png';
-    document.getElementById('albumTitle').textContent = album.title;
+    // 1. Imagen y Título (con soporte para Mayúsculas por si acaso)
+    document.getElementById('albumCover').src = album.image || album.Image || '../Assets/album-de-musica.png';
+    document.getElementById('albumTitle').textContent = album.title || album.Title;
     
     const artistLink = document.getElementById('albumArtistLink');
     
+    // --- CORRECCIÓN DEL ARTISTA ---
+    // Buscamos el nombre en todas las estructuras posibles que devuelve .NET
+    const artistName = album.artistName || 
+                    album.ArtistName || 
+                    (album.artist ? (album.artist.name || album.artist.Name) : null) ||
+                    (album.Artist ? (album.Artist.Name || album.Artist.name) : null) ||
+                    "Artista Desconocido";
 
-    artistLink.textContent = album.artistName || "Artista Desconocido";
+    artistLink.textContent = artistName;
     
-    if (album.apiArtistId) {
-        artistLink.href = `./artist.html?id=${album.apiArtistId}`;
+    // --- CORRECCIÓN DEL LINK AL ARTISTA ---
+    // También aseguramos obtener el ID correcto para que el click funcione
+    const artistId = album.apiArtistId || 
+                    album.ApiArtistId || 
+                    (album.artist ? album.artist.id : null) ||
+                    (album.Artist ? album.Artist.Id : null);
+
+    if (artistId) {
+        // Estandarizado a 'artist.html' (singular) como mencionaste en el contexto
+        artistLink.href = `./artist.html?id=${artistId}`;
+    } else {
+        artistLink.href = '#'; // Si no hay ID, que no lleve a ningun lado
+        artistLink.style.pointerEvents = 'none'; // Deshabilitar click visualmente
     }
 
-    const rating = album.averageRating || 0;
+    // Estadísticas (ya corregidas antes)
+    const rating = album.averageRating || 0; // Esto viene del backend si existiera
     const reviewCount = album.reviewCount || 0;
     
+    // Nota: Aquí NO recalculamos, solo mostramos lo inicial. 
+    // La función updateHeaderStatistics se encarga de la matemática real después.
     document.getElementById('ratingNumber').textContent = rating.toFixed(1);
     document.getElementById('ratingStars').innerHTML = createStarRating(rating, true);
     document.getElementById('ratingCount').textContent = `(${reviewCount} reviews)`;
 }
-
 function renderSongList(songs) {
     const songListEl = document.getElementById('songList');
     if (!songs || songs.length === 0) {
@@ -501,7 +524,7 @@ async function handleSubmitReview() {
         // 7A. Recargar reseñas BÁSICAS
         const allReviews = await getReviews();
         const filteredReviews = allReviews.filter(r => r.albumId === currentAlbumData.albumId || r.AlbumId === currentAlbumData.albumId);
-
+        updateHeaderStatistics(filteredReviews);
         // 7B. "Enriquecer" las reseñas (¡ESTO FALTABA!)
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
@@ -1060,54 +1083,40 @@ async function deleteReviewLogic(reviewId) {
         showAlert('Debes iniciar sesión para eliminar reseñas', 'warning');
     return;
 }
-
-// --- 9. DATOS DE EJEMPLO ---
-function initializeSampleComments() {
-        const authToken = localStorage.getItem('authToken');
-        if (authToken && authToken.startsWith('dev-token-')) {
-            // Los comentarios se agregarán después de cargar las reseñas
-            // para usar los IDs reales de las reseñas
-            setTimeout(() => {
-                // Obtener todas las reseñas renderizadas
-                const reviewItems = document.querySelectorAll('.review-item');
-                if (reviewItems.length > 0) {
-                    const firstReviewId = reviewItems[0].getAttribute('data-review-id');                if (firstReviewId && !commentsData[firstReviewId]) {
-                        const currentUserId = localStorage.getItem('userId');
-                        commentsData[firstReviewId] = [
-                            {
-                                Id_Comment: 'dev-comment-1',
-                                Text: '¡Excelente canción! Me encanta.',
-                                Created: new Date(Date.now() - 3600000).toISOString(), // Hace 1 hora
-                        ReviewId: firstReviewId,
-                                IdUser: currentUserId || 'sample-user-1', // Tu comentario para poder editarlo
-                                UserName: localStorage.getItem('username') || 'Usuario Demo',
-                                Likes: 0, // 0 likes para poder editar
-                            userLiked: false
-                        },
-                            {
-                                Id_Comment: 'dev-comment-2',
-
-                                Text: 'Totalmente de acuerdo, es una obra maestra.',
-                                Created: new Date(Date.now() - 7200000).toISOString(), // Hace 2 horas
-                                ReviewId: firstReviewId,
-                                IdUser: 'sample-user-2', // Comentario de otro usuario
-                        UserName: 'Maria456',
-                                Likes: 2, // Tiene likes
-                            userLiked: false
-                            }
-                        ];
-                    
-                        // Actualizar contador en el botón de comentarios
-                        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${firstReviewId}"]`);
-                    if (commentBtn) {
-                            const countSpan = commentBtn.querySelector('.review-comments-count');
-                            if (countSpan) {
-                                countSpan.textContent = commentsData[firstReviewId].length;
-                        }
-                        }
-                    }
-                }
-            }, 2000); 
-        }
-    }
 }
+
+/**
+ * Calcula el promedio de estrellas basado en el array de reseñas
+ * y actualiza el DOM del header.
+ */
+function updateHeaderStatistics(reviews) {
+    const ratingNumberEl = document.getElementById('ratingNumber');
+    const ratingStarsEl = document.getElementById('ratingStars');
+    const ratingCountEl = document.getElementById('ratingCount');
+
+    if (!reviews || reviews.length === 0) {
+        ratingNumberEl.textContent = "0.0";
+        ratingStarsEl.innerHTML = createStarRating(0, true); 
+        ratingCountEl.textContent = "(0 reviews)";
+        return;
+    }
+
+    // 1. Sumar todas las calificaciones
+    const totalRating = reviews.reduce((sum, review) => {
+        const rating = review.rating || review.Rating || 0;
+        return sum + Number(rating);
+    }, 0);
+
+    // 2. Calcular promedio crudo (ej: 4.23333...)
+    const rawAverage = totalRating / reviews.length;
+
+    // 3. Redondear al 0.5 más cercano
+    const roundedAverage = Math.round(rawAverage * 2) / 2;
+
+    // 4. Actualizar el DOM
+    ratingNumberEl.textContent = roundedAverage.toFixed(1); 
+    ratingStarsEl.innerHTML = createStarRating(roundedAverage, true); 
+    ratingCountEl.textContent = `(${reviews.length} reviews)`;
+}
+
+

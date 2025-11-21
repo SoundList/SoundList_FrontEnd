@@ -1,4 +1,3 @@
-
 /**
  * Renderiza la lista de items en el contenedor del ranking.
  */
@@ -16,15 +15,37 @@ export function renderRankingList(items, tipo) {
         const position = index + 1;
         const defaultImg = '../Assets/default-avatar.png';
 
-        // Mapeamos los campos
+        // Mapeamos los campos visuales
         const name = item.title;
         const artist = item.artistName || 'Artista Desconocido'; 
         const image = item.image || defaultImg;
         const rating = item.calification;
-        const reviews = item.reviewCount; // <--- USAMOS EL CAMPO ENRIQUECIDO
+        const reviews = item.reviewCount;
 
-            return `
-            <div class="ranking-item">
+        // --- NUEVA LÓGICA DE REDIRECCIÓN ---
+        let targetUrl = '#';
+        let contentId = null;
+
+        // Normalizamos el tipo a mayúsculas para evitar errores (ej: "Albums", "albums", "ALBUMES")
+        const typeUpper = tipo ? tipo.toUpperCase() : '';
+
+        // Detectamos si es Álbum o Canción y buscamos el ID correspondiente
+        if (typeUpper.includes('ALBUM')) {
+            contentId = item.apiAlbumId || item.APIAlbumId || item.id;
+            if (contentId) targetUrl = `./album.html?id=${contentId}`;
+        } else {
+            // Asumimos que es canción (Songs/Canciones)
+            contentId = item.apiSongId || item.APISongId || item.id;
+            if (contentId) targetUrl = `./song.html?id=${contentId}`;
+        }
+        // -----------------------------------
+
+        return `
+            <div class="ranking-item" 
+                 onclick="window.location.href='${targetUrl}'" 
+                 style="cursor: pointer;" 
+                 title="Ver detalles de ${name}">
+                 
                 <div class="ranking-position">${position}.</div>
                 <div class="ranking-info">
                     <img src="${image}" 
@@ -43,7 +64,7 @@ export function renderRankingList(items, tipo) {
                 </div>
             </div>
             `;
-        }).join('');
+    }).join('');
 }
 
 /**
@@ -68,7 +89,6 @@ export function showEmptyState() {
 
 /**
  * Genera el HTML para las estrellas de calificación.
- * (Copiado de la lógica de 'renderStars' en home.js)
  */
 function generateStars(rating) {
     const fullStars = Math.floor(rating);

@@ -1,6 +1,5 @@
 import { AmigosHandler } from '../Handlers/amigosHandler.js';
 import { renderStars } from '../Components/starRenderer.js';
-
 import { initializeCreateReviewModal, showEditReviewModal } from '../Components/modals/createReviewModal.js';
 import { initializeCommentsModalLogic, showCommentsModal } from '../Components/modals/commentsModal.js';
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
@@ -8,94 +7,29 @@ import { initializeDeleteModalsLogic, showDeleteReviewModal } from '../Component
 
 const getCurrentUserId = () => localStorage.getItem('userId');
 const isLoggedIn = () => getCurrentUserId() !== null;
-const normalizeId = (id) => String(id || '').toLowerCase().trim(); // 🚨 HELPER LOCAL
+const normalizeId = (id) => String(id || '').toLowerCase().trim();
+
 export const modalsState = {
     followingUsers: new Set(), 
     followerUsers: new Set(),  
-
-mockReviews: [ 
+    
+    mockReviews: [ 
         { 
-            id: 'rev1', 
-            userId: '22222222-2222-2222-2222-222222222222', // Antes 'user2'
-            username: 'vinyl_collector', 
-            song: 'Bohemian Rhapsody', 
-            artist: 'Queen', 
-            contentType: 'song', 
-            comment: 'Una obra maestra atemporal.', 
-            rating: 5, 
-            likes: 45, 
-            comments: 12, 
-            userLiked: false, 
+            id: 'rev1', userId: '22222222-2222-2222-2222-222222222222', username: 'vinyl_collector', 
+            song: 'Bohemian Rhapsody', artist: 'Queen', contentType: 'song', 
+            comment: 'Una obra maestra atemporal.', rating: 5, likes: 45, comments: 12, userLiked: false, 
             avatar: '../Assets/default-avatar.png' 
         },
         { 
-            id: 'rev2', 
-            userId: '33333333-3333-3333-3333-333333333333', // Antes 'user3'
-            username: 'jazz_night', 
-            song: 'Kind of Blue', 
-            artist: 'Miles Davis', 
-            contentType: 'album', 
-            comment: 'El álbum de jazz más importante.', 
-            rating: 5, 
-            likes: 38, 
-            comments: 8, 
-            userLiked: true, 
+            id: 'rev2', userId: '33333333-3333-3333-3333-333333333333', username: 'jazz_night', 
+            song: 'Kind of Blue', artist: 'Miles Davis', contentType: 'album', 
+            comment: 'El álbum de jazz más importante.', rating: 5, likes: 38, comments: 8, userLiked: true, 
             avatar: '../Assets/default-avatar.png' 
         },
         { 
-            id: 'rev3', 
-            userId: '11111111-1111-1111-1111-111111111111', // Antes 'user1'
-            username: 'musiclover23', 
-            song: 'Stairway to Heaven', 
-            artist: 'Led Zeppelin', 
-            contentType: 'song', 
-            comment: 'Desde el inicio acústico hasta el solo épico.', 
-            rating: 5, 
-            likes: 52, 
-            comments: 15, 
-            userLiked: false, 
-            avatar: '../Assets/default-avatar.png' 
-        },
-        { 
-            id: 'rev4', 
-            userId: '66666666-6666-6666-6666-666666666666', // Antes 'user6'
-            username: 'electronic_dreams', 
-            song: 'Random Access Memories', 
-            artist: 'Daft Punk', 
-            contentType: 'album', 
-            comment: 'Un viaje sonoro increíble.', 
-            rating: 4.5, 
-            likes: 29, 
-            comments: 6, 
-            userLiked: false, 
-            avatar: '../Assets/default-avatar.png' 
-        },
-        { 
-            id: 'rev5', 
-            userId: '44444444-4444-4444-4444-444444444444', // Antes 'user4'
-            username: 'pop_enthusiast', 
-            song: 'Blinding Lights', 
-            artist: 'The Weeknd', 
-            contentType: 'song', 
-            comment: 'Adictivo desde el primer segundo.', 
-            rating: 4, 
-            likes: 33, 
-            comments: 9, 
-            userLiked: false, 
-            avatar: '../Assets/default-avatar.png' 
-        },
-        { 
-            id: 'rev6', 
-            userId: '55555555-5555-5555-5555-555555555555', // Antes 'user5'
-            username: 'metalhead99', 
-            song: 'Master of Puppets', 
-            artist: 'Metallica', 
-            contentType: 'album', 
-            comment: 'Thrash metal en su máxima expresión.', 
-            rating: 5, 
-            likes: 41, 
-            comments: 11, 
-            userLiked: true, 
+            id: 'rev6', userId: '55555555-5555-5555-5555-555555555555', username: 'metalhead99', 
+            song: 'Master of Puppets', artist: 'Metallica', contentType: 'album', 
+            comment: 'Thrash metal en su máxima expresión.', rating: 5, likes: 41, comments: 11, userLiked: true, 
             avatar: '../Assets/default-avatar.png' 
         }
     ],
@@ -123,7 +57,7 @@ mockReviews: [
         }
     }
 };
-// LÓGICA DE RENDERIZADO
+
 function loadReviewsLogic(filterType) {
     const reviewsList = document.getElementById('reviewsList');
     const reviewsEmpty = document.getElementById('reviewsEmpty');
@@ -134,10 +68,10 @@ function loadReviewsLogic(filterType) {
 
     switch (filterType) {
         case 'seguidores': 
-            filteredReviews = modalsState.mockReviews.filter(review => modalsState.followerUsers.has(review.userId));
+            filteredReviews = modalsState.mockReviews.filter(review => modalsState.followerUsers.has(normalizeId(review.userId)));
             break;
         case 'seguidos': 
-            filteredReviews = modalsState.mockReviews.filter(review => modalsState.followingUsers.has(review.userId));
+            filteredReviews = modalsState.mockReviews.filter(review => modalsState.followingUsers.has(normalizeId(review.userId)));
             break;
         default:
             filteredReviews = modalsState.mockReviews;
@@ -153,7 +87,6 @@ function loadReviewsLogic(filterType) {
     } else {
         if (reviewsEmpty) reviewsEmpty.style.display = 'none';
         reviewsList.style.display = 'block';
-        
         renderReviews(filteredReviews); 
     }
 }
@@ -167,13 +100,12 @@ function renderReviews(reviews) {
 
     reviewsList.innerHTML = reviews.map(review => {
         const reviewId = review.id;
-// CORRECCIÓN:
-const targetUserId = normalizeId(review.userId);
-const isFollowing = modalsState.followingUsers.has(targetUserId); // <--- Usa targetUserId aquí
- const isOwn = currentUserId && (String(review.userId) === String(currentUserId));
+        const targetUserId = normalizeId(review.userId);
+        const isFollowing = modalsState.followingUsers.has(targetUserId); 
+        const isOwn = currentUserId && (normalizeId(currentUserId) === targetUserId);
         
         const followBtnHTML = (!isOwn && isLoggedIn()) ? `
-            <button class="review-btn review-follow-btn ${isFollowing ? 'following' : ''}" 
+            <button class="review-btn review-follow-btn ${isFollowing ? 'following' : 'follow'}" 
                     data-user-id="${review.userId}"
                     data-username="${review.username}">
                 <i class="fas ${isFollowing ? 'fa-user-check' : 'fa-user-plus'}"></i>
@@ -189,11 +121,8 @@ const isFollowing = modalsState.followingUsers.has(targetUserId); // <--- Usa ta
                     <div class="review-header">
                         <span class="review-username">${review.username}</span>
                         <span class="review-separator">•</span>
-                        <span class="review-song">${review.song}</span>
-                        <span class="review-separator">-</span>
                         <span class="review-artist">${review.artist}</span>
                     </div>
-                    ${review.title ? `<h4 class="review-title">${review.title}</h4>` : ''}
                     <p class="review-comment">${review.comment}</p>
                 </div>
             </div>
@@ -207,32 +136,24 @@ const isFollowing = modalsState.followingUsers.has(targetUserId); // <--- Usa ta
                             <i class="fas fa-heart" style="color: ${review.userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'}"></i>
                         </button>
                     </div>
-                    <button class="review-btn comment-btn" data-review-id="${review.id}">
-                        <i class="fas fa-comment"></i>
-                        <span>${review.comments}</span>
-                    </button>
-                    ${isLoggedIn() && (isOwn ? 
-                        `<button class="review-btn btn-delete" data-review-id="${review.id}" title="Eliminar reseña"><i class="fas fa-trash"></i></button>` : 
-                        `<button class="review-btn btn-report" data-review-id="${review.id}" title="Reportar reseña"><i class="fas fa-flag"></i></button>`)}
+                    <button class="review-btn comment-btn" data-review-id="${review.id}"><i class="fas fa-comment"></i></button>
                 </div>
             </div>
         </div>`;
     }).join('');
+
     AmigosHandler.addReviewEventListeners(reviewsList, modalsState);
 }
 
-export function initializeAmigosPage() {
-    console.log('Inicializando Amigos Page...');
 
+export async function initializeAmigosPage() {
+    console.log('🚀 Inicializando Amigos Page...');
+
+    // 1. Inicializar lógica de modales
     initializeCreateReviewModal(modalsState);
     initializeCommentsModalLogic(modalsState);
     initializeReviewDetailModalLogic(modalsState);
     initializeDeleteModalsLogic(modalsState);
-
-    AmigosHandler.initializeFollowData(modalsState).then(() => {
-        AmigosHandler.init(modalsState); 
-        modalsState.loadReviews();    
-    });
 
     if (typeof window !== 'undefined') {
         window.showEditReviewModal = (id, t, c, r) => showEditReviewModal(id, t, c, r, modalsState);
@@ -240,4 +161,10 @@ export function initializeAmigosPage() {
         window.showReviewDetailModal = (id) => showReviewDetailModal(id, modalsState);
         window.showCommentsModal = (id) => showCommentsModal(id, modalsState);
     }
+
+    await AmigosHandler.init(modalsState);
+    
+    console.log(`✅ Datos cargados. Seguidos: ${modalsState.followingUsers.size}`);
+
+    modalsState.loadReviews(); 
 }

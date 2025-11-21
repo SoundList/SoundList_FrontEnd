@@ -11,7 +11,7 @@ const getAuthHeaders = () => {
 
 const normalizeId = (id) => String(id || '').toLowerCase().trim();
 
-
+// 1. BUSCADOR DE USUARIOS
 export async function searchUsers(query) {
     if (!query || query.trim().length < 1) return [];
     
@@ -42,7 +42,7 @@ export async function searchUsers(query) {
     }
 }
 
-// 2. OBTENER LISTAS 
+//  OBTENER LISTA DE SEGUIDORES
 export async function getFollowers() {
     try {
         const currentUserId = localStorage.getItem('userId');
@@ -67,6 +67,7 @@ export async function getFollowers() {
     }
 }
 
+//  OBTENER LISTA DE SEGUIDOS 
 export async function getFollowing() {
     try {
         const currentUserId = localStorage.getItem('userId');
@@ -79,7 +80,7 @@ export async function getFollowing() {
         if (!response.ok) return [];
         const data = await response.json();
         const results = data.Items || data.items || [];
-
+        
         console.log("📈 [API] Datos Raw Seguidos:", results); 
 
         return results.map(f => {

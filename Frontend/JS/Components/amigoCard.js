@@ -6,7 +6,7 @@ export function renderAmigoCard(user) {
     const buttonClass = isFollowing ? 'following' : 'follow'; 
     const iconClass = isFollowing ? 'fa-user-check' : 'fa-user-plus';
     const defaultAvatar = '../Assets/default-avatar.png'; 
-    const bioText = user.bio || '';
+    const bioText = user.bio || ''; 
 
         const normalizedId = String(user.userId || '').toLowerCase().trim();
     return `

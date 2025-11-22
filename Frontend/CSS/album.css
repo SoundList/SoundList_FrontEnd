@@ -11,6 +11,16 @@ body .home-container {
 }
 
 /* Contenedor principal */
+html, body {
+    height: auto !important;
+    overflow-y: auto !important;
+}
+
+.home-container {
+    height: auto !important;
+    overflow: visible !important;
+}
+
 .album-page-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -173,8 +183,10 @@ body .home-container {
 
 .tab-content-container {
     padding: 2rem;
-    /* Sin restricciones de altura - permite scroll general de la página */
-    overflow: visible;
+    min-height: 300px;
+    max-height: none !important; 
+    height: auto !important;
+    overflow: visible !important;
 }
 
 /* Ocultar pestañas inactivas */
@@ -186,7 +198,8 @@ body .home-container {
 
 .tab-pane.active {
     display: block;
-    overflow: visible;
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 /* --- PESTAÑA 1: LISTA DE CANCIONES --- */
@@ -197,8 +210,35 @@ body .home-container {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    /* Sin scroll individual - el scroll es general de la página */
-    overflow: visible;
+    
+    max-height: 550px !important; 
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important;
+    
+    /* Estilos del scrollbar */
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Estilos del scrollbar para WebKit en song-list */
+.song-list::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.song-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+}
+
+.song-list::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5) !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease !important;
+}
+
+.song-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7) !important;
 }
 
 .song-item {
@@ -243,18 +283,50 @@ body .home-container {
     font-size: 1rem;
 }
 
-/* --- PESTAÑA 2: RESEÑAS (Estilos reutilizados de tu CSS base) --- */
-/* (El HTML usará las clases .reviews-list, .review-item, etc. que ya tienes) */
-
-/* Lista de reseñas - sin scroll individual, usa scroll general de la página */
 .tab-pane .reviews-list,
 #reviewsList.reviews-list,
 .reviews-list {
     display: flex !important;
     flex-direction: column !important;
     gap: 1rem !important;
-    /* Sin scroll individual - el scroll es general de la página */
-    overflow: visible;
+
+    max-height: 500px !important; 
+    height: auto !important;
+    
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 0.5rem !important;
+    
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Estilos del scrollbar para WebKit (Chrome, Safari, Edge) */
+.tab-pane .reviews-list::-webkit-scrollbar,
+#reviewsList.reviews-list::-webkit-scrollbar,
+.reviews-list::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.tab-pane .reviews-list::-webkit-scrollbar-track,
+#reviewsList.reviews-list::-webkit-scrollbar-track,
+.reviews-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+}
+
+.tab-pane .reviews-list::-webkit-scrollbar-thumb,
+#reviewsList.reviews-list::-webkit-scrollbar-thumb,
+.reviews-list::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5) !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease !important;
+}
+
+.tab-pane .reviews-list::-webkit-scrollbar-thumb:hover,
+#reviewsList.reviews-list::-webkit-scrollbar-thumb:hover,
+.reviews-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7) !important;
 }
 
 .ai-summary {

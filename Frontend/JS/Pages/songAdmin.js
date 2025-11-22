@@ -1151,22 +1151,25 @@ function updateHeaderStatistics(reviews) {
 
     if (!reviews || reviews.length === 0) {
         ratingNumberEl.textContent = "0.0";
-        ratingStarsEl.innerHTML = createStarRating(0, true); // Usa tu componente existente
+        ratingStarsEl.innerHTML = createStarRating(0, true); 
         ratingCountEl.textContent = "(0 reviews)";
         return;
     }
 
-    // 1. Sumar todas las calificaciones (Maneja mayúsculas/minúsculas del backend)
+    // 1. Sumar todas las calificaciones
     const totalRating = reviews.reduce((sum, review) => {
         const rating = review.rating || review.Rating || 0;
         return sum + Number(rating);
     }, 0);
 
-    // 2. Calcular promedio
-    const average = totalRating / reviews.length;
+    // 2. Calcular promedio crudo (ej: 4.23333...)
+    const rawAverage = totalRating / reviews.length;
 
-    // 3. Actualizar el DOM
-    ratingNumberEl.textContent = average.toFixed(1); // Ej: 4.5
-    ratingStarsEl.innerHTML = createStarRating(average, true); // Estrellas visuales
+    // 3. Redondear al 0.5 más cercano
+    const roundedAverage = Math.round(rawAverage * 2) / 2;
+
+    // 4. Actualizar el DOM
+    ratingNumberEl.textContent = roundedAverage.toFixed(1); 
+    ratingStarsEl.innerHTML = createStarRating(roundedAverage, true); 
     ratingCountEl.textContent = `(${reviews.length} reviews)`;
 }

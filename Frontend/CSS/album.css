@@ -2,6 +2,14 @@
    ALBUM PAGE STYLES
    ========================================= */
 
+/* Permitir scroll en la página de álbum - Sobrescribir restricciones de home-container */
+/* Solo se aplica cuando este CSS está cargado (página de álbum) */
+body .home-container {
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: 100vh;
+}
+
 /* Contenedor principal */
 html, body {
     height: auto !important;
@@ -353,41 +361,8 @@ html, body {
     background: rgba(0, 0, 0, 0.2);
     padding: 2rem;
     border-radius: 15px;
-    /* Scrollbar personalizado para detalle - altura máxima para activar scroll */
-    max-height: 300px !important; /* Altura fija para forzar scroll cuando hay mucho contenido */
-    overflow-y: scroll !important; /* Forzar scrollbar siempre visible */
-    overflow-x: hidden !important;
-    padding-right: 0.5rem !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Estilos del scrollbar para WebKit en detail-grid - Mayor especificidad */
-.tab-pane .detail-grid::-webkit-scrollbar,
-#tab-detalle .detail-grid::-webkit-scrollbar,
-.detail-grid::-webkit-scrollbar {
-    width: 8px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-track,
-#tab-detalle .detail-grid::-webkit-scrollbar-track,
-.detail-grid::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb,
-.detail-grid::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.5) !important;
-    border-radius: 10px !important;
-    transition: background 0.3s ease !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb:hover,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb:hover,
-.detail-grid::-webkit-scrollbar-thumb:hover {
-    background: rgba(124, 58, 237, 0.7) !important;
+    /* Sin scroll individual - usa el scroll general de la página */
+    overflow: visible;
 }
 
 .detail-item {

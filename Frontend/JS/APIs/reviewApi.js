@@ -1,15 +1,10 @@
-/* =================================================
-   JS/APIs/reviewApi.js
-   (Formato ES6 Module - Compatible con amigosHandler)
-   ================================================= */
 
 import { API_BASE_URL } from './configApi.js';
 
-// Construimos la URL base igual que en tu código anterior
 // API_BASE_URL suele ser http://localhost:5000
 const REVIEWS_ENDPOINT = `${API_BASE_URL}/api/gateway/reviews`;
 
-// Helper para headers (igual que en AmigosApi)
+
 const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
     if (!token) console.warn("API: No token found");
@@ -21,9 +16,6 @@ const getAuthHeaders = () => {
 };
 
 export const ReviewApi = {
-
-    // --- 1. FUNCIONES BÁSICAS (CRUD) ---
-
     // Crear Reseña
     createReview: async (reviewData) => {
         try {
@@ -130,55 +122,48 @@ export const ReviewApi = {
         return await ReviewApi.getReviewsByUser(myUserId);
     },
 
-    // --- 3. 👇 LAS NUEVAS FUNCIONES PARA AMIGOS 👇 ---
-
-    // Reseñas de gente que YO SIGO (Seguidos)
+// Obtener reseñas de quienes YO SIGO (Endpoint: /api/gateway/following)
+// Obtener reseñas de SEGUIDOS (Following)
     getReviewsByFollowing: async () => {
         try {
             const userId = localStorage.getItem('userId');
             if (!userId) return [];
 
-            // Ruta: GET /api/gateway/reviews/user/{id}/following
-            const response = await fetch(`${REVIEWS_ENDPOINT}/user/${userId}/following`, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
 
-            if (!response.ok) {
-                // Si el backend no tiene la ruta aún, devolvemos vacío para no romper
-                console.warn("Backend sin ruta /following reviews, retornando vacío.");
-                return []; 
-            }
-            return await response.json();
+            // La URL base sigue siendo http://localhost:5000/api/gateway
+            const url = `${API_BASE_URL}/api/gateway/feeds/following?myUserId=${userId}&page=1&pageSize=50`;
+            
+            console.log(`🌐 Fetching Seguidos: ${url}`);
+            const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
+
+            if (!response.ok) return [];
+            const data = await response.json();
+            return data.Items || data.items || [];
         } catch (error) {
             console.error('Error cargando feed de seguidos:', error);
             return [];
         }
     },
 
-    // Reseñas de gente que ME SIGUE (Seguidores)
+    // Obtener reseñas de SEGUIDORES (Followers)
     getReviewsByFollowers: async () => {
         try {
             const userId = localStorage.getItem('userId');
             if (!userId) return [];
 
-            // Ruta: GET /api/gateway/reviews/user/{id}/followers
-            const response = await fetch(`${REVIEWS_ENDPOINT}/user/${userId}/followers`, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
+            const url = `${API_BASE_URL}/api/gateway/feeds/follow?myUserId=${userId}&page=1&pageSize=50`;
+            
+            console.log(`🌐 Fetching Seguidores: ${url}`);
+            const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
 
-            if (!response.ok) {
-                console.warn("Backend sin ruta /followers reviews, retornando vacío.");
-                return [];
-            }
-            return await response.json();
+            if (!response.ok) return [];
+            const data = await response.json();
+            return data.Items || data.items || [];
         } catch (error) {
             console.error('Error cargando feed de seguidores:', error);
             return [];
         }
     },
-
     // --- 4. EXTRAS (Placeholders para evitar errores si los llamas) ---
     reportReview: async (reviewId) => {
         console.log(`[MOCK] Reseña ${reviewId} reportada.`);

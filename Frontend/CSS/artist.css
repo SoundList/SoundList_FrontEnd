@@ -2,6 +2,14 @@
 ARTIST PAGE STYLES
    ========================================= */
 
+/* Permitir scroll en la página de artista - Sobrescribir restricciones de home-container */
+/* Solo se aplica cuando este CSS está cargado (página de artista) */
+body .home-container {
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: 100vh;
+}
+
 /* Copiamos estilos base de album/song para consistencia */
 .artist-page-container { max-width: 1200px; margin: 0 auto; padding: 2rem; color: #fff; }
 
@@ -41,19 +49,17 @@ ARTIST PAGE STYLES
 .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #7C3AED, #EC4899); }
 .tab-content-container { 
     padding: 2rem; 
-    min-height: 300px;
-    max-height: calc(100vh - 300px); /* Usar altura disponible de la ventana */
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+    /* Sin restricciones de altura - permite scroll general de la página */
+    overflow: visible;
 }
 .tab-pane { 
     display: none; 
     animation: fadeIn 0.4s ease-out; 
     overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
 }
-.tab-pane.active { 
-    display: block; 
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
-    max-height: calc(100vh - 350px); /* Altura máxima para activar scroll */
+.tab-pane.active {
+    display: block;
+    overflow: visible;
 }
 
 /* LISTAS (Canciones y Álbumes reusan el mismo estilo básico) */
@@ -64,33 +70,8 @@ ARTIST PAGE STYLES
     display: flex; 
     flex-direction: column; 
     gap: 0.5rem;
-    /* Scrollbar personalizado para lista de canciones/álbumes - usar todo el espacio disponible */
-    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding-right: 0.5rem !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Estilos del scrollbar para WebKit en song-list (artista) */
-.song-list::-webkit-scrollbar {
-    width: 8px !important;
-}
-
-.song-list::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-}
-
-.song-list::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.5) !important;
-    border-radius: 10px !important;
-    transition: background 0.3s ease !important;
-}
-
-.song-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(124, 58, 237, 0.7) !important;
+    /* Sin scroll individual - el scroll es general de la página */
+    overflow: visible;
 }
 .song-item { display: flex; align-items: center; padding: 1rem; border-radius: 12px; transition: background 0.2s ease; cursor: pointer; background: rgba(255, 255, 255, 0.03); }
 .song-item:hover { background: rgba(255, 255, 255, 0.1); }
@@ -147,41 +128,8 @@ ARTIST PAGE STYLES
     background: rgba(0, 0, 0, 0.2); 
     padding: 2rem; 
     border-radius: 15px;
-    /* Scrollbar personalizado para detalle - altura máxima para activar scroll */
-    max-height: 300px !important; /* Altura fija para forzar scroll cuando hay mucho contenido */
-    overflow-y: scroll !important; /* Forzar scrollbar siempre visible */
-    overflow-x: hidden !important;
-    padding-right: 0.5rem !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Estilos del scrollbar para WebKit en detail-grid (artista) - Mayor especificidad */
-.tab-pane .detail-grid::-webkit-scrollbar,
-#tab-detalle .detail-grid::-webkit-scrollbar,
-.detail-grid::-webkit-scrollbar {
-    width: 8px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-track,
-#tab-detalle .detail-grid::-webkit-scrollbar-track,
-.detail-grid::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb,
-.detail-grid::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.5) !important;
-    border-radius: 10px !important;
-    transition: background 0.3s ease !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb:hover,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb:hover,
-.detail-grid::-webkit-scrollbar-thumb:hover {
-    background: rgba(124, 58, 237, 0.7) !important;
+    /* Sin scroll individual - usa el scroll general de la página */
+    overflow: visible;
 }
 .detail-item { display: flex; flex-direction: column; gap: 0.5rem; }
 .detail-label { font-size: 0.9rem; font-weight: 700; color: rgba(255, 255, 255, 0.6); letter-spacing: 1px; text-transform: uppercase; margin-left: 1rem; }

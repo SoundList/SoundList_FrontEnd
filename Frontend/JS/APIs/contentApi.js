@@ -1,5 +1,3 @@
-
-
 import { API_BASE_URL } from './configApi.js'; // (Debe ser 'http://localhost:5000')
 /**
  * Helper unificado para manejar las respuestas de fetch y parsear el JSON.
@@ -176,38 +174,39 @@ export async function getOrCreateAlbum(apiAlbumId) {
 
 /**
  * Busca una canción por su ID (GUID) de base de datos.
- * Endpoint: GET /api/Song/{id}
+ * CORRECCIÓN: Usamos 'song' (minúscula) porque el Gateway así lo define en su "Match".
  */
 export async function getSongById(songId) {
     try {
-        // Llamamos al endpoint estándar pasándole el GUID
-        const response = await axios.get(`${API_BASE_URL}/Song/${songId}`, {
+        // CORRECCIÓN: /api/gateway/contents/song/ (minúscula)
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/song/${songId}`, {
             validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
-        // Si es 404 o 500, retornar null silenciosamente
+        // Si el Gateway deja pasar la petición pero la DB no tiene el dato, devuelve 404
         if (response.status === 404 || response.status === 500) {
+            console.warn(`[DATA] Canción no encontrada en DB para ID: ${songId}`);
             return null;
         }
         
         return response.data;
     } catch (error) {
-        // Si falla (ej. timeout, network error), retornamos null silenciosamente para no romper la UI
+        console.error("Error de conexión:", error);
         return null;
     }
 }
 
 /**
  * Busca un álbum por su ID (GUID) de base de datos.
- * Endpoint: GET /api/Album/{id}
+ * CORRECCIÓN: Usamos 'album' (minúscula).
  */
 export async function getAlbumById(albumId) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/Album/${albumId}`, {
+        // CORRECCIÓN: /api/gateway/contents/album/ (minúscula)
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/album/${albumId}`, {
             validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
-        // Si es 404 o 500, retornar null silenciosamente
         if (response.status === 404 || response.status === 500) {
             return null;
         }

@@ -1,5 +1,6 @@
 import { AmigosHandler } from '../Handlers/amigosHandler.js';
 import { renderStars } from '../Components/starRenderer.js';
+import { ReviewApi } from '../APIs/reviewApi.js';
 import { initializeCreateReviewModal, showEditReviewModal } from '../Components/modals/createReviewModal.js';
 import { initializeCommentsModalLogic, showCommentsModal } from '../Components/modals/commentsModal.js';
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
@@ -58,26 +59,38 @@ export const modalsState = {
     }
 };
 
-function loadReviewsLogic(filterType) {
+async function loadReviewsLogic(filterType) {
     const reviewsList = document.getElementById('reviewsList');
     const reviewsEmpty = document.getElementById('reviewsEmpty');
     
     if (!reviewsList) return;
     
-    let filteredReviews = [];
+    // Mostrar spinner o limpiar mientras carga
+    reviewsList.innerHTML = '<div class="text-center text-white p-3"><i class="fas fa-spinner fa-spin"></i> Cargando reseñas...</div>';
+    if (reviewsEmpty) reviewsEmpty.style.display = 'none';
 
-    switch (filterType) {
-        case 'seguidores': 
-            filteredReviews = modalsState.mockReviews.filter(review => modalsState.followerUsers.has(normalizeId(review.userId)));
-            break;
-        case 'seguidos': 
-            filteredReviews = modalsState.mockReviews.filter(review => modalsState.followingUsers.has(normalizeId(review.userId)));
-            break;
-        default:
-            filteredReviews = modalsState.mockReviews;
+    let rawReviews = [];
+
+    try {
+        switch (filterType) {
+            case 'seguidores': 
+                // Traer reseñas de quienes ME SIGUEN (Followers)
+                rawReviews = await ReviewApi.getReviewsByFollowers();
+                break;
+            case 'seguidos': 
+                // Traer reseñas de quienes YO SIGO (Following)
+                rawReviews = await ReviewApi.getReviewsByFollowing();
+                break;
+            default:
+                rawReviews = [];
+        }
+    } catch (e) {
+        console.error("Error cargando reseñas:", e);
+        rawReviews = [];
     }
     
-    if (filteredReviews.length === 0) {
+    // Si no hay datos, mostrar vacío
+    if (!rawReviews || rawReviews.length === 0) {
         reviewsList.innerHTML = '';
         reviewsList.style.display = 'none';
         if (reviewsEmpty) {
@@ -85,10 +98,31 @@ function loadReviewsLogic(filterType) {
             reviewsEmpty.style.display = 'flex'; 
         }
     } else {
+        // Mapear datos del backend al formato visual
+        const frontendReviews = rawReviews.map(mapBackendReviewToFrontend);
+
         if (reviewsEmpty) reviewsEmpty.style.display = 'none';
         reviewsList.style.display = 'block';
-        renderReviews(filteredReviews); 
+        
+        // Renderizar
+        renderReviews(frontendReviews); 
     }
+}
+function mapBackendReviewToFrontend(r) {
+    // Como el ReviewResponse del backend es limitado, usamos placeholders para lo que falta.
+    return {
+        id: r.reviewId || r.ReviewId,
+        userId: r.userId || r.UserId,
+        username: 'Usuario', // El backend actual no envía Username en este endpoint
+        song: r.title || 'Título Desconocido',   // Usamos Title como canción
+        artist: 'Artista', // El backend no envía artista
+        comment: r.content || r.Content || '',
+        rating: r.rating || r.Rating || 0,
+        likes: 0, // Dato no disponible en este endpoint
+        comments: 0,
+        userLiked: false,
+        avatar: '../Assets/default-avatar.png'
+    };
 }
 
 function renderReviews(reviews) {

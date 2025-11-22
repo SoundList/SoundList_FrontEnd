@@ -182,9 +182,6 @@ async function executeUserSearch(query, state) {
         attachFollowButtonListeners(userSearchResults, targetState);
         attachProfileRedirectionListeners(userSearchResults);
 
-        // 3. NUEVO: Adjuntamos listeners para REDIRECCIÓN AL PERFIL
-        attachProfileRedirectionListeners(userSearchResults);
-
     } catch (err) {
         console.error("Error búsqueda:", err);
         userSearchResults.innerHTML = '<div class="p-3 text-center text-danger">Error al buscar.</div>';
@@ -235,22 +232,6 @@ function attachFollowButtonListeners(container, state) {
             const userId = this.getAttribute('data-user-id');
             const username = this.getAttribute('data-username');
             toggleFollow(userId, username, this, state); 
-        });
-    });
-}
-
-function attachProfileRedirectionListeners(container) {
-    const cards = container.querySelectorAll('.user-result-item');
-    cards.forEach(card => {
-        card.style.cursor = 'pointer';
-        card.addEventListener('click', (e) => {
-            if (e.target.closest('.follow-btn') || e.target.closest('button')) return;
-            
-            const followBtn = card.querySelector('.follow-btn');
-            if (followBtn) {
-                const userId = followBtn.getAttribute('data-user-id');
-                if (userId) window.location.href = `profile.html?userId=${userId}`;
-            }
         });
     });
 }

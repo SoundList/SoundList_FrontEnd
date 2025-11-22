@@ -22,66 +22,36 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Intentar primero el backend directo, luego el gateway como fallback
-        const PORTS = [
-            { url: 'http://localhost:8003', isGateway: false },
-            { url: 'http://localhost:5000', isGateway: true }
-        ];
-        attemptVerifyWithPorts(code, PORTS, 0);
-    });
-
-    function attemptVerifyWithPorts(code, ports, portIndex) {
-        if (portIndex >= ports.length) {
-            // Todos los puertos fallaron
-            showAlert('No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.', 'danger');
-            return;
-        }
-
-        const currentPort = ports[portIndex];
-        const API_BASE_URL = currentPort.url;
+        // Usar el gateway directamente
+        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const verifyEmailEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/verify-email`;
         
-        // El gateway no tiene ruta para VerifyEmail, solo usar backend directo
-        const verifyEmailEndpoint = `${API_BASE_URL}/api/User/VerifyEmail`;
         axios.get(verifyEmailEndpoint, { params: { token: code } })
             .then(() => {
                 showAlert('¡Cuenta verificada! Redirigiendo al inicio de sesión...', 'success');
                 setTimeout(() => { window.location.href = 'login.html'; }, 1500);
             })
             .catch((error) => {
-                // Si es un error de conexión y hay más puertos para intentar, probar el siguiente
-                const isConnectionError = !error.response || 
-                    error.code === 'ECONNREFUSED' || 
-                    error.code === 'ERR_NETWORK' ||
-                    error.code === 'ERR_FAILED' ||
-                    error.message?.includes('Network Error') ||
-                    error.message?.includes('Failed to fetch') ||
-                    error.message?.includes('ERR_CONNECTION_CLOSED') ||
-                    error.message?.includes('CORS');
-
-                if (isConnectionError && portIndex < ports.length - 1) {
-                    // Intentar con el siguiente puerto
-                    attemptVerifyWithPorts(code, ports, portIndex + 1);
-                } else {
-                    // Si es un error de validación o no hay más puertos, mostrar el error
-                    let message = 'Código inválido';
-                    
-                    if (error.response && error.response.data) {
-                        const errorData = error.response.data;
-                        if (typeof errorData === 'string') {
-                            message = sanitizeErrorMessage(errorData);
-                        } else if (errorData.message) {
-                            message = sanitizeErrorMessage(errorData.message);
-                        } else if (errorData.error) {
-                            message = sanitizeErrorMessage(errorData.error);
-                        }
-                    } else if (!error.response && portIndex >= ports.length - 1) {
-                        message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.';
+                // Manejar errores
+                let message = 'Código inválido';
+                
+                if (error.response && error.response.data) {
+                    const errorData = error.response.data;
+                    if (typeof errorData === 'string') {
+                        message = sanitizeErrorMessage(errorData);
+                    } else if (errorData.message) {
+                        message = sanitizeErrorMessage(errorData.message);
+                    } else if (errorData.error) {
+                        message = sanitizeErrorMessage(errorData.error);
                     }
-                    
-                    showAlert(message, 'danger');
+                } else if (!error.response) {
+                    message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway esté corriendo.';
                 }
+                
+                showAlert(message, 'danger');
             });
-    }
+    });
+
 
     
 

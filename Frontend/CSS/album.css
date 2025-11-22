@@ -2,7 +2,25 @@
    ALBUM PAGE STYLES
    ========================================= */
 
+/* Permitir scroll en la página de álbum - Sobrescribir restricciones de home-container */
+/* Solo se aplica cuando este CSS está cargado (página de álbum) */
+body .home-container {
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: 100vh;
+}
+
 /* Contenedor principal */
+html, body {
+    height: auto !important;
+    overflow-y: auto !important;
+}
+
+.home-container {
+    height: auto !important;
+    overflow: visible !important;
+}
+
 .album-page-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -165,9 +183,10 @@
 
 .tab-content-container {
     padding: 2rem;
-    min-height: 300px; /* Altura mínima para que no colapse */
-    max-height: calc(100vh - 300px); /* Usar altura disponible de la ventana */
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+    min-height: 300px;
+    max-height: none !important; 
+    height: auto !important;
+    overflow: visible !important;
 }
 
 /* Ocultar pestañas inactivas */
@@ -179,8 +198,8 @@
 
 .tab-pane.active {
     display: block;
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
-    max-height: calc(100vh - 350px); /* Altura máxima para activar scroll */
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 /* --- PESTAÑA 1: LISTA DE CANCIONES --- */
@@ -191,11 +210,13 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    /* Scrollbar personalizado para lista de canciones - usar todo el espacio disponible */
-    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
+    
+    max-height: 550px !important; 
     overflow-y: auto !important;
     overflow-x: hidden !important;
     padding-right: 0.5rem !important;
+    
+    /* Estilos del scrollbar */
     scrollbar-width: thin !important;
     scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
 }
@@ -262,23 +283,22 @@
     font-size: 1rem;
 }
 
-/* --- PESTAÑA 2: RESEÑAS (Estilos reutilizados de tu CSS base) --- */
-/* (El HTML usará las clases .reviews-list, .review-item, etc. que ya tienes) */
-
-/* Scrollbar personalizado para reseñas en página de álbum - Mayor especificidad */
 .tab-pane .reviews-list,
 #reviewsList.reviews-list,
 .reviews-list {
     display: flex !important;
     flex-direction: column !important;
     gap: 1rem !important;
-    /* Altura máxima para usar todo el espacio disponible del contenedor */
-    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
+
+    max-height: 500px !important; 
+    height: auto !important;
+    
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding-right: 0.5rem !important; /* Espacio para el scrollbar */
-    scrollbar-width: thin !important; /* Firefox */
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important; /* Firefox */
+    padding-right: 0.5rem !important;
+    
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Estilos del scrollbar para WebKit (Chrome, Safari, Edge) */
@@ -341,41 +361,8 @@
     background: rgba(0, 0, 0, 0.2);
     padding: 2rem;
     border-radius: 15px;
-    /* Scrollbar personalizado para detalle - altura máxima para activar scroll */
-    max-height: 300px !important; /* Altura fija para forzar scroll cuando hay mucho contenido */
-    overflow-y: scroll !important; /* Forzar scrollbar siempre visible */
-    overflow-x: hidden !important;
-    padding-right: 0.5rem !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Estilos del scrollbar para WebKit en detail-grid - Mayor especificidad */
-.tab-pane .detail-grid::-webkit-scrollbar,
-#tab-detalle .detail-grid::-webkit-scrollbar,
-.detail-grid::-webkit-scrollbar {
-    width: 8px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-track,
-#tab-detalle .detail-grid::-webkit-scrollbar-track,
-.detail-grid::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb,
-.detail-grid::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.5) !important;
-    border-radius: 10px !important;
-    transition: background 0.3s ease !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb:hover,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb:hover,
-.detail-grid::-webkit-scrollbar-thumb:hover {
-    background: rgba(124, 58, 237, 0.7) !important;
+    /* Sin scroll individual - usa el scroll general de la página */
+    overflow: visible;
 }
 
 .detail-item {

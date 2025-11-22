@@ -1,4 +1,12 @@
+html, body {
+    height: auto !important;
+    overflow-y: auto !important; /* Fuerza la barra de scroll del navegador */
+}
 
+.home-container {
+    height: auto !important;
+    overflow: visible !important; /* Permite que el contenido empuje hacia abajo */
+}
 
 .song-page-container {
     max-width: 1200px;
@@ -177,23 +185,24 @@
 .tab-content-container {
     padding: 2rem;
     min-height: 300px;
-    max-height: calc(100vh - 300px); /* Usar altura disponible de la ventana */
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
 }
 
 .tab-pane {
     display: none;
     animation: fadeIn 0.4s ease-out;
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
+    overflow: visible; 
 }
 
 .tab-pane.active {
     display: block;
-    overflow: visible; /* Permitir que el scrollbar de las reseñas sea visible */
-    max-height: calc(100vh - 350px); /* Altura máxima para activar scroll */
+    max-height: none !important;
+    overflow: visible !important;
 }
 
-/* --- PESTAÑA RESEÑAS & AI SUMMARY (Faltaba esto) --- */
+/* --- PESTAÑA RESEÑAS & AI SUMMARY --- */
 .ai-summary {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
     border: 1px solid rgba(147, 51, 234, 0.3);
@@ -224,20 +233,23 @@
     line-height: 1.5;
 }
 
-/* Scrollbar personalizado para reseñas en página de canción - Mayor especificidad */
+/* Lista de reseñas - sin scroll individual, usa scroll general de la página */
 .tab-pane .reviews-list,
 #reviewsList.reviews-list,
 .reviews-list {
     display: flex !important;
     flex-direction: column !important;
     gap: 1rem !important;
-    /* Altura máxima para usar todo el espacio disponible del contenedor */
-    max-height: calc(100vh - 400px) !important; /* Usar altura disponible menos espacio para header y otros elementos */
+
+    max-height: 500px !important; 
+    height: auto !important;
+    
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding-right: 0.5rem !important; /* Espacio para el scrollbar */
-    scrollbar-width: thin !important; /* Firefox */
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important; /* Firefox */
+    padding-right: 0.5rem !important; 
+    
+    scrollbar-width: thin !important; 
+    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Estilos del scrollbar para WebKit (Chrome, Safari, Edge) */
@@ -290,41 +302,8 @@
     background: rgba(0, 0, 0, 0.2);
     padding: 2rem;
     border-radius: 15px;
-    /* Scrollbar personalizado para detalle - altura máxima para activar scroll */
-    max-height: 300px !important; /* Altura fija para forzar scroll cuando hay mucho contenido */
-    overflow-y: scroll !important; /* Forzar scrollbar siempre visible */
-    overflow-x: hidden !important;
-    padding-right: 0.5rem !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(124, 58, 237, 0.5) rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Estilos del scrollbar para WebKit en detail-grid - Mayor especificidad */
-.tab-pane .detail-grid::-webkit-scrollbar,
-#tab-detalle .detail-grid::-webkit-scrollbar,
-.detail-grid::-webkit-scrollbar {
-    width: 8px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-track,
-#tab-detalle .detail-grid::-webkit-scrollbar-track,
-.detail-grid::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb,
-.detail-grid::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.5) !important;
-    border-radius: 10px !important;
-    transition: background 0.3s ease !important;
-}
-
-.tab-pane .detail-grid::-webkit-scrollbar-thumb:hover,
-#tab-detalle .detail-grid::-webkit-scrollbar-thumb:hover,
-.detail-grid::-webkit-scrollbar-thumb:hover {
-    background: rgba(124, 58, 237, 0.7) !important;
+    /* Sin scroll individual - usa el scroll general de la página */
+    overflow: visible;
 }
 
 .detail-item {
@@ -786,24 +765,22 @@
     }
 }
 
-
-
 .form-control.is-invalid-custom,
 .review-rating-input.is-invalid-custom .stars-input {
-    border: 1px solid #dc3545 !important; /* Borde rojo */
-    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* Opcional: Sombra de enfoque roja */
+    border: 1px solid #dc3545 !important; 
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; 
 }
 
 .invalid-feedback-custom {
     width: 100%;
     margin-top: 0.25rem;
     font-size: 0.875em;
-    color: #dc3545; /* Texto rojo */
-    display: none; /* Por defecto oculto */
+    color: #dc3545; 
+    display: none; 
 }
 
 .is-invalid-field .invalid-feedback-custom {
-    display: block; /* Muestra el mensaje cuando el campo tiene la clase de error */
+    display: block; 
 }
 
 

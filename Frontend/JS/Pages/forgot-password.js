@@ -22,12 +22,45 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Enviando enlace de recuperación...', 'info');
         
-        // Intentar primero el backend directo, luego el gateway como fallback
-        const PORTS = [
-            { url: 'http://localhost:8003', isGateway: false },
-            { url: 'http://localhost:5000', isGateway: true }
-        ];
-        attemptForgotPassword(email, PORTS, 0, submitButton);
+        // Usar el gateway directamente
+        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const forgotPasswordEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/forgot-password`;
+        
+        axios.post(forgotPasswordEndpoint, {
+            Email: email
+        })
+        .then(response => {
+            showAlert('Si el correo electrónico está registrado, recibirás un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.', 'success');
+            setButtonLoading(submitButton, false);
+            
+            // Limpiar el formulario
+            emailInput.value = '';
+            
+            // Opcional: redirigir después de unos segundos
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 5000);
+        })
+        .catch(error => {
+            // Manejar errores
+            let message = 'No se pudo enviar el enlace de recuperación';
+            
+            if (error.response && error.response.data) {
+                const errorData = error.response.data;
+                if (typeof errorData === 'string') {
+                    message = sanitizeErrorMessage(errorData);
+                } else if (errorData.message) {
+                    message = sanitizeErrorMessage(errorData.message);
+                } else if (errorData.error) {
+                    message = sanitizeErrorMessage(errorData.error);
+                }
+            } else if (!error.response) {
+                message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway esté corriendo.';
+            }
+            
+            showAlert(message, 'danger');
+            setButtonLoading(submitButton, false);
+        });
     });
 
     // Email validation function
@@ -72,88 +105,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function attemptForgotPassword(email, ports, portIndex, submitButton) {
-        if (portIndex >= ports.length) {
-            // Todos los puertos fallaron
-            showAlert('No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.', 'danger');
-            setButtonLoading(submitButton, false);
-            return;
-        }
-
-        const currentPort = ports[portIndex];
-        const API_BASE_URL = currentPort.url;
-        
-        // El gateway no tiene ruta para ForgotPassword, solo usar backend directo
-        const forgotPasswordEndpoint = `${API_BASE_URL}/api/User/ForgotPassword`;
-        
-        console.log(`Intentando conectar a: ${forgotPasswordEndpoint}`);
-        
-        axios.post(forgotPasswordEndpoint, {
-            Email: email
-        })
-        .then(response => {
-            console.log('¡Éxito! Respuesta del servidor:', response.data);
-            showAlert('Si el correo electrónico está registrado, recibirás un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.', 'success');
-            setButtonLoading(submitButton, false);
-            
-            // Limpiar el formulario
-            emailInput.value = '';
-            
-            // Opcional: redirigir después de unos segundos
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 5000);
-        })
-        .catch(error => {
-            console.log('Error capturado en puerto', portIndex, ':', error.code, error.message, 'Response:', error.response);
-            console.log('Error completo:', error);
-            
-            // Si es un error de conexión y hay más puertos para intentar, probar el siguiente
-            // Axios no siempre tiene error.code, pero sí tiene error.message
-            const isConnectionError = !error.response || 
-                error.code === 'ECONNREFUSED' || 
-                error.code === 'ERR_NETWORK' ||
-                error.code === 'ERR_FAILED' ||
-                error.code === 'ERR_CONNECTION_REFUSED' ||
-                error.code === 'ERR_CERT_AUTHORITY_INVALID' ||
-                error.code === 'ERR_SSL_PROTOCOL_ERROR' ||
-                error.message?.includes('Network Error') ||
-                error.message?.includes('Failed to fetch') ||
-                error.message?.includes('ERR_CONNECTION_CLOSED') ||
-                error.message?.includes('ERR_CONNECTION_REFUSED') ||
-                error.message?.includes('CORS') ||
-                error.message?.includes('certificate') ||
-                error.message?.includes('SSL') ||
-                (error.response === undefined && error.request !== undefined);
-
-            console.log('isConnectionError:', isConnectionError, 'portIndex:', portIndex, 'ports.length:', ports.length);
-
-            if (isConnectionError && portIndex < ports.length - 1) {
-                // Intentar con el siguiente puerto
-                console.log(`Fallo en puerto ${currentPort.url}, intentando siguiente puerto (${ports[portIndex + 1].url})...`);
-                attemptForgotPassword(email, ports, portIndex + 1, submitButton);
-            } else {
-                // Si es un error de validación o no hay más puertos, mostrar el error
-                let message = 'No se pudo enviar el enlace de recuperación';
-                
-                if (error.response && error.response.data) {
-                    const errorData = error.response.data;
-                    if (typeof errorData === 'string') {
-                        message = sanitizeErrorMessage(errorData);
-                    } else if (errorData.message) {
-                        message = sanitizeErrorMessage(errorData.message);
-                    } else if (errorData.error) {
-                        message = sanitizeErrorMessage(errorData.error);
-                    }
-                } else if (!error.response && portIndex >= ports.length - 1) {
-                    message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.';
-                }
-                
-                showAlert(message, 'danger');
-                setButtonLoading(submitButton, false);
-            }
-        });
-    }
 
     // Función para limpiar errores técnicos y mostrar mensajes amigables
     function sanitizeErrorMessage(errorMessage) {

@@ -53,6 +53,8 @@ body::-webkit-scrollbar {
     max-height: 100vh; /* Limitar altura para evitar scroll del body */
     padding-bottom: 2rem;
     overflow: hidden; /* Evitar scroll del contenedor principal */
+    background-attachment: fixed;
+    background-size: cover;
 }
 
 /* Header Styles */

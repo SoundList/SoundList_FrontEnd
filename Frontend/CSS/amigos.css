@@ -63,17 +63,21 @@ html, body {
     padding-bottom: 1rem;
 }
 
-/* --- AQUÍ ESTÁ EL FIX DEL SCROLLBAR --- */
+/* --- CONTENEDOR DE RESEÑAS CON SCROLL --- */
 .reviews-list-section {
-    flex: 1; /* Ocupa todo el espacio vertical hasta abajo */
-    min-height: 0; /* Truco vital para flexbox */
+    flex: 1; /* Ocupa todo el espacio vertical disponible */
+    min-height: 0; /* Truco vital para flexbox - permite que el scroll funcione */
     position: relative;
-    margin-bottom: 1rem;
+    overflow: hidden; /* Evita que el contenedor se expanda */
+    display: flex;
+    flex-direction: column;
 }
 
 .reviews-list-container {
-    height: 100%; /* Llena la sección */
+    flex: 1; /* Ocupa todo el espacio disponible en la sección */
+    min-height: 0; /* Permite que el scroll funcione correctamente */
     overflow-y: auto !important; /* ACTIVA EL SCROLL INTERNO */
+    overflow-x: hidden;
     padding-right: 10px;
     padding-bottom: 50px; /* Espacio extra al final */
 }
@@ -352,32 +356,19 @@ html, body {
     width: 100%; /* Asegura que ocupe todo el ancho de su columna */
 }
 
-/* CONTENEDOR SCROLLEABLE */
-.reviews-list-section {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding-right: 12px;
-    padding-bottom: 134px;
-    min-height: 0;
-    width: 100%; /* Asegura ancho total */
-}
 
-/* Scrollbar Premium */
-.reviews-list-section::-webkit-scrollbar { width: 8px; }
-.reviews-list-section::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 4px; }
-.reviews-list-section::-webkit-scrollbar-thumb { 
-    background: linear-gradient(to bottom, #7C3AED, #EC4899);
-    border-radius: 4px; 
-    border: 2px solid #0a0e1a;
-}
+/* Scrollbar Premium - aplicado al contenedor interno */
 
-/* Lista interna */
+/* Lista interna - Sin restricciones de altura */
 .reviews-list {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
     width: 100%; /* Ocupa el 100% del contenedor */
     align-items: stretch; /* Estira las tarjetas al ancho total */
+    /* Sin max-height - permite que se expanda según el contenido */
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 /* CAMBIO EN TARJETAS: Asegurar que llenen el espacio */

@@ -718,3 +718,33 @@ html, body {
 .song-item.playing .list-play-btn i {
     color: #fff;
 }
+
+
+/* =========================================
+    ESTILOS DE VALIDACIÓN DEL MODAL (NUEVOS/AJUSTADOS)
+========================================= */
+
+.review-modal-content .form-control.is-invalid-custom {
+    border-color: #dc3545 !important; 
+    box-shadow: none !important; 
+}
+
+.review-rating-input .stars-input.is-invalid-custom {
+    border: 1px solid #dc3545 !important; 
+    padding: 5px; 
+    border-radius: 8px; 
+    box-shadow: none !important; 
+}
+
+.invalid-feedback-custom {
+    width: 100%;
+    margin-top: 0.5rem; 
+    font-size: 0.85rem;
+    color: #dc3545; /* Rojo para error */
+    font-weight: 500;
+    display: none; /* Oculto por defecto */
+}
+
+.invalid-feedback-custom.show-error {
+    display: block; 
+}

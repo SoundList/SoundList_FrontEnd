@@ -1,6 +1,7 @@
 import { searchUsers, getFollowing, getFollowers } from '../APIs/AmigosApi.js';
 import { renderAmigoCard } from '../Components/amigoCard.js';
 
+// --- ESTADO GLOBAL ---
 const globalState = {
     followingUsers: new Set(),
     followerUsers: new Set(),
@@ -24,9 +25,7 @@ const normalizeId = (id) => String(id || '').toLowerCase().trim();
 function cleanList(list) {
     if (!Array.isArray(list)) return [];
     return list.map(item => {
-
         if (typeof item === 'string') return normalizeId(item);
-
         if (typeof item === 'object' && item !== null) {
             const id = item.userId || item.UserId || item.id || item.Id || 
                     item.FollowingId || item.followingId || 
@@ -34,7 +33,21 @@ function cleanList(list) {
             return normalizeId(id);
         }
         return null;
-    }).filter(id => id !== null && id !== ''); // Filtramos nulos
+    }).filter(id => id !== null && id !== ''); 
+}
+
+// --- FUNCIÓN AUXILIAR PARA CARGAR API ---
+async function loadUserApi() {
+    if (window.userApi) return window.userApi;
+    
+    try {
+        await import('../APIs/userApi.js');
+        if (window.userApi) return window.userApi;
+        throw new Error("userApi no se inicializó correctamente");
+    } catch (e) {
+        console.error("Error cargando userApi:", e);
+        return null;
+    }
 }
 
 // --- LÓGICA DE FOLLOW ---
@@ -48,50 +61,47 @@ export async function toggleFollow(userId, username, buttonElement, state) {
 
     const targetId = normalizeId(userId);
     const isFollowing = currentState.followingUsers.has(targetId);
-    const targetUser = username || 'al usuario'; // Fallback por si no llega el nombre
-
-    if (!window.userApi) {
-        try {
-            const { followUser, unfollowUser } = await import('../APIs/userApi.js');
-            window.userApi = { followUser, unfollowUser };
-        } catch (e) {
-            console.error('Error: API de usuario no cargada.');
-            if (window.showAlert) window.showAlert('Error interno: No se pudo conectar con el servicio.', 'danger');
-            return;
-        }
+    const targetUser = username || 'al usuario'; 
+    const userApi = await loadUserApi();
+    
+    if (!userApi) {
+        console.error('Error: API de usuario no disponible.');
+        if (window.showAlert) window.showAlert('Error interno: No se pudo conectar con el servicio.', 'danger');
+        return;
     }
 
     buttonElement.disabled = true;
     const originalHTML = buttonElement.innerHTML;
+    const originalTitle = buttonElement.title; 
     buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
     try {
         if (isFollowing) {
-            // ➖ DEJAR DE SEGUIR
-            await window.userApi.unfollowUser(userId);
+            // DEJAR DE SEGUIR
+            await userApi.unfollowUser(userId);
             currentState.followingUsers.delete(targetId); 
 
-            // Actualizar botón
             buttonElement.classList.remove('following');
             buttonElement.classList.add('follow');
-            
+
             if (buttonElement.classList.contains('follow-btn-small')) {
                 buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
+            } else if (buttonElement.classList.contains('icon-follow-btn')) {
+
             } else {
                 buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
             }
             buttonElement.title = "Seguir";
 
             if (window.showAlert) {
-                window.showAlert(`Dejaste de seguir a ${targetUser}`, 'warning'); // Usa estilo naranja/amarillo
+                window.showAlert(`Dejaste de seguir a ${targetUser}`, 'warning'); 
             }
             
         } else {
-            // ➕ SEGUIR
-            await window.userApi.followUser(userId);
+            // SEGUIR
+            await userApi.followUser(userId);
             currentState.followingUsers.add(targetId); 
-            
-            // Actualizar botón
+
             buttonElement.classList.add('following');
             buttonElement.classList.remove('follow');
             
@@ -103,7 +113,7 @@ export async function toggleFollow(userId, username, buttonElement, state) {
             buttonElement.title = "Dejar de seguir";
 
             if (window.showAlert) {
-                window.showAlert(`Ahora sigues a ${targetUser}`, 'success'); // Usa estilo morado/verde
+                window.showAlert(`Ahora sigues a ${targetUser}`, 'success'); 
             }
         }
 
@@ -117,13 +127,16 @@ export async function toggleFollow(userId, username, buttonElement, state) {
             console.warn(`Sincronizando: Ya seguías a ${username}.`);
             currentState.followingUsers.add(targetId);
             buttonElement.classList.add('following');
-            buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
+            if (buttonElement.classList.contains('follow-btn-small')) {
+                 buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
+            }
 
             if (window.showAlert) window.showAlert(`Ya seguías a ${targetUser}`, 'info');
 
         } else {
             console.error(`Error en toggleFollow:`, error);
             buttonElement.innerHTML = originalHTML; 
+            buttonElement.title = originalTitle;
 
             if (window.showAlert) {
                 window.showAlert('No se pudo completar la acción. Intenta nuevamente.', 'danger');
@@ -176,7 +189,6 @@ async function executeUserSearch(query, state) {
             return;
         }
 
-        // 1. Renderizamos el HTML
         userSearchResults.innerHTML = normalizedUsers.map(user => renderAmigoCard(user)).join('');
         
         attachFollowButtonListeners(userSearchResults, targetState);
@@ -188,41 +200,19 @@ async function executeUserSearch(query, state) {
     }
 }
 
-// --- NUEVA FUNCIÓN PARA REDIRECCIÓN ---
 function attachProfileRedirectionListeners(container) {
-    console.log("1. Intentando adjuntar listeners de redirección...");
     const cards = container.querySelectorAll('.user-result-item');
-    console.log(`2. Se encontraron ${cards.length} tarjetas.`);
-
     cards.forEach(card => {
         card.style.cursor = 'pointer';
-
         card.addEventListener('click', (e) => {
-            console.log("3. Click detectado en la tarjeta!");
-            
-            if (e.target.closest('.follow-btn')) {
-                console.log("   -> Click fue en el botón seguir, ignorando redirección.");
-                return;
-            }
-
+            if (e.target.closest('.follow-btn')) return;
             const followBtn = card.querySelector('.follow-btn');
-            if (!followBtn) {
-                console.error("   ❌ Error: No se encontró el botón .follow-btn dentro de la tarjeta.");
-                return;
-            }
-
-            const userId = followBtn.getAttribute('data-user-id');
-            console.log(`   -> ID encontrado en el botón: ${userId}`);
-
-            if (userId) {
-                console.log(`   ✅ RUTA FINAL: profile.html?userId=${userId}`);
-                window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
-            } else {
-                console.error("   ❌ Error: El botón tiene el atributo data-user-id vacío o nulo.");
+            if (followBtn) {
+                const userId = followBtn.getAttribute('data-user-id');
+                if (userId) window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
             }
         });
     });
-
 }
 
 function attachFollowButtonListeners(container, state) {
@@ -288,6 +278,8 @@ export function initializeReviewFilters(state) {
 
 export function addReviewEventListeners(reviewsListElement, state) {
     if (!reviewsListElement) return;
+    
+    // Botones pequeños (Reseñas de Amigos)
     reviewsListElement.querySelectorAll('.follow-btn-small').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -298,6 +290,7 @@ export function addReviewEventListeners(reviewsListElement, state) {
         });
     });
 
+    // Botones Grandes (Tarjetas de Usuario)
     reviewsListElement.querySelectorAll('.review-follow-btn, .follow-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -360,9 +353,9 @@ export async function initializeFollowData(state) {
         
         if (targetState === globalState) targetState.isInitialized = true;
 
-        console.log(` Estado inicializado. Sigues a: ${targetState.followingUsers.size}`);
+        console.log(`Datos cargados. Sigues a: ${targetState.followingUsers.size}`);
     } catch (e) {
-        console.error('Error inicializando datos de seguimiento:', e);
+        console.error('Error inicializando datos:', e);
         targetState.followerUsers = new Set();
         targetState.followingUsers = new Set();
     }

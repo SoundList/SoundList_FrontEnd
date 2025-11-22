@@ -3,21 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoundList - Amigos</title>
-    <!-- Favicon -->
+    <title>SoundList - Explorar</title>
     <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
     <link rel="shortcut icon" type="image/png" href="../Assets/default-avatar.png">
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../CSS/home.css">
     <link rel="stylesheet" href="../CSS/amigos.css">
+    <link rel="stylesheet" href="../CSS/home.css">
 </head>
 <body>
     <div class="amigos-container">
@@ -35,8 +30,7 @@
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div class="search-dropdown" id="searchDropdown" style="display: none;">
-                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display: none;"></div>
                 </div>
 
                 <div class="header-center d-none d-lg-flex">
@@ -104,59 +98,64 @@
         </header>
 
         <main class="main-content">
-            <section class="user-search-section">
-                <div class="container-fluid">
-                    <div class="user-search-container">
-                        <h2 class="section-title">
-                            <i class="fas fa-user-plus"></i> Buscar y Seguir Usuarios
-                        </h2>
-                        <div class="user-search-box">
-                            <i class="fas fa-search user-search-icon"></i>
-                            <input type="text" 
-                                class="user-search-input" 
-                                id="userSearchInput" 
-                                placeholder="Buscar por nombre de usuario...">
-                            <button class="user-search-clear" id="userSearchClear" style="display: none;">
-                                <i class="fas fa-times"></i>
-                            </button>
+            <div class="explore-grid container-fluid">
+                
+                <div class="explore-left-column">
+                    
+                    <section class="reviews-filter-section">
+                        <div class="reviews-filter-container">
+                            <h2 class="section-title">
+                                <i class="fas fa-comments"></i> Reseñas
+                            </h2>
+                            <div class="filter-buttons">
+                                <button class="filter-btn active" data-filter="seguidores" id="filterAmigos">
+                                    <i class="fas fa-user-friends"></i> Seguidores
+                                </button>
+                                <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
+                                    <i class="fas fa-heart"></i> Seguidos
+                                </button>
+                            </div>
                         </div>
-                        <div class="user-search-results" id="userSearchResults" style="display: none;">
-                        </div>
-                    </div>
-                </div>
-            </section>
+                    </section>
 
+                    <section class="reviews-list-section">
+                        <div class="reviews-list-container">
+                            
+                            <div class="reviews-list" id="reviewsList"></div>
 
-            <section class="reviews-filter-section">
-                <div class="container-fluid">
-                    <div class="reviews-filter-container">
-                        <h2 class="section-title">
-                            <i class="fas fa-comments"></i> Reseñas
-                        </h2>
-                        <div class="filter-buttons">
-                            <button class="filter-btn active" data-filter="seguidores" id="filterAmigos">
-                                <i class="fas fa-user-friends"></i> Seguidores
-                            </button>
-                            <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
-                                <i class="fas fa-heart"></i> Seguidos
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                            <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
+                                <i class="fas fa-comment-slash"></i>
+                                <p>No hay reseñas para mostrar</p>
+                            </div>
 
-            <section class="reviews-list-section">
-                <div class="container-fluid">
-                    <div class="reviews-list-container">
-                        <div class="reviews-list" id="reviewsList">
                         </div>
-                        <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
-                            <i class="fas fa-comment-slash"></i>
-                            <p>No hay reseñas para mostrar</p>
-                        </div>
-                    </div>
+                    </section>
+
                 </div>
-            </section>
+
+                <div class="explore-right-column">
+                    <section class="user-search-section sticky-search">
+                        <div class="user-search-container">
+                            <h2 class="section-title small-title">
+                                <i class="fas fa-user-plus"></i> Buscar Usuarios
+                            </h2>
+                            <div class="user-search-box compact-search">
+                                <i class="fas fa-search user-search-icon"></i>
+                                <input type="text" 
+                                    class="user-search-input" 
+                                    id="userSearchInput" 
+                                    placeholder="Buscar usuario...">
+                                <button class="user-search-clear" id="userSearchClear" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="user-search-results compact-results" id="userSearchResults" style="display: none;">
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
         </main>
     </div>
 
@@ -206,4 +205,3 @@
     <script type="module" src="../JS/main.js"></script>
 </body>
 </html>
-

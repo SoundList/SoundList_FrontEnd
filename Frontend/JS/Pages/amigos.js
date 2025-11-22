@@ -125,12 +125,16 @@ function mapBackendReviewToFrontend(r) {
     };
 }
 
+// En JS/Pages/amigos.js
+
 function renderReviews(reviews) {
     const reviewsList = document.getElementById('reviewsList');
     if (!reviewsList) return;
 
     const currentUserId = getCurrentUserId();
     const defaultAvatar = '../Assets/default-avatar.png';
+    // Usamos una imagen de disco genérica si no hay portada, o la que venga del backend
+    const defaultCover = '../Assets/default-album-cover.png'; // Asegúrate de tener algo similar o usa el avatar como fallback
 
     reviewsList.innerHTML = reviews.map(review => {
         const reviewId = review.id;
@@ -138,39 +142,65 @@ function renderReviews(reviews) {
         const isFollowing = modalsState.followingUsers.has(targetUserId); 
         const isOwn = currentUserId && (normalizeId(currentUserId) === targetUserId);
         
+        // Simulamos o recuperamos la imagen del contenido (Asegúrate de que tu backend la envíe en el futuro)
+        // Si tu objeto review ya tiene 'image', úsalo. Si no, usaremos el avatar como placeholder visual temporal.
+        const contentImage = review.image || review.cover || review.img || 'https://via.placeholder.com/150/000000/FFFFFF/?text=Music'; 
+
         const followBtnHTML = (!isOwn && isLoggedIn()) ? `
-            <button class="review-btn review-follow-btn ${isFollowing ? 'following' : 'follow'}" 
+            <button class="feed-follow-btn ${isFollowing ? 'following' : ''}" 
                     data-user-id="${review.userId}"
                     data-username="${review.username}">
-                <i class="fas ${isFollowing ? 'fa-user-check' : 'fa-user-plus'}"></i>
                 ${isFollowing ? 'Siguiendo' : 'Seguir'}
             </button>
         ` : '';
 
         return `
-        <div class="review-item" data-review-id="${reviewId}">
-            <div class="review-user review-clickable" data-review-id="${reviewId}" style="cursor: pointer;">
-                <img src="${review.avatar || defaultAvatar}" class="review-avatar" onerror="this.src='${defaultAvatar}'">
-                <div class="review-info">
-                    <div class="review-header">
-                        <span class="review-username">${review.username}</span>
-                        <span class="review-separator">•</span>
-                        <span class="review-artist">${review.artist}</span>
+        <div class="feed-card" data-review-id="${reviewId}">
+            
+            <div class="feed-header">
+                <div class="feed-user-info review-clickable" data-review-id="${reviewId}">
+                    <img src="${review.avatar || defaultAvatar}" class="feed-avatar" onerror="this.src='${defaultAvatar}'">
+                    <div class="feed-meta">
+                        <span class="feed-username">${review.username}</span>
+                        <span class="feed-action">reseñó ${review.contentType === 'song' ? 'una canción' : 'un álbum'}</span>
                     </div>
-                    <p class="review-comment">${review.comment}</p>
+                </div>
+                ${followBtnHTML}
+            </div>
+
+            <div class="feed-music-content review-clickable" data-review-id="${reviewId}">
+                <div class="music-cover-wrapper">
+                    <img src="${contentImage}" class="music-cover" alt="${review.song}" onerror="this.src='${defaultAvatar}'">
+                    <div class="music-badge">
+                        <i class="fas ${review.contentType === 'song' ? 'fa-music' : 'fa-compact-disc'}"></i>
+                    </div>
+                </div>
+                <div class="music-details">
+                    <h3 class="music-title">${review.song}</h3>
+                    <p class="music-artist">${review.artist}</p>
+                    <div class="feed-rating">
+                        ${renderStars(review.rating)}
+                    </div>
                 </div>
             </div>
-            <div class="review-actions">
-                <div class="review-rating">${renderStars(review.rating)}</div>
-                <div class="review-interactions">
-                    ${followBtnHTML}
-                    <div class="review-likes-container">
-                        <span class="review-likes-count">${review.likes}</span>
-                        <button class="review-btn btn-like ${review.userLiked ? 'liked' : ''}" data-review-id="${review.id}">
-                            <i class="fas fa-heart" style="color: ${review.userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'}"></i>
-                        </button>
-                    </div>
-                    <button class="review-btn comment-btn" data-review-id="${review.id}"><i class="fas fa-comment"></i></button>
+
+            <div class="feed-review-text">
+                <p>"${review.comment}"</p>
+            </div>
+
+            <div class="feed-footer">
+                <div class="interaction-group">
+                    <button class="feed-btn btn-like ${review.userLiked ? 'liked' : ''}" data-review-id="${review.id}">
+                        <i class="${review.userLiked ? 'fas' : 'far'} fa-heart"></i>
+                        <span>${review.likes}</span>
+                    </button>
+                    <button class="feed-btn comment-btn" data-review-id="${review.id}">
+                        <i class="far fa-comment"></i>
+                        <span>${review.comments || 0}</span>
+                    </button>
+                    <button class="feed-btn share-btn">
+                        <i class="far fa-paper-plane"></i>
+                    </button>
                 </div>
             </div>
         </div>`;

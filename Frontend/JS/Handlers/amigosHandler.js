@@ -1,7 +1,6 @@
 import { searchUsers, getFollowing, getFollowers } from '../APIs/AmigosApi.js';
 import { renderAmigoCard } from '../Components/amigoCard.js';
 
-// --- ESTADO GLOBAL (Para que funcione en toda la app) ---
 const globalState = {
     followingUsers: new Set(),
     followerUsers: new Set(),
@@ -22,18 +21,16 @@ function debounce(func, delay = DEBOUNCE_DELAY) {
 
 const normalizeId = (id) => String(id || '').toLowerCase().trim();
 
-// --- FUNCIÓN SEGURA PARA LIMPIAR LISTAS (La clave para que no falle el refresh) ---
 function cleanList(list) {
     if (!Array.isArray(list)) return [];
     return list.map(item => {
-        // 1. Si ya es un ID (String), lo usamos directo
+
         if (typeof item === 'string') return normalizeId(item);
-        
-        // 2. Si es Objeto, buscamos cualquier variante de ID posible
+
         if (typeof item === 'object' && item !== null) {
             const id = item.userId || item.UserId || item.id || item.Id || 
-                       item.FollowingId || item.followingId || 
-                       item.FollowerId || item.followerId;
+                    item.FollowingId || item.followingId || 
+                    item.FollowerId || item.followerId;
             return normalizeId(id);
         }
         return null;
@@ -45,13 +42,13 @@ function cleanList(list) {
 export async function toggleFollow(userId, username, buttonElement, state) {
     const currentState = state || globalState;
 
-    // Asegurar inicialización si falla
     if (!currentState.followingUsers || currentState.followingUsers.size === 0) {
         await initializeFollowData(currentState);
     }
 
     const targetId = normalizeId(userId);
     const isFollowing = currentState.followingUsers.has(targetId);
+    const targetUser = username || 'al usuario'; // Fallback por si no llega el nombre
 
     if (!window.userApi) {
         try {
@@ -59,11 +56,11 @@ export async function toggleFollow(userId, username, buttonElement, state) {
             window.userApi = { followUser, unfollowUser };
         } catch (e) {
             console.error('Error: API de usuario no cargada.');
+            if (window.showAlert) window.showAlert('Error interno: No se pudo conectar con el servicio.', 'danger');
             return;
         }
     }
 
-    // UI Optimista
     buttonElement.disabled = true;
     const originalHTML = buttonElement.innerHTML;
     buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -74,54 +71,68 @@ export async function toggleFollow(userId, username, buttonElement, state) {
             await window.userApi.unfollowUser(userId);
             currentState.followingUsers.delete(targetId); 
 
-            // Actualizar botón visualmente
+            // Actualizar botón
             buttonElement.classList.remove('following');
             buttonElement.classList.add('follow');
-            // Si es el botón pequeño de la reseña o el grande del buscador
+            
             if (buttonElement.classList.contains('follow-btn-small')) {
                 buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
             } else {
                 buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
             }
             buttonElement.title = "Seguir";
+
+            if (window.showAlert) {
+                window.showAlert(`Dejaste de seguir a ${targetUser}`, 'warning'); // Usa estilo naranja/amarillo
+            }
             
         } else {
             // ➕ SEGUIR
             await window.userApi.followUser(userId);
             currentState.followingUsers.add(targetId); 
             
+            // Actualizar botón
             buttonElement.classList.add('following');
             buttonElement.classList.remove('follow');
+            
             if (buttonElement.classList.contains('follow-btn-small')) {
                 buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
             } else {
                 buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
             }
             buttonElement.title = "Dejar de seguir";
+
+            if (window.showAlert) {
+                window.showAlert(`Ahora sigues a ${targetUser}`, 'success'); // Usa estilo morado/verde
+            }
         }
 
-        // Recargar feed si estamos en la página de amigos
         if (state && typeof state.loadReviews === 'function') {
             setTimeout(() => state.loadReviews(), 100); 
         }
 
     } catch (error) {
-        // Manejo de conflicto (Ya seguido)
+
         if (error.response && error.response.status === 409) {
             console.warn(`Sincronizando: Ya seguías a ${username}.`);
             currentState.followingUsers.add(targetId);
             buttonElement.classList.add('following');
             buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
+
+            if (window.showAlert) window.showAlert(`Ya seguías a ${targetUser}`, 'info');
+
         } else {
             console.error(`Error en toggleFollow:`, error);
-            buttonElement.innerHTML = originalHTML;
+            buttonElement.innerHTML = originalHTML; 
+
+            if (window.showAlert) {
+                window.showAlert('No se pudo completar la acción. Intenta nuevamente.', 'danger');
+            }
         }
     } finally {
         buttonElement.disabled = false;
     }
 }
-
-// --- LÓGICA DE BÚSQUEDA CON FILTRO DE USUARIO PROPIO ---
 
 async function executeUserSearch(query, state) {
     const userSearchResults = document.getElementById('userSearchResults');
@@ -139,20 +150,16 @@ async function executeUserSearch(query, state) {
             return;
         }
 
-        // === FILTRO DEL PROPIO USUARIO ===
         const currentUserId = normalizeId(localStorage.getItem('userId'));
 
         const normalizedUsers = users
             .filter(u => {
-                // Filtramos si el ID del resultado es igual al mío
                 const uId = u.userId || u.UserId || u.id;
                 return normalizeId(uId) !== currentUserId;
             })
             .map(u => {
                 const resolvedId = u.userId || u.UserId || u.id;
                 const cleanId = normalizeId(resolvedId);
-                
-                // Verificamos contra el Set global
                 const isFollowing = targetState.followingUsers ? targetState.followingUsers.has(cleanId) : false;
                 
                 return {
@@ -165,7 +172,6 @@ async function executeUserSearch(query, state) {
             });
 
         if (normalizedUsers.length === 0) {
-            // Caso especial: si el único resultado era yo mismo
             userSearchResults.innerHTML = `<div class="p-3 text-center text-white">No se encontraron otros usuarios.</div>`;
             return;
         }
@@ -260,8 +266,6 @@ export function initializeReviewFilters(state) {
 
 export function addReviewEventListeners(reviewsListElement, state) {
     if (!reviewsListElement) return;
-
-    // Botón Seguir PEQUEÑO (Reseñas)
     reviewsListElement.querySelectorAll('.follow-btn-small').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -272,7 +276,6 @@ export function addReviewEventListeners(reviewsListElement, state) {
         });
     });
 
-    // Botón Seguir GRANDE (Tarjetas de amigos)
     reviewsListElement.querySelectorAll('.review-follow-btn, .follow-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -306,10 +309,10 @@ export function addReviewEventListeners(reviewsListElement, state) {
     });
 
     reviewsListElement.querySelectorAll('.btn-edit').forEach(btn => {
-         btn.addEventListener('click', function() {
+        btn.addEventListener('click', function() {
             const id = this.getAttribute('data-review-id');
-             if (typeof window.toggleReviewEditMode === 'function') window.toggleReviewEditMode(id);
-         });
+            if (typeof window.toggleReviewEditMode === 'function') window.toggleReviewEditMode(id);
+        });
     });
 
     reviewsListElement.querySelectorAll('.btn-delete').forEach(btn => {
@@ -321,24 +324,21 @@ export function addReviewEventListeners(reviewsListElement, state) {
     });
 }
 
-// --- INICIALIZACIÓN DE DATOS (Corrección Crítica) ---
 export async function initializeFollowData(state) {
     const targetState = state || globalState;
     
     try {
-        // 1. Obtenemos los datos crudos
         const [followersData, followingData] = await Promise.all([
             getFollowers(), 
             getFollowing()
         ]);
 
-        // 2. Usamos cleanList para extraer los IDs sea cual sea el formato que venga
         targetState.followerUsers = new Set(cleanList(followersData));
         targetState.followingUsers = new Set(cleanList(followingData));
         
         if (targetState === globalState) targetState.isInitialized = true;
 
-        console.log(`✅ Estado inicializado. Sigues a: ${targetState.followingUsers.size}`);
+        console.log(` Estado inicializado. Sigues a: ${targetState.followingUsers.size}`);
     } catch (e) {
         console.error('Error inicializando datos de seguimiento:', e);
         targetState.followerUsers = new Set();
@@ -346,7 +346,6 @@ export async function initializeFollowData(state) {
     }
 }
 
-// Función auxiliar para verificar estado rápidamente
 export function isFollowingUser(userId) {
     return globalState.followingUsers.has(normalizeId(userId));
 }

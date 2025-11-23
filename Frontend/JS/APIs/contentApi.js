@@ -180,40 +180,31 @@ export async function getOrCreateAlbum(apiAlbumId) {
  */
 export async function getSongById(songId) {
     try {
-        // Llamamos al endpoint estándar pasándole el GUID
-        const response = await axios.get(`${API_BASE_URL}/Song/${songId}`, {
-            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        // CORRECCIÓN: Usamos la ruta completa del Gateway con /db/
+        // Esto arregla el error 404 localhost:5000/Song/...
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/song/db/${songId}`, {
+             validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
-        // Si es 404 o 500, retornar null silenciosamente
-        if (response.status === 404 || response.status === 500) {
-            return null;
-        }
-        
-        return response.data;
+        if (response.status === 200) return response.data;
+        return null;
     } catch (error) {
-        // Si falla (ej. timeout, network error), retornamos null silenciosamente para no romper la UI
+        console.error("Error en getSongById:", error);
         return null;
     }
 }
 
-/**
- * Busca un álbum por su ID (GUID) de base de datos.
- * Endpoint: GET /api/Album/{id}
- */
 export async function getAlbumById(albumId) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/Album/${albumId}`, {
-            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        // CORRECCIÓN: Usamos la ruta completa del Gateway con /db/
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/album/db/${albumId}`, {
+             validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
-        // Si es 404 o 500, retornar null silenciosamente
-        if (response.status === 404 || response.status === 500) {
-            return null;
-        }
-        
-        return response.data;
+        if (response.status === 200) return response.data;
+        return null;
     } catch (error) {
+        console.error("Error en getAlbumById:", error);
         return null;
     }
 }

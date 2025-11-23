@@ -185,8 +185,19 @@ async function handleImageSubmit(e) {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-
     loadCurrentProfileData();
+
+    // Verificar si hay un hash en la URL para mostrar una sección específica
+    const hash = window.location.hash;
+    if (hash) {
+        const sectionId = hash.substring(1); // Remover el #
+        if (sectionId === 'image' || sectionId === 'description') {
+            // Esperar un momento para que el DOM esté completamente cargado
+            setTimeout(() => {
+                showSection(sectionId);
+            }, 100);
+        }
+    }
 
     document.querySelectorAll('.sidebar button').forEach(button => {
         button.addEventListener('click', () => {

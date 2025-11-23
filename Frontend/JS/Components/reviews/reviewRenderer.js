@@ -74,11 +74,15 @@ export function renderReviews(reviews) {
             <div class="review-user review-clickable" data-review-id="${reviewId}" style="cursor: pointer;">
                     <img src="${review.avatar || defaultAvatar}"  
                             alt="${review.username}"  
-                            class="review-avatar"
-                            onerror="this.src='${defaultAvatar}'">
+                            class="review-avatar profile-navigation-trigger"
+                            data-user-id="${reviewUserId}"
+                            onerror="this.src='${defaultAvatar}'"
+                            style="cursor: pointer;">
                     <div class="review-info">
                         <div class="review-header">
-                                <span class="review-username">${review.username}</span>
+                                <span class="review-username profile-navigation-trigger" 
+                                      data-user-id="${reviewUserId}"
+                                      style="cursor: pointer;">${review.username}</span>
                                 
                                 ${followButtonHTML}
 
@@ -301,8 +305,23 @@ export function attachReviewActionListeners(reviewsListElement) {
         });
     });
 
+    // Navegación a perfil desde avatar/username
+    reviewsListElement.querySelectorAll('.profile-navigation-trigger').forEach(element => {
+        element.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const userId = this.getAttribute('data-user-id');
+            if (userId && typeof window.navigateToProfile === 'function') {
+                window.navigateToProfile(userId);
+            }
+        });
+    });
+
     reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
         element.addEventListener('click', function(e) {
+            // Si se hace clic en avatar/username, no abrir el modal de reseña
+            if (e.target.classList.contains('profile-navigation-trigger') || e.target.closest('.profile-navigation-trigger')) {
+                return;
+            }
             if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn') || e.target.closest('.icon-follow-btn')) {
                 return;
             }

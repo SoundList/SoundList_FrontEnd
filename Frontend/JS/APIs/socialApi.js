@@ -595,3 +595,32 @@ export async function getAllReviews() {
         return []; 
     }
 }
+
+export async function getUserReactionToReview(reviewId, userId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/reactions/review/${reviewId}/${userId}`, {
+            // ESTA LÍNEA ES LA MAGIA:
+            // Le decimos a axios: "Si es 404, NO lances error, trátalo como una respuesta válida"
+            validateStatus: function (status) {
+                return status >= 200 && status < 300 || status === 404; 
+            }
+        });
+
+        // Si es 200 OK -> Retornamos true (o el objeto)
+        if (response.status === 200) {
+            return response.data; 
+        }
+        
+        // Si es 404 Not Found -> Retornamos null (No hay like, pero no es error)
+        if (response.status === 404) {
+            return null; 
+        }
+
+        return null;
+
+    } catch (error) {
+        // Solo entramos aquí si es error 500 o de red real
+        console.error("Error verificando reacción:", error);
+        return null;
+    }
+}

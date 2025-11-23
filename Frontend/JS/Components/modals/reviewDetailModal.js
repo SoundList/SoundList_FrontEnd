@@ -185,9 +185,9 @@ export async function showReviewDetailModal(reviewId, state = null) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar" onerror="this.src='../Assets/default-avatar.png'">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username">${username}</span>
+                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
                             <span class="review-detail-time">${timeAgo}</span>
                         </div>
                     </div>
@@ -380,10 +380,10 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                 
                 return `
                     <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar" onerror="this.src='../Assets/default-avatar.png'">
+                        <img src="../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-comment-content">
                             <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username">${username}</span>
+                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
                                 <span class="review-detail-comment-time">${timeAgo}</span>
                             </div>
                             <p class="review-detail-comment-text">${text}</p>
@@ -401,11 +401,32 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
             }).join('');
         }
         
+        // Agregar event listeners para navegación a perfil
+        attachProfileNavigationListeners();
+        
         attachReviewDetailCommentListeners(reviewId, state);
     } catch (error) {
         console.error('Error cargando comentarios en vista detallada:', error);
         commentsList.innerHTML = '<div class="review-detail-comment-empty">Error al cargar comentarios.</div>';
     }
+}
+
+/**
+ * Adjunta listeners para navegación a perfil desde avatares y usernames
+ */
+function attachProfileNavigationListeners() {
+    document.querySelectorAll('.profile-navigation-trigger').forEach(element => {
+        if (!element.hasAttribute('data-navigation-listener-attached')) {
+            element.setAttribute('data-navigation-listener-attached', 'true');
+            element.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                if (userId && typeof window.navigateToProfile === 'function') {
+                    window.navigateToProfile(userId);
+                }
+            });
+        }
+    });
 }
 
 /**

@@ -388,6 +388,51 @@ function navigateToContentView(type, id) {
     window.location.href = destinationUrl;
 }
 
+/**
+ * Navega al perfil de un usuario
+ * @param {string} userId - ID del usuario
+ */
+function navigateToProfile(userId) {
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('Error: El ID del usuario está vacío o es inválido.', { userId });
+        return;
+    }
+    
+    const currentPath = window.location.pathname;
+    const currentFile = currentPath.split('/').pop() || '';
+    let destinationUrl = '';
+    
+    const encodedUserId = encodeURIComponent(userId.trim());
+    
+    // Determinar la ruta correcta según dónde estemos
+    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
+        // Ya estamos en Pages/, solo necesitamos el nombre del archivo
+        destinationUrl = `profile.html?userId=${encodedUserId}`;
+    } else if (currentPath.includes('/HTML/') || 
+               currentFile === 'home.html' || 
+               currentFile === 'album.html' || 
+               currentFile === 'song.html' || 
+               currentFile === 'artist.html' ||
+               currentFile === 'rankings.html' ||
+               currentFile === 'amigos.html' ||
+               currentFile === 'login.html' ||
+               currentFile === 'register.html') {
+        // Estamos en HTML/, necesitamos ir a Pages/
+        destinationUrl = `Pages/profile.html?userId=${encodedUserId}`;
+    } else {
+        // Fallback: intentar detectar la estructura
+        destinationUrl = `Pages/profile.html?userId=${encodedUserId}`;
+    }
+    
+    console.log(`Navegando a perfil: ${destinationUrl} (desde: ${currentFile}, userId: ${userId})`);
+    window.location.href = destinationUrl;
+}
+
+// Hacer la función disponible globalmente
+if (typeof window !== 'undefined') {
+    window.navigateToProfile = navigateToProfile;
+}
+
 // --- 5. SECCIÓN DE PERFIL, NAVEGACIÓN Y SESIÓN ---
 
 function initializeProfileDropdown() {

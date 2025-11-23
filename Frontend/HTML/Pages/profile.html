@@ -134,11 +134,11 @@
                             <strong id="user-reviews">0</strong>
                             <p>Reseñas</p>
                         </div>
-                        <div class="stat-item">
+                        <div class="stat-item stat-clickable" id="followers-stat" style="cursor: pointer;">
                             <strong id="user-followers">0</strong>
                             <p>Seguidores</p>
                         </div>
-                        <div class="stat-item">
+                        <div class="stat-item stat-clickable" id="following-stat" style="cursor: pointer;">
                             <strong id="user-following">0</strong>
                             <p>Seguidos</p>
                         </div>
@@ -160,25 +160,9 @@
 
                 <section class="featured-reviews-section">
                     <h2 class="mb-3">Reseñas Destacadas</h2>
-                    <div class="carousel-controls mb-2">
-                        <button class="btn-nav active" id="btnShowBest" 
-                                        data-bs-target="#featured-reviews-carousel" data-bs-slide-to="0">
-                            Mejores Reseñas
-                        </button>
+                    <div class="reviews-list" id="featured-reviews-list-best">
+                        <p class='text-muted p-4 text-center'>Cargando mejores reseñas...</p>
                     </div>
-                    
-                    <div id="featured-reviews-carousel" class="carousel slide" data-bs-ride="false">
-                        <div class="carousel-inner" id="featured-reviews-container">
-                            
-
-                            <div class="carousel-item active">
-                                <div class="reviews-list" id="featured-reviews-list-best">
-                                    <p class='text-muted p-4 text-center'>Cargando mejores reseñas...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
                 </section>
             
             </div>  
@@ -350,6 +334,28 @@
         </div>
     </div>
 
+    <!-- Modal de Seguidores/Seguidos -->
+    <div class="followers-modal-overlay" id="followersModalOverlay" style="display: none;">
+        <div class="followers-modal">
+            <div class="followers-modal-content">
+                <div class="followers-modal-header">
+                    <h2 class="followers-modal-title" id="followersModalTitle">Seguidores</h2>
+                    <button class="followers-modal-close" id="closeFollowersModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="followers-modal-body">
+                    <div class="followers-list" id="followersList">
+                        <div class="followers-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
@@ -412,6 +418,10 @@
 
             if (typeof setupEditProfileButton === 'function') {
                 setupEditProfileButton();
+            }
+
+            if (typeof initializeFollowersModal === 'function') {
+                initializeFollowersModal();
             }
         });
     </script>

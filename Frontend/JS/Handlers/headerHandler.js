@@ -388,6 +388,51 @@ function navigateToContentView(type, id) {
     window.location.href = destinationUrl;
 }
 
+/**
+ * Navega al perfil de un usuario
+ * @param {string} userId - ID del usuario
+ */
+function navigateToProfile(userId) {
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('Error: El ID del usuario está vacío o es inválido.', { userId });
+        return;
+    }
+    
+    const currentPath = window.location.pathname;
+    const currentFile = currentPath.split('/').pop() || '';
+    let destinationUrl = '';
+    
+    const encodedUserId = encodeURIComponent(userId.trim());
+    
+    // Determinar la ruta correcta según dónde estemos
+    if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
+        // Ya estamos en Pages/, solo necesitamos el nombre del archivo
+        destinationUrl = `profile.html?userId=${encodedUserId}`;
+    } else if (currentPath.includes('/HTML/') || 
+               currentFile === 'home.html' || 
+               currentFile === 'album.html' || 
+               currentFile === 'song.html' || 
+               currentFile === 'artist.html' ||
+               currentFile === 'rankings.html' ||
+               currentFile === 'amigos.html' ||
+               currentFile === 'login.html' ||
+               currentFile === 'register.html') {
+        // Estamos en HTML/, necesitamos ir a Pages/
+        destinationUrl = `Pages/profile.html?userId=${encodedUserId}`;
+    } else {
+        // Fallback: intentar detectar la estructura
+        destinationUrl = `Pages/profile.html?userId=${encodedUserId}`;
+    }
+    
+    console.log(`Navegando a perfil: ${destinationUrl} (desde: ${currentFile}, userId: ${userId})`);
+    window.location.href = destinationUrl;
+}
+
+// Hacer la función disponible globalmente
+if (typeof window !== 'undefined') {
+    window.navigateToProfile = navigateToProfile;
+}
+
 // --- 5. SECCIÓN DE PERFIL, NAVEGACIÓN Y SESIÓN ---
 
 function initializeProfileDropdown() {
@@ -742,7 +787,6 @@ function loadUserData() {
         }
         
         loadNotifications();
-        startNotificationPolling();
         
         if (typeof signalR !== 'undefined' && signalR) {
             initializeSignalR();
@@ -959,12 +1003,18 @@ function addNotification(notification) {
     renderNotifications();
     
     const notificationsBtn = document.getElementById('notificationsBtn');
-    if (notificationsBtn && !notificationsBtn.querySelector('.notification-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'notification-badge';
-        badge.textContent = '!';
-        notificationsBtn.appendChild(badge);
-    }
+    if (notificationsBtn) {
+        let badge = notificationsBtn.querySelector('.notification-badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            notificationsBtn.appendChild(badge);
+        }
+        // Calcular notificaciones no leídas reales
+        const count = notifications.length; 
+        badge.textContent = count > 99 ? '99+' : count; // Muestra el número
+        badge.style.display = count > 0 ? 'block' : 'none';
+    }
 }
 
 // CORREGIDO: Eliminada la duplicación
@@ -1086,79 +1136,73 @@ async function loadNotifications() {
 }
 
 function initializeSignalR() {
-    if (typeof signalR === 'undefined' || !signalR) {
-        console.warn('SignalR no está disponible.');
-        return;
-    }
-    
-    const authToken = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-    if (!authToken || !userId) return;
+    if (typeof signalR === 'undefined' || !signalR) return;
+    
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
 
-    if (notificationConnection && (notificationConnection.state === signalR.HubConnectionState.Connected || notificationConnection.state === signalR.HubConnectionState.Connecting)) {
-        console.log('SignalR ya está conectado o conectando');
-        return;
+    // Ajusta el puerto si es necesario
+    const hubUrl = 'http://localhost:8002/notificationHub'; 
+
+    if (!notificationConnection) {
+        notificationConnection = new signalR.HubConnectionBuilder()
+            .withUrl(hubUrl)
+            .withAutomaticReconnect()
+            .build();
     }
 
-    // ¡CAMBIO CLAVE! Usamos la URL del Gateway importada
-    const hubUrl = 'http://localhost:8002/notificationHub';
-    try {
-        const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl(hubUrl) // (Se podría necesitar pasar el token aquí si el hub está protegido)
-            .withAutomaticReconnect()
-            .build();
-        
-        notificationConnection = newConnection;
+    if (notificationConnection.state === signalR.HubConnectionState.Disconnected) {
+        notificationConnection.start()
+            .then(() => {
+                console.log('✅ SignalR Conectado.');
+                return notificationConnection.invoke('JoinUserGroup', userId.toLowerCase());
+            })
+            .catch(err => console.error('Error SignalR:', err));
+    }
 
-        notificationConnection.start()
-            .then(() => {
-                console.log('SignalR Connected');
-                return notificationConnection.invoke('JoinUserGroup', userId);
-            })
-            .then(() => console.log('Joined user group:', userId))
-            .catch(err => {
-                const errorMessage = err?.message || String(err);
-                const isConnectionError = errorMessage.includes('Failed to fetch') || 
-                                            errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-                                            errorMessage.includes('Failed to complete negotiation') ||
-                                            errorMessage.includes('Failed to start the connection');
-                
-                if (!isConnectionError) {
-                    console.error('Error connecting to SignalR:', err);
-                } else {
-                    console.debug('SignalR service no disponible.');
-                }
-            });
+    // LISTENER DEL EVENTO
+    notificationConnection.off('ReceiveNotification'); 
+    notificationConnection.on('ReceiveNotification', async function(notificationData) {
+        console.log('🔔 Notificación recibida en Tiempo Real:', notificationData);
+        
+        // 1. Reproducir sonido
+        playNotificationSound();
 
-        notificationConnection.on('ReceiveNotification', function(notification) {
-            console.log('Notification received:', notification);
-            playNotificationSound();
-            showNotificationAlert(notification);
-        });
+        // 2. OBTENER EL NOMBRE REAL (HIDRATACIÓN PREVIA)
+        // Antes de agregar a la lista, buscamos quién es para quitar los "..."
+        let realUsername = "Usuario"; 
+        const senderId = notificationData.SenderId || notificationData.senderId;
 
-        notificationConnection.onreconnecting(() => {
-            console.log('SignalR reconnecting...');
-        });
+        if (senderId && senderId !== '00000000-0000-0000-0000-000000000000') {
+            try {
+                const userData = await getUser(senderId);
+                if (userData) {
+                    // Usamos la misma lógica que confirmamos que funciona
+                    const userObj = userData.result || userData.data || userData;
+                    realUsername = userObj.username || userObj.Username || userObj.Name || "Usuario";
+                }
+            } catch (e) {
+                console.warn("No se pudo obtener el nombre para la lista:", e);
+            }
+        }
+        
+        // 3. Mostrar alerta flotante (Toast)
+        // (Esta función ya tiene su propia lógica, no tocamos nada)
+        await showNotificationAlert(notificationData);
+        
+        // 4. AGREGAR A LA LISTA DE LA CAMPANITA (CORREGIDO)
+        // Ahora pasamos 'realUsername' en lugar de '...'
+        addNotification({
+             type: notificationData.Type || notificationData.type,
+             date: notificationData.Date || notificationData.date,
+             username: realUsername, // <--- ¡AQUÍ ESTÁ EL CAMBIO!
+             userId: senderId,
+             reviewId: notificationData.ReferenceId
+        });
 
-        notificationConnection.onreconnected(() => {
-            console.log('SignalR reconnected');
-            if (userId) {
-                notificationConnection.invoke('JoinUserGroup', userId);
-            }
-        });
-
-    } catch (error) {
-        const errorMessage = error?.message || String(error);
-        const isConnectionError = errorMessage.includes('Failed to fetch') || 
-                            errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-                                errorMessage.includes('Failed to complete negotiation');
-        
-        if (!isConnectionError) {
-            console.error('Error initializing SignalR:', error);
-        } else {
-            console.debug('SignalR no disponible.');
-        }
-    }
+        // 5. Actualizar el badge rojo
+        updateNotificationCount(1); 
+    });
 }
 
 function playNotificationSound() {
@@ -1180,133 +1224,126 @@ function playNotificationSound() {
 }
 
 async function showNotificationAlert(notification) {
-    // Enriquecer con username si es necesario
-    const actorUserId = notification.UserId || notification.userId;
-    let username = notification.Username || notification.username || 'Usuario';
+    // 1. Obtener ID del emisor (Normalización para evitar errores)
+    const actorUserId = notification.SenderId || notification.senderId || notification.userId || notification.UserId;
     
-    // Si hay un UserId pero no hay username, obtenerlo
-    if (actorUserId && actorUserId !== '00000000-0000-0000-0000-000000000000' && (!username || username === 'Usuario')) {
+    let username = "Alguien";
+    let userImage = '../Assets/default-avatar.png';
+
+    // 2. HIDRATACIÓN DE USUARIO (Obtener nombre y foto real)
+    if (actorUserId && actorUserId !== '00000000-0000-0000-0000-000000000000') {
         try {
-            const userData = await getUser(actorUserId);
+            const userData = await getUser(actorUserId); 
+            
             if (userData) {
-                username = userData.Username || userData.username || 'Usuario';
+                // Manejo robusto de la respuesta (por si viene en 'result' o directo)
+                const userObj = userData.result || userData.data || userData;
+
+                // PRIORIDAD: 'username' (Confirmado por tu consola)
+                username = userObj.username || userObj.Username || userObj.Name || "Usuario";
+                
+                // Para la imagen: Busca 'avatar', 'image' o 'profilePicture'
+                // (Si en tu consola no salía una propiedad de imagen, se usará el default)
+                userImage = userObj.avatar || userObj.image || userObj.profilePicture || userObj.Avatar || '../Assets/default-avatar.png';
             }
-        } catch (userError) {
-            console.debug('No se pudo obtener username para notificación en tiempo real:', actorUserId, userError);
+        } catch (error) {
+            console.warn("No se pudo cargar la info del usuario para la notificación", error);
         }
     }
-    
-    addNotification({
-        type: notification.Type || notification.type,
-        date: notification.Date || notification.date || new Date().toISOString(),
-        username: username,
-        songName: notification.SongName || notification.songName || null,
-        reviewId: notification.ReviewId || notification.reviewId || null,
-        userId: actorUserId
-    });
-    
-    let message = 'Nueva notificación';
-    if (notification.Type === 'NewReaction' || notification.type === 'NewReaction') {
-        message = '¡Alguien le dio me gusta a tu reseña!';
-    } else if (notification.Type === 'NewComment' || notification.type === 'NewComment') {
-        message = '¡Alguien comentó tu reseña!';
-    } else if (notification.Type === 'NewFollower' || notification.type === 'NewFollower') {
-        message = '¡Nuevo seguidor!';
-    }
-    showAlert(message, 'info');
-}
 
+    // 3. DEFINIR EL MENSAJE HTML
+    let messageHtml = '';
+    const rawType = notification.Type || notification.type || '';
+    
+    // Nombre en negrita y color blanco para resaltar
+    const userHtml = `<strong style="color: #fff;">${username}</strong>`;
+
+    if (rawType.includes('Reaction') || rawType.includes('Like')) {
+        messageHtml = `${userHtml} le dio me gusta a tu reseña`;
+    } 
+    else if (rawType.includes('Comment')) {
+        // Diferenciar si es like a comentario o comentario nuevo
+        if (rawType.includes('Reaction')) {
+             messageHtml = `${userHtml} le dio me gusta a tu comentario`;
+        } else {
+             messageHtml = `${userHtml} comentó tu reseña`;
+        }
+    } 
+    else if (rawType.includes('Follow')) {
+        messageHtml = `${userHtml} comenzó a seguirte`;
+    } 
+    else {
+        messageHtml = `Nueva notificación de ${userHtml}`;
+    }
+
+    // 4. MOSTRAR LA ALERTA VISUAL (TOAST)
+    createToastNotification(messageHtml, userImage, rawType);
+}
 // --- 7. POLLING DE NOTIFICACIONES ---
 
 async function checkForNotifications(isInitialLoad = false) {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-        stopNotificationPolling();
-        return;
-    }
-    
-    try {
-        const allReviews = await getReviews();
-        
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        stopNotificationPolling();
+        return;
+    }
+    
+    try {
+        const allReviews = await getReviews();
+        // Filtramos reviews del usuario actual
         const userReviews = allReviews.filter(review => {
-            const reviewUserId = review.UserId || review.userId;
-            return reviewUserId && (
-                reviewUserId.toString() === userId.toString() ||
-                reviewUserId === userId
-            );
-        });
-        
-        for (const review of userReviews) {
-            const reviewId = review.id || review.ReviewId || review.reviewId;
-            if (!reviewId) continue;
-            
-            const reviewIdStr = String(reviewId);
-            
-            // ¡LLAMADAS A API REFACTORIZADAS!
-            const currentLikes = await getReviewReactionCount(reviewIdStr);
-            const commentsData = await getCommentsByReview(reviewIdStr);
-            const currentComments = commentsData.length;
-            
-            const previousState = userReviewsState[reviewIdStr];
-            
-            if (isInitialLoad || !previousState) {
-                userReviewsState[reviewIdStr] = { likes: currentLikes, comments: currentComments };
-                continue;
-            }
-            
-            if (currentLikes > previousState.likes) {
-                const newLikes = currentLikes - previousState.likes;
-                // ¡LLAMADA A API REFACTORIZADA!
-                const contentInfo = await getReviewContentInfo(reviewIdStr);
-                
-                addNotification({
-                    type: 'NewReaction',
-                    date: new Date().toISOString(),
-                    username: newLikes === 1 ? 'Alguien' : `${newLikes} personas`,
-                    songName: contentInfo.songName,
-                    reviewId: reviewIdStr
-                });
-                
-                playNotificationSound();
-                showAlert(
-                    newLikes === 1 
-                        ? `¡Alguien le dio me gusta a tu reseña de "${contentInfo.songName}"!`
-                        : `¡${newLikes} personas le dieron me gusta a tu reseña de "${contentInfo.songName}"!`,
-                    'info'
-                );
-            }
-            
-            if (currentComments > previousState.comments) {
-                const newComments = currentComments - previousState.comments;
-                // ¡LLAMADA A API REFACTORIZADA!
-                const contentInfo = await getReviewContentInfo(reviewIdStr);
-                
-                addNotification({
-                    type: 'NewComment',
-                    date: new Date().toISOString(),
-                    username: newComments === 1 ? 'Alguien' : `${newComments} personas`,
-                    songName: contentInfo.songName,
-                    reviewId: reviewIdStr
-                });
-                
-                playNotificationSound();
-                showAlert(
-                    newComments === 1
-                        ? `¡Alguien comentó tu reseña de "${contentInfo.songName}"!`
-                        : `¡${newComments} personas comentaron tu reseña de "${contentInfo.songName}"!`,
-                    'info'
-                );
-            }
-            
-             userReviewsState[reviewIdStr] = {
-                likes: currentLikes,
-                comments: currentComments
-            };
-        }
-        
-    } catch (error) {
-        console.debug('Error en polling de notificaciones:', error);
-    }
+            const reviewUserId = review.UserId || review.userId;
+            return reviewUserId && (reviewUserId.toString() === userId.toString());
+        });
+        
+        for (const review of userReviews) {
+            const reviewId = review.id || review.ReviewId || review.reviewId;
+            if (!reviewId) continue;
+            
+            const reviewIdStr = String(reviewId);
+            
+            // Obtenemos contadores actuales
+            // Asegúrate de que estas funciones importadas no fallen
+            let currentLikes = 0;
+            let currentComments = 0;
+
+            try {
+                currentLikes = await getReviewReactionCount(reviewIdStr);
+                const commentsData = await getCommentsByReview(reviewIdStr);
+                currentComments = commentsData ? commentsData.length : 0;
+            } catch (err) {
+                console.warn(`Error obteniendo datos para review ${reviewIdStr}`, err);
+                continue; 
+            }
+            
+            const previousState = userReviewsState[reviewIdStr];
+            
+            // Carga inicial o nuevo estado base
+            if (isInitialLoad || !previousState) {
+                userReviewsState[reviewIdStr] = { likes: currentLikes, comments: currentComments };
+                continue;
+            }
+            
+            // --- AQUÍ ESTABA EL ERROR ---
+            // Eliminamos la lógica que lanzaba notificaciones visuales desde el polling.
+            // Eliminamos la llamada a 'getReviewContentInfo' que rompía el código.
+            // Ahora solo actualizamos el estado interno para que la próxima vez compare bien.
+            
+            if (currentLikes !== previousState.likes || currentComments !== previousState.comments) {
+                console.log(`🔄 Sincronizando estado (silencioso) para Review ${reviewIdStr}`);
+                userReviewsState[reviewIdStr] = {
+                    likes: currentLikes,
+                    comments: currentComments
+                };
+                // NOTA: No llamamos a addNotification ni showAlert aquí.
+                // Dejamos que SignalR haga el trabajo sucio en tiempo real.
+            }
+        }
+        
+    } catch (error) {
+        // Cambiado a warn para no ensuciar tanto la consola si falla la red
+        console.warn('Polling de notificaciones pausado momentáneamente:', error);
+    }
 }
 
 function startNotificationPolling() {
@@ -1380,6 +1417,53 @@ function hideLoginRequiredModal() {
     }
 }
 
+function createToastNotification(messageHtml, image, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'custom-alert notification-toast';
+    // Estilos inline o asegúrate de tenerlos en CSS
+    alertDiv.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 9999;
+        background: #1e1e1e; border: 1px solid #333; border-left: 4px solid #EC4899;
+        color: white; padding: 15px; border-radius: 8px;
+        display: flex; align-items: center; gap: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        animation: slideIn 0.3s ease-out;
+        min-width: 300px;
+    `;
+
+    const iconClass = type === 'NewFollower' ? 'fa-user-plus' : (type.includes('Reaction') ? 'fa-heart' : 'fa-bell');
+    const iconColor = type.includes('Reaction') ? '#EC4899' : '#fff';
+
+    alertDiv.innerHTML = `
+        <img src="${image}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+        <div style="flex:1; font-size: 0.9rem;">${messageHtml}</div>
+        <i class="fas ${iconClass}" style="color: ${iconColor};"></i>
+    `;
+
+    document.body.appendChild(alertDiv);
+
+    // Auto eliminar a los 4 segundos
+    setTimeout(() => {
+        alertDiv.style.opacity = '0';
+        setTimeout(() => alertDiv.remove(), 500);
+    }, 4000);
+}
+function updateNotificationCount(amount) {
+    const btn = document.getElementById('notificationsBtn');
+    if (!btn) return;
+    
+    let badge = btn.querySelector('.notification-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'notification-badge';
+        badge.textContent = '0';
+        btn.appendChild(badge);
+    }
+    
+    let current = parseInt(badge.textContent) || 0;
+    badge.textContent = current + amount;
+    badge.style.display = 'block';
+}
 // CORREGIDO: Eliminada la duplicación
 function initializeLoginRequiredModal() {
     const goToLoginBtn = document.getElementById('goToLoginBtn');

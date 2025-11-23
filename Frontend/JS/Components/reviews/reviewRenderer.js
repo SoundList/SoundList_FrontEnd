@@ -1,8 +1,8 @@
-
 import { renderStars } from '../../Utils/reviewHelpers.js';
 import { showLoginRequiredModal } from '../../Handlers/headerHandler.js';
 import { addReviewReaction, deleteReviewReaction } from '../../APIs/socialApi.js';
-import { AmigosHandler } from '../../Handlers/amigosHandler.js';
+import { AmigosHandler } from '../../Handlers/amigosHandler.js'; 
+
 /**
  * Renderiza las reseñas en el DOM
  * @param {Array} reviews - Array de reseñas procesadas
@@ -20,53 +20,72 @@ export function renderReviews(reviews) {
         if (reviewId) {
             reviewId = String(reviewId).trim();
             if (!reviewId || reviewId === 'null' || reviewId === 'undefined') {
-                console.warn('⚠️ Reseña con ID inválido en renderReviews, omitiendo:', { review, reviewId });
+                console.warn('Reseña con ID inválido en renderReviews, omitiendo:', { review, reviewId });
                 return '';
             }
         } else {
-            console.warn('⚠️ Reseña sin ID en renderReviews, omitiendo:', review);
+            console.warn(' Reseña sin ID en renderReviews, omitiendo:', review);
             return '';
         }
         
         const isLiked = review.userLiked || false;
-        // Asegurar que likeCount sea un número válido (incluso si es 0)
         const likeCount = (typeof review.likes === 'number' && !isNaN(review.likes) && review.likes >= 0) 
             ? Math.floor(review.likes) 
             : (typeof review.likes === 'string' ? Math.max(0, parseInt(review.likes, 10) || 0) : 0);
-        // Asegurar que commentCount sea un número válido (incluso si es 0)
         const commentCount = (typeof review.comments === 'number' && !isNaN(review.comments) && review.comments >= 0)
             ? Math.floor(review.comments)
             : (typeof review.comments === 'string' ? Math.max(0, parseInt(review.comments, 10) || 0) : 0);
         const defaultAvatar = '../Assets/default-avatar.png';
         const reviewUserId = review.userId || review.UserId || '';
         const isOwnReview = currentUserId && (reviewUserId === currentUserId || reviewUserId.toString() === currentUserId.toString());
-        
         let followButtonHTML = '';
-        if (isLoggedIn && !isOwnReview && reviewUserId) {
-            const isFollowing = review.isFollowingAuthor || false;
-            const btnClass = isFollowing ? 'following' : 'follow';
-            const btnText = isFollowing ? 'Siguiendo' : 'Seguir';
+        const isAmigosPage = window.location.pathname.includes('amigos.html');
+
+        if (isLoggedIn && !isOwnReview && reviewUserId && !isAmigosPage) {
+            const isFollowing = AmigosHandler.isFollowingUser(reviewUserId);
             const iconClass = isFollowing ? 'fa-user-check' : 'fa-user-plus';
-            
+            const btnTitle = isFollowing ? 'Dejar de seguir' : 'Seguir';
+
             followButtonHTML = `
-                <button class="follow-btn-small ${btnClass}" 
+                <button class="icon-follow-btn" 
                         data-user-id="${reviewUserId}"
-                        title="${btnText}">
-                    <i class="fas ${iconClass}"></i>
-                    <span>${btnText}</span>
+                        data-username="${review.username}"
+                        title="${btnTitle}"
+                        style="
+                            background: rgba(255, 255, 255, 0.1); 
+                            border: none; 
+                            border-radius: 6px; 
+                            padding: 4px 8px; 
+                            margin-left: 10px; 
+                            cursor: pointer; 
+                            color: ${isFollowing ? '#EC4899' : '#fff'}; 
+                            transition: background 0.2s;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                        ">
+                    <i class="fas ${iconClass}" style="font-size: 0.85rem;"></i>
                 </button>
             `;
         }
+
         return `
         <div class="review-item" data-review-id="${reviewId}">
             <div class="review-user review-clickable" data-review-id="${reviewId}" style="cursor: pointer;">
                     <img src="${review.avatar || defaultAvatar}"  
                             alt="${review.username}"  
-                            class="review-avatar"
-                            onerror="this.src='${defaultAvatar}'">
+                            class="review-avatar profile-navigation-trigger"
+                            data-user-id="${reviewUserId}"
+                            onerror="this.src='${defaultAvatar}'"
+                            style="cursor: pointer;">
                     <div class="review-info">
                         <div class="review-header">
-                                <span class="review-username">${review.username}</span>
+                                <span class="review-username profile-navigation-trigger" 
+                                      data-user-id="${reviewUserId}"
+                                      style="cursor: pointer;">${review.username}</span>
+                                
+                                ${followButtonHTML}
+
                                 <span class="review-separator">-</span>
                                 <span class="review-content-type">${review.contentType === 'song' ? 'Canción' : 'Álbum'}</span>
                                 <span class="review-separator">-</span>
@@ -125,16 +144,48 @@ export function renderReviews(reviews) {
 
 
 export function attachReviewActionListeners(reviewsListElement) { 
-    reviewsListElement.querySelectorAll('.follow-btn-small').forEach(btn => {
-        btn.addEventListener('click', async function(e) {
-            e.preventDefault();
-            e.stopPropagation(); 
-            
-            const userId = this.getAttribute('data-user-id');
-            const isFollowing = this.classList.contains('following');
-            await AmigosHandler.toggleFollow(userId, isFollowing, this);
+    reviewsListElement.querySelectorAll('.icon-follow-btn').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        e.stopPropagation(); 
+        
+        const userId = this.getAttribute('data-user-id');
+        const username = this.getAttribute('data-username');
+        const realState = AmigosHandler.isFollowingUser(userId);
+        const btnProxy = {
+            disabled: false,
+            classList: { 
+                add: () => {}, remove: () => {}, toggle: () => {},
+                contains: (cls) => cls === 'following' ? realState : btn.classList.contains(cls)
+            },
+            innerHTML: '', title: ''
+        };
+
+        await AmigosHandler.toggleFollow(userId, username, btnProxy);
+        const isFollowingNow = !realState;
+
+        const allButtons = document.querySelectorAll(`.icon-follow-btn[data-user-id="${userId}"]`);
+
+        allButtons.forEach(otherBtn => {
+            const icon = otherBtn.querySelector('i');
+
+            if (isFollowingNow) {
+                otherBtn.classList.add('following');
+                icon.className = 'fas fa-user-check';
+                otherBtn.style.color = '#EC4899'; // Magenta
+                otherBtn.title = 'Dejar de seguir';
+            } else {
+                otherBtn.classList.remove('following');
+                icon.className = 'fas fa-user-plus';
+                otherBtn.style.color = '#a1a1aa'; // Gris
+                otherBtn.title = 'Seguir';
+            }
         });
     });
+});
+
+    // -------------------------------------------
+
     reviewsListElement.querySelectorAll('.btn-like').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -162,42 +213,24 @@ export function attachReviewActionListeners(reviewsListElement) {
                 const newLikesCount = Math.max(0, currentLikes - 1);
                 likesSpan.textContent = newLikesCount;
                 
-                // ACTUALIZAR CACHE INMEDIATAMENTE (fuente de verdad)
                 const likesCacheKey = `review_likes_${reviewId}`;
                 try {
                     localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) {
-                    // Ignorar errores de localStorage
-                }
+                } catch (e) { }
                 
                 const userId = localStorage.getItem('userId');
                 const reactionId = localStorage.getItem(`reaction_${reviewId}_${userId}`);
                 
-                // Sincronizar con backend
                 deleteReviewReaction(reviewId, userId, authToken, reactionId)
                     .then(() => {
-                        // Confirmar eliminación en localStorage
                         localStorage.removeItem(`like_${reviewId}_${userId}`);
                         localStorage.removeItem(`reaction_${reviewId}_${userId}`);
-                        // Mantener el cache actualizado
-                        try {
-                            localStorage.setItem(likesCacheKey, String(newLikesCount));
-                        } catch (e) {
-                            // Ignorar errores de localStorage
-                        }
+                        try { localStorage.setItem(likesCacheKey, String(newLikesCount)); } catch (e) { }
                     })
                     .catch(err => {
-                        console.warn('No se pudo eliminar like del backend', err);
-                        // Revertir cambio si falla
                         this.classList.add('liked');
                         icon.style.color = 'var(--magenta, #EC4899)';
                         likesSpan.textContent = currentLikes;
-                        // Revertir cache
-                        try {
-                            localStorage.setItem(likesCacheKey, String(currentLikes));
-                        } catch (e) {
-                            // Ignorar errores de localStorage
-                        }
                     });
             } else {
 
@@ -207,45 +240,25 @@ export function attachReviewActionListeners(reviewsListElement) {
                 const newLikesCount = currentLikes + 1;
                 likesSpan.textContent = newLikesCount;
                 
-                // ACTUALIZAR CACHE INMEDIATAMENTE (fuente de verdad)
                 const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) {
-                    // Ignorar errores de localStorage
-                }
+                try { localStorage.setItem(likesCacheKey, String(newLikesCount)); } catch (e) { }
                 
                 const currentUserId = localStorage.getItem('userId');
-                // Guardar estado de like en localStorage INMEDIATAMENTE
                 localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
                 
-                // Sincronizar con backend
                 addReviewReaction(reviewId, currentUserId, authToken)
                     .then(data => {
                         const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
                         if (reactionId) {
                             localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
                         }
-                        // Mantener el cache actualizado
-                        try {
-                            localStorage.setItem(likesCacheKey, String(newLikesCount));
-                        } catch (e) {
-                            // Ignorar errores de localStorage
-                        }
+                        try { localStorage.setItem(likesCacheKey, String(newLikesCount)); } catch (e) { }
                     })
                     .catch(err => {
-                        console.warn('No se pudo guardar like en el backend', err);
-                        // Revertir cambio si falla
                         this.classList.remove('liked');
                         icon.style.color = 'rgba(255,255,255,0.7)';
                         likesSpan.textContent = currentLikes;
                         localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                        // Revertir cache
-                        try {
-                            localStorage.setItem(likesCacheKey, String(currentLikes));
-                        } catch (e) {
-                            // Ignorar errores de localStorage
-                        }
                     });
             }
         });
@@ -292,9 +305,24 @@ export function attachReviewActionListeners(reviewsListElement) {
         });
     });
 
+    // Navegación a perfil desde avatar/username
+    reviewsListElement.querySelectorAll('.profile-navigation-trigger').forEach(element => {
+        element.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const userId = this.getAttribute('data-user-id');
+            if (userId && typeof window.navigateToProfile === 'function') {
+                window.navigateToProfile(userId);
+            }
+        });
+    });
+
     reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
         element.addEventListener('click', function(e) {
-            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn')) {
+            // Si se hace clic en avatar/username, no abrir el modal de reseña
+            if (e.target.classList.contains('profile-navigation-trigger') || e.target.closest('.profile-navigation-trigger')) {
+                return;
+            }
+            if (e.target.closest('.review-actions') || e.target.closest('.btn-edit') || e.target.closest('.btn-delete') || e.target.closest('.btn-like') || e.target.closest('.comment-btn') || e.target.closest('.icon-follow-btn')) {
                 return;
             }
             
@@ -306,24 +334,4 @@ export function attachReviewActionListeners(reviewsListElement) {
             }
         });
     });
-
-    reviewsListElement.querySelectorAll('.review-clickable').forEach(element => {
-        element.addEventListener('click', function(e) {
-            if (e.target.closest('.review-actions') || 
-                e.target.closest('.btn-edit') || 
-                e.target.closest('.btn-delete') || 
-                e.target.closest('.btn-like') || 
-                e.target.closest('.comment-btn') ||
-                e.target.closest('.follow-btn-small')) { 
-                return;
-            }
-            
-            const reviewId = this.getAttribute('data-review-id');
-            if (reviewId && typeof window.showReviewDetailModal === 'function') {
-                window.showReviewDetailModal(reviewId);
-            }
-        });
-    });
 }
-
-

@@ -243,7 +243,7 @@
         </div>
     </div>
 
-    <!-- Review Detail Modal (Vista detallada estilo Twitter/X) -->
+    <!-- Review Detail Modal-->
     <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
         <div class="review-detail-modal">
             <div class="review-detail-modal-content">
@@ -398,12 +398,10 @@
                                placeholder="Buscar canción o álbum..."
                                autocomplete="off">
                         <div class="content-search-dropdown" id="contentSearchDropdown" style="display: none;">
-                            <!-- Search results will be populated here -->
-                        </div>
+                            </div>
                     </div>
                 </div>
                 <div class="create-review-content-info" id="createReviewContentInfo" style="display: none;">
-                    <!-- Content info will be populated dynamically -->
                     <div class="content-info-image">
                         <img src="../Assets/default-avatar.png" alt="Content" id="contentInfoImage">
                     </div>
@@ -415,6 +413,7 @@
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
+                
                 <div class="create-review-rating">
                     <label class="rating-label">Calificación</label>
                     <div class="rating-stars" id="createReviewStars">
@@ -424,17 +423,22 @@
                         <span class="star-input" data-rating="4">★</span>
                         <span class="star-input" data-rating="5">★</span>
                     </div>
+                    <div class="invalid-feedback-custom" id="createReviewRatingError"></div> 
                 </div>
+
                 <div class="create-review-form">
                     <input type="text" 
                         class="create-review-title-input" 
                         id="createReviewTitleInput" 
                         placeholder="Titulo de la reseña"
                         maxlength="100">
+                    <div class="invalid-feedback-custom" id="createReviewTitleError"></div>
+
                     <textarea class="create-review-text-input" 
                             id="createReviewTextInput" 
                             placeholder="Escribe tu reseña"
                             maxlength="1000"></textarea>
+                    <div class="invalid-feedback-custom" id="createReviewTextError"></div>
                 </div>
                 <button class="create-review-submit-btn" id="submitCreateReviewBtn">
                     SUBIR

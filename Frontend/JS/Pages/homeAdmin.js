@@ -7,6 +7,7 @@ import { initializeCreateReviewModal, showCreateReviewModal, showEditReviewModal
 import { initializeCommentsModalLogic, showCommentsModal } from '../Components/modals/commentsModal.js';
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
 import { initializeDeleteModalsLogic, showDeleteReviewModal } from '../Components/modals/deleteModals.js';
+import { AmigosHandler } from '../Handlers/amigosHandler.js';
 
 // --- 2. VARIABLES GLOBALES (ESPECÍFICAS DEL HOME) ---
 let currentReviewFilter = 'popular'; // Filtro actual de reseñas: 'popular' o 'recent'
@@ -27,8 +28,10 @@ const modalsState = {
 
 // --- 3. PUNTO DE ENTRADA (LLAMADO POR MAIN.JS) ---
 
-export function initializeHomePage() {
+export async function initializeHomePage() {
     console.log("Inicializando lógica de Home...");
+
+    await AmigosHandler.init();
     
     if (document.getElementById('carouselWrapper')) {
         initializeCarousel();

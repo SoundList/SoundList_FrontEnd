@@ -44,12 +44,44 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Restableciendo contraseña...', 'info');
         
-        // Intentar primero el backend directo, luego el gateway como fallback
-        const PORTS = [
-            { url: 'http://localhost:8003', isGateway: false },
-            { url: 'http://localhost:5000', isGateway: true }
-        ];
-        attemptResetPassword(token, newPassword, confirmPassword, PORTS, 0, submitButton);
+        // Usar el gateway directamente
+        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const resetPasswordEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/reset-password`;
+        
+        axios.post(resetPasswordEndpoint, {
+            Token: token,
+            NewPassword: newPassword,
+            ConfirmPassword: confirmPassword
+        })
+        .then(response => {
+            showAlert('¡La contraseña ha sido restablecida con éxito! Redirigiendo al inicio de sesión...', 'success');
+            setButtonLoading(submitButton, false);
+            
+            // Redirigir al login después de 2 segundos
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+        })
+        .catch(error => {
+            // Manejar errores
+            let message = 'No se pudo restablecer la contraseña';
+            
+            if (error.response && error.response.data) {
+                const errorData = error.response.data;
+                if (typeof errorData === 'string') {
+                    message = sanitizeErrorMessage(errorData);
+                } else if (errorData.message) {
+                    message = sanitizeErrorMessage(errorData.message);
+                } else if (errorData.error) {
+                    message = sanitizeErrorMessage(errorData.error);
+                }
+            } else if (!error.response) {
+                message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway esté corriendo.';
+            }
+            
+            showAlert(message, 'danger');
+            setButtonLoading(submitButton, false);
+        });
     });
 
     // Show field error function
@@ -100,70 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function attemptResetPassword(token, newPassword, confirmPassword, ports, portIndex, submitButton) {
-        if (portIndex >= ports.length) {
-            // Todos los puertos fallaron
-            showAlert('No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.', 'danger');
-            setButtonLoading(submitButton, false);
-            return;
-        }
-
-        const currentPort = ports[portIndex];
-        const API_BASE_URL = currentPort.url;
-        
-        // El gateway no tiene ruta para ResetPassword, solo usar backend directo
-        const resetPasswordEndpoint = `${API_BASE_URL}/api/User/ResetPassword`;
-        
-        axios.post(resetPasswordEndpoint, {
-            Token: token,
-            NewPassword: newPassword,
-            ConfirmPassword: confirmPassword
-        })
-        .then(response => {
-            showAlert('¡La contraseña ha sido restablecida con éxito! Redirigiendo al inicio de sesión...', 'success');
-            setButtonLoading(submitButton, false);
-            
-            // Redirigir al login después de 2 segundos
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-        })
-        .catch(error => {
-            // Si es un error de conexión y hay más puertos para intentar, probar el siguiente
-            const isConnectionError = !error.response || 
-                error.code === 'ECONNREFUSED' || 
-                error.code === 'ERR_NETWORK' ||
-                error.code === 'ERR_FAILED' ||
-                error.message?.includes('Network Error') ||
-                error.message?.includes('Failed to fetch') ||
-                error.message?.includes('ERR_CONNECTION_CLOSED') ||
-                error.message?.includes('CORS');
-
-            if (isConnectionError && portIndex < ports.length - 1) {
-                // Intentar con el siguiente puerto
-                attemptResetPassword(token, newPassword, confirmPassword, ports, portIndex + 1, submitButton);
-            } else {
-                // Si es un error de validación o no hay más puertos, mostrar el error
-                let message = 'No se pudo restablecer la contraseña';
-                
-                if (error.response && error.response.data) {
-                    const errorData = error.response.data;
-                    if (typeof errorData === 'string') {
-                        message = sanitizeErrorMessage(errorData);
-                    } else if (errorData.message) {
-                        message = sanitizeErrorMessage(errorData.message);
-                    } else if (errorData.error) {
-                        message = sanitizeErrorMessage(errorData.error);
-                    }
-                } else if (!error.response && portIndex >= ports.length - 1) {
-                    message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.';
-                }
-                
-                showAlert(message, 'danger');
-                setButtonLoading(submitButton, false);
-            }
-        });
-    }
 
     // Función para limpiar errores técnicos y mostrar mensajes amigables
     function sanitizeErrorMessage(errorMessage) {

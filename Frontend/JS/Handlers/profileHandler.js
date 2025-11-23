@@ -752,12 +752,12 @@ async function loadUserProfile(userIdToLoad) {
         if (featuredContainer && userReviews && userReviews.length > 0) {
             // Ordenar por likes (más populares primero) - igual que en homeAdmin.js
             const bestReviews = [...userReviews].sort((a, b) => {
-                const likesA = Number(a.likes) || 0;
-                const likesB = Number(b.likes) || 0;
+                const likesA = Number(a.likes) || Number(a.Likes) || 0;
+                const likesB = Number(b.likes) || Number(b.Likes) || 0;
                 // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
                 if (likesB === likesA) {
-                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : (a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0);
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : (b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0);
                     return dateB - dateA;
                 }
                 return likesB - likesA; // Más likes primero
@@ -779,6 +779,42 @@ async function loadUserProfile(userIdToLoad) {
         console.error("❌ Error al cargar reseñas:", reviewError);
         if (recentContainer) recentContainer.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
         if (reviewCountEl) reviewCountEl.textContent = 0;
+    }
+
+    // Hacer el avatar clickeable solo si es el perfil propio
+    setupAvatarClickability(isOwnProfile);
+}
+
+/**
+ * Configura el avatar para que sea clickeable solo si es el perfil propio
+ * @param {boolean} isOwnProfile - Indica si es el perfil del usuario actual
+ */
+function setupAvatarClickability(isOwnProfile) {
+    const userAvatarEl = document.querySelector(".profile-avatar");
+    
+    if (!userAvatarEl) return;
+    
+    // Remover cualquier listener previo
+    const newAvatar = userAvatarEl.cloneNode(true);
+    userAvatarEl.parentNode.replaceChild(newAvatar, userAvatarEl);
+    
+    // Obtener el nuevo elemento
+    const avatarEl = document.querySelector(".profile-avatar");
+    
+    if (isOwnProfile) {
+        // Perfil propio: hacer clickeable
+        avatarEl.style.cursor = 'pointer';
+        avatarEl.title = 'Haz clic para editar tu foto de perfil';
+        avatarEl.setAttribute('data-editable', 'true');
+        
+        avatarEl.addEventListener('click', function() {
+            window.location.href = 'editProfile.html#image';
+        });
+    } else {
+        // Perfil ajeno: no clickeable
+        avatarEl.style.cursor = 'default';
+        avatarEl.title = '';
+        avatarEl.removeAttribute('data-editable');
     }
 }
 
@@ -1339,9 +1375,9 @@ async function showReviewDetailModal(reviewId) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar" onerror="this.src='../../Assets/default-avatar.png'">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username">${username}</span>
+                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
                             <span class="review-detail-time">${timeAgo}</span>
                         </div>
                     </div>
@@ -1373,6 +1409,9 @@ async function showReviewDetailModal(reviewId) {
         }
         
         await loadReviewDetailComments(reviewId, comments);
+        
+        // Agregar event listeners para navegación a perfil en la reseña principal
+        attachProfileNavigationListeners();
         
         const likeBtn = document.getElementById('reviewDetailLikeBtn');
         if (likeBtn) {
@@ -1548,10 +1587,10 @@ async function loadReviewDetailComments(reviewId, comments) {
                 
                 return `
                     <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar" onerror="this.src='../../Assets/default-avatar.png'">
+                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-comment-content">
                             <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username">${username}</span>
+                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
                                 <span class="review-detail-comment-time">${timeAgo}</span>
                             </div>
                             <p class="review-detail-comment-text">${text}</p>
@@ -1569,11 +1608,32 @@ async function loadReviewDetailComments(reviewId, comments) {
             }).join('');
         }
         
+        // Agregar event listeners para navegación a perfil
+        attachProfileNavigationListeners();
+        
         attachReviewDetailCommentListeners(reviewId);
     } catch (error) {
         console.error('Error cargando comentarios en vista detallada:', error);
         commentsList.innerHTML = '<div class="review-detail-comment-empty">Error al cargar comentarios.</div>';
     }
+}
+
+/**
+ * Adjunta listeners para navegación a perfil desde avatares y usernames
+ */
+function attachProfileNavigationListeners() {
+    document.querySelectorAll('.profile-navigation-trigger').forEach(element => {
+        if (!element.hasAttribute('data-navigation-listener-attached')) {
+            element.setAttribute('data-navigation-listener-attached', 'true');
+            element.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                if (userId && typeof window.navigateToProfile === 'function') {
+                    window.navigateToProfile(userId);
+                }
+            });
+        }
+    });
 }
 
 function attachReviewDetailCommentListeners(reviewId) {
@@ -2709,11 +2769,11 @@ async function submitCreateReview() {
                 });
             }
             
-            console.log('✅ Reseña editada exitosamente');
+            console.log(' Reseña editada exitosamente');
             if (typeof showAlert === 'function') {
-                showAlert('✅ Reseña editada exitosamente', 'success');
+                showAlert(' Reseña editada exitosamente', 'success');
             } else {
-                alert('✅ Reseña editada exitosamente');
+                alert(' Reseña editada exitosamente');
             }
             hideCreateReviewModal();
             if (modal) modal.removeAttribute('data-edit-review-id');
@@ -2919,6 +2979,199 @@ async function submitCreateReview() {
     }
 }
 
+// --- FUNCIONES PARA MODAL DE SEGUIDORES/SEGUIDOS ---
+
+/**
+ * Carga y muestra la lista de seguidores o seguidos en el modal
+ * @param {string} userId - ID del usuario
+ * @param {string} type - 'followers' o 'following'
+ */
+async function showFollowersModal(userId, type) {
+    const modal = document.getElementById('followersModalOverlay');
+    const modalTitle = document.getElementById('followersModalTitle');
+    const followersList = document.getElementById('followersList');
+    
+    if (!modal || !modalTitle || !followersList) {
+        console.error('❌ Elementos del modal no encontrados');
+        return;
+    }
+    
+    // Configurar título
+    modalTitle.textContent = type === 'followers' ? 'Seguidores' : 'Seguidos';
+    
+    // Mostrar modal
+    modal.style.display = 'flex';
+    
+    // Mostrar loading
+    followersList.innerHTML = `
+        <div class="followers-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Cargando...</p>
+        </div>
+    `;
+    
+    try {
+        let users = [];
+        
+        if (type === 'followers') {
+            // Obtener lista de seguidores
+            const response = await window.userApi.getFollowerList(userId);
+            const data = response.Items || response.items || response || [];
+            
+            // Obtener información completa de cada usuario
+            for (const item of data) {
+                const followerId = item.FollowerId || item.followerId || item.UserId || item.userId || item.id;
+                if (followerId) {
+                    try {
+                        const userInfo = await window.userApi.getUserProfile(followerId);
+                        users.push({
+                            userId: followerId,
+                            username: userInfo.Username || userInfo.username || 'Usuario',
+                            avatar: userInfo.ImgProfile || userInfo.imgProfile || userInfo.avatar || '../../Assets/default-avatar.png',
+                            bio: userInfo.Bio || userInfo.bio || ''
+                        });
+                    } catch (err) {
+                        console.warn(`⚠️ Error obteniendo info del usuario ${followerId}:`, err);
+                        // Agregar usuario con datos mínimos
+                        users.push({
+                            userId: followerId,
+                            username: 'Usuario',
+                            avatar: '../../Assets/default-avatar.png',
+                            bio: ''
+                        });
+                    }
+                }
+            }
+        } else {
+            // Obtener lista de seguidos
+            const API_BASE = window.API_BASE_URL || 'http://localhost:5000';
+            const token = localStorage.getItem("authToken");
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            
+            const response = await axios.get(`${API_BASE}/api/gateway/users/${userId}/follow`, { headers });
+            const data = response.data.Items || response.data.items || response.data || [];
+            
+            // Obtener información completa de cada usuario
+            for (const item of data) {
+                const followingId = item.FollowingId || item.followingId || item.UserId || item.userId || item.id;
+                if (followingId) {
+                    try {
+                        const userInfo = await window.userApi.getUserProfile(followingId);
+                        users.push({
+                            userId: followingId,
+                            username: userInfo.Username || userInfo.username || 'Usuario',
+                            avatar: userInfo.ImgProfile || userInfo.imgProfile || userInfo.avatar || '../../Assets/default-avatar.png',
+                            bio: userInfo.Bio || userInfo.bio || ''
+                        });
+                    } catch (err) {
+                        console.warn(`⚠️ Error obteniendo info del usuario ${followingId}:`, err);
+                        // Agregar usuario con datos mínimos
+                        users.push({
+                            userId: followingId,
+                            username: 'Usuario',
+                            avatar: '../../Assets/default-avatar.png',
+                            bio: ''
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Renderizar lista de usuarios
+        if (users.length === 0) {
+            followersList.innerHTML = `
+                <div class="followers-empty">
+                    <i class="fas fa-users"></i>
+                    <p>No hay ${type === 'followers' ? 'seguidores' : 'seguidos'} aún</p>
+                </div>
+            `;
+        } else {
+            followersList.innerHTML = users.map(user => `
+                <div class="follower-item" data-user-id="${user.userId}" style="cursor: pointer;">
+                    <img src="${user.avatar}" 
+                         alt="${user.username}" 
+                         class="follower-avatar"
+                         onerror="this.src='../../Assets/default-avatar.png'">
+                    <div class="follower-info">
+                        <h4 class="follower-username">${user.username}</h4>
+                        ${user.bio ? `<p class="follower-bio">${user.bio}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Agregar event listeners para navegar a perfiles
+            followersList.querySelectorAll('.follower-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const targetUserId = this.getAttribute('data-user-id');
+                    if (targetUserId && typeof window.navigateToProfile === 'function') {
+                        window.navigateToProfile(targetUserId);
+                    }
+                });
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cargando lista:', error);
+        followersList.innerHTML = `
+            <div class="followers-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar la lista</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Cierra el modal de seguidores/seguidos
+ */
+function closeFollowersModal() {
+    const modal = document.getElementById('followersModalOverlay');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Inicializa los event listeners para el modal de seguidores/seguidos
+ */
+function initializeFollowersModal() {
+    // Botón de cerrar
+    const closeBtn = document.getElementById('closeFollowersModal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeFollowersModal);
+    }
+    
+    // Cerrar al hacer clic fuera del modal
+    const modal = document.getElementById('followersModalOverlay');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeFollowersModal();
+            }
+        });
+    }
+    
+    // Botones de estadísticas (seguidores/seguidos)
+    const followersStat = document.getElementById('followers-stat');
+    const followingStat = document.getElementById('following-stat');
+    
+    if (followersStat) {
+        followersStat.addEventListener('click', function() {
+            if (profileUserId) {
+                showFollowersModal(profileUserId, 'followers');
+            }
+        });
+    }
+    
+    if (followingStat) {
+        followingStat.addEventListener('click', function() {
+            if (profileUserId) {
+                showFollowersModal(profileUserId, 'following');
+            }
+        });
+    }
+}
+
 // Hacer las funciones disponibles globalmente para que los listeners puedan usarlas
 window.showEditReviewModal = showEditReviewModal;
 window.showDeleteReviewModal = showDeleteReviewModal;
@@ -2929,3 +3182,5 @@ window.showReviewDetailModal = showReviewDetailModal;
 window.initializeReviewDetailModalLogic = initializeReviewDetailModalLogic;
 window.showCreateReviewModal = showCreateReviewModal;
 window.initializeCreateReviewModal = initializeCreateReviewModal;
+window.showFollowersModal = showFollowersModal;
+window.initializeFollowersModal = initializeFollowersModal;

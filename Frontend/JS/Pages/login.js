@@ -28,12 +28,75 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitButton, true);
         showAlert('Iniciando sesión...', 'info');
         
-        // Intentar primero el backend directo, luego el gateway como fallback
-        const PORTS = [
-            { url: 'http://localhost:8003', isGateway: false },
-            { url: 'http://localhost:5000', isGateway: true }
-        ];
-        attemptLoginWithPorts(username, password, PORTS, 0, submitButton);
+        // Usar el gateway directamente
+        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const loginEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/login`;
+        
+        axios.post(loginEndpoint, {
+            Usuario: username,
+            Password: password
+        })
+        .then(response => {
+            const token = response.data.token || response.data.Token;
+            const userId = response.data.userId || response.data.UserId;
+            const usernameResp = response.data.username || response.data.Username;
+
+            if (token) localStorage.setItem('authToken', token);
+            if (userId) localStorage.setItem('userId', userId);
+            if (usernameResp) localStorage.setItem('username', usernameResp);
+
+            showAlert('¡Inicio de sesión exitoso!', 'success');
+            setButtonLoading(submitButton, false);
+            // Redirigir a home después de un breve delay para que se vea el mensaje
+            setTimeout(() => {
+                window.location.href = 'home.html';
+            }, 1000);
+        })
+        .catch(error => {
+            // Manejar errores
+            let message = 'Usuario o contraseña inválidos';
+            
+            if (error.response) {
+                const status = error.response.status;
+                const errorData = error.response.data;
+                
+                // Detectar error 500 con problema de base de datos
+                if (status === 500) {
+                    let errorText = '';
+                    if (typeof errorData === 'string') {
+                        errorText = errorData;
+                    } else if (errorData.message) {
+                        errorText = errorData.message;
+                    } else if (errorData.title) {
+                        errorText = errorData.title;
+                    } else if (errorData.error) {
+                        errorText = errorData.error;
+                    }
+                    
+                    // Detectar específicamente el error de PasswordResetToken
+                    if (errorText.includes('PasswordResetToken') || 
+                        errorText.includes('does not exist') || 
+                        errorText.includes('column')) {
+                        message = 'Error de configuración de base de datos: Falta la columna PasswordResetToken. El backend necesita aplicar una migración de Entity Framework. Contacta al administrador del backend.';
+                    } else {
+                        message = 'Error del servidor (500). Por favor, intenta nuevamente o contacta al administrador.';
+                    }
+                } else if (error.response.data) {
+                    if (typeof errorData === 'string') {
+                        message = sanitizeErrorMessage(errorData);
+                    } else if (errorData.message) {
+                        message = sanitizeErrorMessage(errorData.message);
+                    } else if (errorData.error) {
+                        message = sanitizeErrorMessage(errorData.error);
+                    }
+                }
+            } else {
+                message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway esté corriendo.';
+            }
+            
+            showAlert(message, 'danger');
+            setButtonLoading(submitButton, false);
+        });
     });
 
     function showFieldError(field, message) {
@@ -140,101 +203,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function attemptLoginWithPorts(username, password, ports, portIndex, submitButton) {
-        if (portIndex >= ports.length) {
-            // Todos los puertos fallaron
-            showAlert('No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.', 'danger');
-            setButtonLoading(submitButton, false);
-            return;
-        }
-
-        const currentPort = ports[portIndex];
-        const API_BASE_URL = currentPort.url;
-        
-        // Construir la ruta según si es gateway o no
-        const loginEndpoint = currentPort.isGateway 
-            ? `${API_BASE_URL}/api/gateway/users/login`
-            : `${API_BASE_URL}/api/User/Login`;
-        
-        axios.post(loginEndpoint, {
-            Usuario: username,
-            Password: password
-        })
-        .then(response => {
-            const token = response.data.token || response.data.Token;
-            const userId = response.data.userId || response.data.UserId;
-            const usernameResp = response.data.username || response.data.Username;
-
-            if (token) localStorage.setItem('authToken', token);
-            if (userId) localStorage.setItem('userId', userId);
-            if (usernameResp) localStorage.setItem('username', usernameResp);
-
-            showAlert('¡Inicio de sesión exitoso!', 'success');
-            setButtonLoading(submitButton, false);
-            // Redirigir a home después de un breve delay para que se vea el mensaje
-            setTimeout(() => {
-                window.location.href = 'home.html';
-            }, 1000);
-        })
-        .catch(error => {
-            // Si es un error de conexión y hay más puertos para intentar, probar el siguiente
-            const isConnectionError = !error.response || 
-                error.code === 'ECONNREFUSED' || 
-                error.code === 'ERR_NETWORK' ||
-                error.code === 'ERR_FAILED' ||
-                error.message?.includes('Network Error') ||
-                error.message?.includes('Failed to fetch') ||
-                error.message?.includes('ERR_CONNECTION_CLOSED') ||
-                error.message?.includes('CORS');
-
-            if (isConnectionError && portIndex < ports.length - 1) {
-                // Intentar con el siguiente puerto
-                attemptLoginWithPorts(username, password, ports, portIndex + 1, submitButton);
-            } else {
-                // Si es un error de autenticación o no hay más puertos, mostrar el error
-                let message = 'Usuario o contraseña inválidos';
-                
-                if (error.response) {
-                    const status = error.response.status;
-                    const errorData = error.response.data;
-                    
-                    // Detectar error 500 con problema de base de datos
-                    if (status === 500) {
-                        let errorText = '';
-                        if (typeof errorData === 'string') {
-                            errorText = errorData;
-                        } else if (errorData.message) {
-                            errorText = errorData.message;
-                        } else if (errorData.title) {
-                            errorText = errorData.title;
-                        } else if (errorData.error) {
-                            errorText = errorData.error;
-                        }
-                        
-                        // Detectar específicamente el error de PasswordResetToken
-                        if (errorText.includes('PasswordResetToken') || 
-                            errorText.includes('does not exist') || 
-                            errorText.includes('column')) {
-                            message = 'Error de configuración de base de datos: Falta la columna PasswordResetToken. El backend necesita aplicar una migración de Entity Framework. Contacta al administrador del backend.';
-                        } else {
-                            message = 'Error del servidor (500). Por favor, intenta nuevamente o contacta al administrador.';
-                        }
-                    } else if (error.response.data) {
-                        if (typeof errorData === 'string') {
-                            message = sanitizeErrorMessage(errorData);
-                        } else if (errorData.message) {
-                            message = sanitizeErrorMessage(errorData.message);
-                        } else if (errorData.error) {
-                            message = sanitizeErrorMessage(errorData.error);
-                        }
-                    }
-                } else if (!error.response && portIndex >= ports.length - 1) {
-                    message = 'No se pudo conectar al servidor. Por favor, verifica que el gateway o el backend estén corriendo.';
-                }
-                
-                showAlert(message, 'danger');
-                setButtonLoading(submitButton, false);
-            }
-        });
-    }
 });

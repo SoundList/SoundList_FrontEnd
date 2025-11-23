@@ -196,23 +196,17 @@ export async function getSongById(songId) {
     }
 }
 
-/**
- * Busca un álbum por su ID (GUID) de base de datos.
- * CORRECCIÓN: Usamos 'album' (minúscula).
- */
 export async function getAlbumById(albumId) {
     try {
-        // CORRECCIÓN: /api/gateway/contents/album/ (minúscula)
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/album/${albumId}`, {
-            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        // CORRECCIÓN: Usamos la ruta completa del Gateway con /db/
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/album/db/${albumId}`, {
+             validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
-        if (response.status === 404 || response.status === 500) {
-            return null;
-        }
-        
-        return response.data;
+        if (response.status === 200) return response.data;
+        return null;
     } catch (error) {
+        console.error("Error en getAlbumById:", error);
         return null;
     }
 }

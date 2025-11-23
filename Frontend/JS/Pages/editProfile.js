@@ -226,5 +226,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (imageForm) {
         imageForm.addEventListener('submit', handleImageSubmit);
     }
+    const backBtn = document.getElementById('btn-back-profile');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '../../index.html'; 
+            }
+        });
+    }
     
 });

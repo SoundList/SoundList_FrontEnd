@@ -2709,11 +2709,11 @@ async function submitCreateReview() {
                 });
             }
             
-            console.log('✅ Reseña editada exitosamente');
+            console.log(' Reseña editada exitosamente');
             if (typeof showAlert === 'function') {
-                showAlert('✅ Reseña editada exitosamente', 'success');
+                showAlert(' Reseña editada exitosamente', 'success');
             } else {
-                alert('✅ Reseña editada exitosamente');
+                alert(' Reseña editada exitosamente');
             }
             hideCreateReviewModal();
             if (modal) modal.removeAttribute('data-edit-review-id');

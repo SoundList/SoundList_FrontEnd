@@ -584,7 +584,7 @@ async function submitCreateReview(state) {
                 }
             }
 
-            console.log('✅ Reseña editada exitosamente');
+            console.log(' Reseña editada exitosamente');
             
             // Recargar las reseñas si hay una función disponible
             if (state && state.loadReviews && typeof state.loadReviews === 'function') {
@@ -592,7 +592,7 @@ async function submitCreateReview(state) {
             } else if (typeof window.loadReviews === 'function') {
                 await window.loadReviews();
             }
-            showAlert('✅ Reseña editada exitosamente', 'success');
+            showAlert(' Reseña editada exitosamente', 'success');
             hideCreateReviewModal(state);
             if (modal) modal.removeAttribute('data-edit-review-id');
             if (state.loadReviews && typeof state.loadReviews === 'function') {

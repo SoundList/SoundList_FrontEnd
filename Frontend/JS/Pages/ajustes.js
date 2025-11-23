@@ -76,7 +76,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
+const backBtn = document.getElementById('btn-back-profile');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'index.html'; 
+            }
+        });
+    }
     // Formulario de cambio de contraseña
     const passwordForm = document.getElementById('form-change-password');
     if (passwordForm) {

@@ -150,3 +150,95 @@ small.password-hint,
     color: var(--blanco);
 }
 
+.settings-container {
+    position: relative; 
+}
+
+.btn-back-profile {
+    position: absolute;
+    top: 10px;   
+    left: -80px; 
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4); 
+    font-size: 2.5rem; 
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    z-index: 100;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.btn-back-profile:hover {
+    color: var(--blanco);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(-5px) scale(1.1);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+.custom-tooltip {
+    position: absolute;
+    top: 120%;  
+    left: 50%;  
+    transform: translateX(-50%) translateY(-10px);
+    background-color: rgba(13, 17, 32, 0.95);
+    color: var(--blanco);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-family: 'League Spartan', sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 101;
+}
+
+.custom-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%; 
+    left: 50%;
+    margin-left: -6px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent rgba(13, 17, 32, 0.95) transparent;
+}
+
+.btn-back-profile:hover .custom-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+
+@media (max-width: 1200px) {
+    .btn-back-profile {
+        left: 0;  
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .btn-back-profile {
+        position: static; 
+        margin-bottom: 15px;
+        display: block;
+        width: auto;
+        height: auto;
+        text-align: left;
+        font-size: 1.5rem;
+        padding-left: 10px;
+    }
+    
+    .custom-tooltip {
+        display: none; 
+    }
+}

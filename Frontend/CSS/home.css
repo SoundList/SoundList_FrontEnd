@@ -1515,39 +1515,46 @@ button.nav-btn.active:hover {
 /* Mobile Large (max-width: 768px) */
 @media (max-width: 767.98px) {
     .top-header {
-        padding: 0.5rem 0.75rem;
+        padding: 0.5rem 0.5rem; /* Ajuste: Padding general del header */
         position: sticky;
         top: 0;
         z-index: 1000;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     .header-content {
+        /* Hacemos que el header-content envuelva */
+        flex-wrap: wrap; 
+        gap: 0.5rem; /* Espacio entre las filas del header */
         padding: 0;
-        gap: 0.5rem;
         align-items: center;
-        flex-wrap: nowrap;
+        justify-content: space-between; /* Distribuir elementos en la fila */
     }
     
     .header-left {
+        /* Logo a la izquierda, en la primera fila */
         flex-wrap: nowrap;
         gap: 0.5rem;
         margin-left: 0;
-        flex: 1;
+        flex: 1 1 auto; /* Permite que ocupe espacio y se encoja */
         min-width: 0;
         align-items: center;
         overflow: hidden;
+        order: 1; /* Primer elemento en la fila */
     }
     
     .logo-icon {
-        width: 32px;
-        height: 32px;
+        width: 36px; /* Logo un poco más grande para visibilidad */
+        height: 36px;
         margin-top: 0;
         flex-shrink: 0;
     }
     
     .search-container {
-        flex: 1;
+        /* La búsqueda ocupa su propia fila */
+        flex: 1 1 100%; /* Ocupa el 100% del ancho disponible */
         min-width: 0;
+        order: 3; /* Tercer elemento (segunda fila) */
     }
     
     .search-input {
@@ -1562,17 +1569,23 @@ button.nav-btn.active:hover {
     }
     
     .header-right {
+        /* Iconos de acción a la derecha, en la primera fila */
         gap: 0.25rem;
         flex-shrink: 0;
+        order: 2; /* Segundo elemento en la fila */
     }
     
-    .icon-btn {
-        width: 36px;
-        height: 36px;
+    .icon-btn,
+    .icon-btn.profile-btn {
+        width: 36px !important; /* Iconos un poco más grandes para ser tocables */
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        padding: 0.3rem !important; /* Padding para hacerlos más fáciles de tocar */
         font-size: 1.25rem;
-        padding: 0.4rem;
     }
     
+    /* El botón del menú hamburguesa */
     .mobile-menu-toggle {
         width: 36px;
         height: 36px;
@@ -1580,6 +1593,7 @@ button.nav-btn.active:hover {
         font-size: 1.1rem;
     }
     
+    /* --- CONTENIDO PRINCIPAL --- */
     .main-content {
         padding: 1rem;
     }
@@ -1590,7 +1604,7 @@ button.nav-btn.active:hover {
     }
     
     .carousel-section {
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem; /* Ajuste de margen inferior */
     }
     
     .carousel-container {
@@ -1657,7 +1671,7 @@ button.nav-btn.active:hover {
     }
     
     .reviews-section {
-        margin-top: 2rem;
+        margin-top: 1.5rem !important; /* AJUSTE: Reduce el espacio entre carrusel y reseñas */
         margin-bottom: 1.5rem;
     }
     
@@ -1697,6 +1711,16 @@ button.nav-btn.active:hover {
         align-items: center;
         padding-top: 0.5rem;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-wrap: wrap; 
+        gap: 0.5rem;
+    }
+    
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        padding: 0.3rem 0.6rem; 
+        font-size: 0.75rem; 
+        min-height: 30px;
     }
     
     .review-rating {
@@ -1714,7 +1738,7 @@ button.nav-btn.active:hover {
         min-height: 36px;
     }
     
-    /* Modales responsive */
+    /* --- MODALES --- */
     .comments-modal {
         width: 95%;
         max-width: 100%;
@@ -1754,158 +1778,30 @@ button.nav-btn.active:hover {
         min-height: 44px;
     }
     
-    /* Mejorar scroll en móviles */
-    /* -webkit-overflow-scrolling: touch; removed - not supported in Safari 13+ and other modern browsers */
-    
-    /* Asegurar que los elementos interactivos sean fáciles de tocar */
     .comment-action-btn,
     .comment-like-btn {
         min-width: 44px;
         min-height: 44px;
         padding: 0.5rem;
     }
+
+    /* --- BOTONES POPULARES/RECIENTES --- */
+    .filter-buttons {
+        flex-wrap: nowrap; /* Aseguramos que no se envuelvan */
+        gap: 0.5rem;
+    }
+    .filter-btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    /* --- NOTIFICATION DROPDOWN FIX --- */
+    .notification-dropdown {
+        width: 280px; /* Ancho fijo para el desplegable de notificaciones */
+        right: 0.5rem; /* Ajustar posición */
+    }
 }
 
-/* Mobile Small (max-width: 576px) */
-@media (max-width: 575.98px) {
-    .top-header {
-        padding: 0.5rem 0.625rem;
-    }
-    
-    .header-content {
-        gap: 0.4rem;
-    }
-    
-    .header-left {
-        gap: 0.4rem;
-    }
-    
-    .logo-icon {
-        width: 28px;
-        height: 28px;
-    }
-    
-    .search-input {
-        padding: 0.45rem 0.65rem 0.45rem 2rem;
-        font-size: 0.8rem;
-    }
-    
-    .search-icon {
-        left: 0.65rem;
-        font-size: 0.85rem;
-    }
-    
-    .icon-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 1.15rem;
-        padding: 0.35rem;
-    }
-    
-    .mobile-menu-toggle {
-        width: 32px;
-        height: 32px;
-        padding: 0.35rem;
-        font-size: 1rem;
-    }
-    
-    .carousel-indicators {
-        gap: 0.3rem;
-    }
-    
-    .carousel-indicator {
-        width: 5px;
-        height: 5px;
-    }
-    
-    .main-content {
-        padding: 0.75rem;
-    }
-    
-    .section-title {
-        font-size: 1.15rem;
-        margin-bottom: 0.875rem;
-    }
-    
-    .carousel-wrapper {
-        height: 220px;
-    }
-    
-    .carousel-nav-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-    
-    .carousel-card {
-        padding: 1rem;
-    }
-    
-    .album-image {
-        width: 120px;
-        height: 120px;
-    }
-    
-    .carousel-title {
-        font-size: 1.35rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .carousel-description {
-        font-size: 0.9rem;
-    }
-    
-    .carousel-text {
-        font-size: 0.85rem;
-    }
-    
-    .review-item {
-        padding: 0.875rem;
-    }
-    
-    .review-avatar {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .review-header {
-        font-size: 0.85rem;
-    }
-    
-    .review-comment {
-        font-size: 0.85rem;
-    }
-    
-    .comment-btn,
-    .like-btn {
-        padding: 0.45rem 0.875rem;
-        font-size: 0.8rem;
-        min-height: 32px;
-    }
-    
-    .comments-modal {
-        width: 100%;
-        max-height: 100vh;
-        border-radius: 0;
-        margin: 0;
-    }
-    
-    .comments-modal-header {
-        padding: 0.875rem 1rem;
-    }
-    
-    .comments-modal-title {
-        font-size: 1.15rem;
-    }
-    
-    .comments-list-container {
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .comments-input-container {
-        padding: 0.875rem;
-    }
-}
 
 /* Extra Small Mobile (max-width: 400px) */
 @media (max-width: 400px) {
@@ -4268,31 +4164,10 @@ button.nav-btn.active:hover {
     border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Logout Modal Responsive - Mobile Small */
-@media (max-width: 575.98px) {
-    .logout-modal {
-        width: 95%;
-        max-width: 350px;
-    }
-    
-    .logout-modal-content {
-        padding: 1.5rem;
-    }
-    
-    .logout-modal-title {
-        font-size: 1.25rem;
-    }
-    
-    .logout-logo-img {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .action-btn {
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-    }
-}
+
+
+
+
 
 /* =========================================
    ESTILOS DE VALIDACIÓN DEL MODAL "CREAR RESEÑA"
@@ -4345,4 +4220,399 @@ button.nav-btn.active:hover {
 /* Quitar el margen inferior al último elemento dentro de .create-review-form */
 .create-review-form > *:last-child {
     margin-bottom: 0;
+}
+
+
+/* --- 1. RANGO ESPECÍFICO: Notebookes (992px a 1400px) --- */
+@media (min-width: 992px) and (max-width: 1400px) {
+    
+    .header-content {
+        /* Reducción de gaps y compresión forzada */
+        gap: 0.5rem; 
+        justify-content: space-between;
+    }
+
+    /* Limpieza de márgenes negativos en esta franja */
+    .header-left {
+        /* ¡ELIMINAMOS EL MARGEN NEGATIVO AQUÍ! */
+        margin-left: 0 !important; 
+        flex: 0 0 auto;
+    }
+    
+    .logo-icon {
+        /* Reducimos el logo en notebook para ahorrar espacio */
+        width: 60px;
+        height: 50px;
+    }
+
+    .search-container {
+        flex: 2; /* Prioridad a la búsqueda */
+        min-width: 200px; 
+        max-width: 350px; 
+    }
+
+    /* Botones: Espacios mínimos */
+    .header-center {
+        /* Reducimos el gap de 7rem a 1rem */
+        gap: 1rem !important; 
+        /* ¡ELIMINAMOS EL MARGEN NEGATIVO AQUÍ! */
+        margin-right: 0 !important; 
+    }
+    
+    .nav-btn {
+        /* Reducimos el padding horizontal de 3.5rem a 1.5rem */
+        padding: 0.75rem 1.5rem !important; 
+        font-size: 0.9rem !important;
+    }
+
+    /* Iconos derecha */
+    .header-right {
+        /* ¡ELIMINAMOS EL MARGEN NEGATIVO AQUÍ! */
+        margin-right: 0 !important;
+        flex: 0 0 auto;
+        gap: 0.5rem;
+    }
+    
+    .icon-btn,
+    /* Aplicamos la misma regla al contenedor de la imagen del perfil */
+    .icon-btn.profile-btn {
+        /* Tamaño más compacto */
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        /* Eliminamos cualquier padding o margen que pueda desbordar */
+        padding: 0 !important; 
+        margin: 0 !important;
+        flex-shrink: 0;
+    }
+
+    /* Si estás usando el .profile-icon para el audífono/avatar, también lo ajustamos */
+    .profile-icon {
+        width: 36px !important;
+        height: 36px !important;
+        max-width: 36px !important;
+        max-height: 36px !important;
+    }
+
+
+    .reviews-section {
+        margin-top: 2rem !important;
+        margin-bottom: 2rem !important;
+    }
+}
+
+
+/* --- 2. RESTAURACIÓN: PC de Escritorio Grande (1401px y más) --- */
+@media (min-width: 1401px) {
+    
+    .header-content {
+        gap: 2rem !important;
+    }
+
+    /* Restaurar Márgenes y Flexibilidad Originales */
+    .header-left {
+        margin-left: -12rem !important; 
+        flex: 1 !important;
+    }
+    
+    .logo-icon {
+        width: 100px !important;
+        height: 90px !important;
+    }
+
+    .search-container {
+        flex: 1 !important;
+        max-width: 400px !important;
+    }
+
+    .header-center {
+        gap: 7rem !important; 
+        margin-right: -13rem !important;
+        flex: 1 !important; 
+    }
+    
+    .nav-btn {
+        padding: 0.75rem 3.5rem !important; 
+        font-size: 0.95rem !important;
+    }
+
+    .header-right {
+        margin-right: -8rem !important; 
+        flex: 1 !important;
+    }
+    
+    .icon-btn,
+    .icon-btn.profile-btn {
+        width: 50px !important;
+        height: 50px !important;
+        min-width: 50px !important;
+        min-height: 50px !important;
+    }
+}
+
+
+@media (max-width: 575.98px) {
+    /* --- AJUSTES GLOBALES Y DE CONTENIDO --- */
+    .top-header {
+        padding: 0.3rem 0.3rem !important; /* Mínimo padding para el header */
+    }
+
+    .main-content {
+        padding: 0.4rem !important; /* Padding mínimo exterior */
+    }
+
+    .section-title {
+        font-size: 1rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    
+    .reviews-section {
+        margin-top: 1rem !important; /* Espacio mínimo para reseñas */
+        margin-bottom: 1rem !important;
+    }
+
+    /* --- 1. HEADER (Visibilidad y Buscador) --- */
+    .header-content {
+        gap: 0.15rem !important; 
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+    }
+    
+    .header-left {
+        flex: 0 0 auto !important; 
+        gap: 0.3rem !important;
+    }
+    
+    .logo-icon {
+        width: 28px !important;
+        height: 28px !important;
+    }
+    
+    .search-container {
+        /* Reducir la prioridad del buscador para que los íconos quepan */
+        flex: 0 1 auto !important; 
+        min-width: 100px !important; /* Mínimo viable */
+    }
+
+    /* ICONOS DERECHA: Reducción de tamaño para que quepa el '+' */
+    .header-right {
+        /* Espacio mínimo entre los 3 íconos */
+        gap: 0.1rem !important; 
+        padding-right: 0 !important; /* Eliminar padding derecho */
+    }
+    
+    .icon-btn,
+    .icon-btn.profile-btn {
+        /* Reducir a 28px de ancho y alto */
+        width: 28px !important; 
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .search-input {
+        padding: 0.3rem 0.5rem 0.3rem 1.6rem !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .search-icon {
+        left: 0.4rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+
+    /* NAV BUTTONS: Compresión extrema si aparecen en la segunda fila */
+    .header-center {
+        gap: 0.3rem !important;
+        margin-top: 0.3rem !important;
+    }
+    .nav-btn {
+        padding: 0.4rem 0.6rem !important; 
+        font-size: 0.75rem !important;
+        border-radius: 15px !important; 
+    }
+    
+    /* --- 2. CARRUSEL Y CÍRCULOS (Eliminación Definitiva) --- */
+    .carousel-wrapper {
+        height: 200px !important; /* Altura más grande (vertical) */
+    }
+    
+    .carousel-card {
+        padding: 0.7rem !important;
+        gap: 0.5rem !important;
+    }
+    
+    .album-image {
+        width: 80px !important;
+        height: 80px !important;
+    }
+
+    /* SOLUCIÓN FINAL: OCULTAR LOS CÍRCULOS INDICADORES DEL CARRUSEL */
+    .carousel-indicators {
+        display: none !important; 
+    }
+
+
+    .reviews-list {
+        /* Aumentamos la altura dinámica del scroll para que ocupe más pantalla */
+        max-height: 75vh !important; 
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* 2. AGREGAR UN GRAN ESPACIO INFERIOR A LA PÁGINA */
+    /* Esto asegura que haya espacio para que la última reseña suba al hacer scroll */
+    .home-container {
+        padding-bottom: 5rem !important; 
+        /* Es necesario sobreescribir la restricción de altura que ya tienes en .home-container, 
+           así que la incluiremos aquí para que tenga un scroll funcional: */
+        max-height: none !important; 
+        min-height: auto !important;
+        overflow: auto !important;
+    }
+
+    /* 3. PEQUEÑO AJUSTE AL AVATAR DE LA RESEÑA (Para que no se corte) */
+    .review-avatar {
+        /* Aseguramos que los avatares sean de un tamaño que encaje con el padding */
+        width: 30px !important;
+        height: 30px !important;
+    } 
+    /* --- 3. RESEÑAS: SCROLL Y BOTONES DE ACCIÓN --- */
+    
+    .reviews-list::-webkit-scrollbar {
+        width: 6px !important; 
+    }
+    .reviews-list::-webkit-scrollbar-thumb {
+        background: rgba(124, 58, 237, 0.5) !important;
+        border-radius: 3px !important;
+    }
+    
+    /* FIX FILTROS (Populares/Recientes) */
+    .reviews-header .reviews-filter {
+        margin-left: 0 !important; 
+        flex-wrap: nowrap !important;
+        padding: 0.1rem !important;
+        gap: 0.1rem !important;
+    }
+    .filter-btn {
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .review-item {
+        padding: 0.6rem !important;
+        gap: 0.6rem !important;
+    }
+    
+    .review-avatar {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    
+    .review-comment {
+        font-size: 0.75rem !important;
+    }
+
+    /* FIX BOTONES DENTRO DE RESEÑAS (Tachito, Lápiz, etc.) */
+    .review-actions {
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+        gap: 0.1rem !important;
+    }
+    
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        width: auto !important;
+        height: auto !important;
+        padding: 0.2rem 0.3rem !important; 
+        margin: 0 0.1rem !important;
+        font-size: 0.8rem !important;
+        min-height: 24px !important;
+        min-width: 24px !important;
+        border-radius: 50% !important; 
+    }
+    
+    .review-rating {
+        display: flex !important;
+        align-items: center !important;
+        font-size: 0.8rem !important;
+        margin-right: auto !important;
+    }
+
+    
+    
+    .review-stars {
+        font-size: 0.8rem !important;
+    }
+
+    /* --- 4. MODALES (Notificaciones) --- */
+    .notifications-dropdown {
+        max-width: 240px !important;
+        min-width: 240px !important;
+        right: 0.2rem !important; 
+    }
+    .notifications-dropdown-header {
+        padding: 0.6rem !important;
+    }
+    .notification-item {
+        padding: 0.5rem !important;
+    }
+    .notification-text {
+        font-size: 0.75rem !important;
+    }
+    
+    /* MODALES GRANDES (Comentarios) */
+    .comments-modal {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* --- REGLAS DE TUS OTROS COMPONENTES --- */
+    .mobile-menu-toggle {
+        width: 32px; height: 32px; padding: 0.35rem; font-size: 1rem;
+    }
+    .logout-modal { max-width: 350px; }
+    .logout-modal-content { padding: 1.5rem; }
+    .logout-modal-title { font-size: 1.25rem; }
+    .logout-logo-img { width: 60px; height: 60px; }
+    .action-btn { padding: 0.75rem 1rem; font-size: 0.9rem; }
+    .login-required-modal { max-width: 90%; }
+    .delete-comment-modal { max-width: 90%; }
+    .comments-modal-header { padding: 0.6rem 0.7rem; }
+
+
+    .header-content {
+        /* CRUCIAL: Usamos space-between para distribuir los 3 bloques equitativamente */
+        justify-content: space-between !important; 
+        gap: 0.15rem !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .search-container {
+        /* Reducir el min-width AÚN MÁS (de 80px a 70px) para dejar espacio */
+        min-width: 70px !important; 
+        flex: 1 1 auto !important; 
+    }
+
+    /* Reducir los íconos de la derecha a 24px (Campana, Perfil, +) */
+    .icon-btn,
+    .icon-btn.profile-btn {
+        width: 24px !important; 
+        height: 24px !important;
+        min-width: 24px !important;
+        min-height: 24px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* Si la imagen de perfil tiene una clase diferente, también la ajustamos */
+    .profile-icon {
+        width: 24px !important; 
+        height: 24px !important;
+    }
 }

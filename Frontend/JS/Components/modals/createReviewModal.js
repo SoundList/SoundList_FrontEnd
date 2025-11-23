@@ -319,6 +319,11 @@ export function showCreateReviewModal(contentData = null, state) {
     
     if (!modal) return;
     
+
+    clearReviewFormErrors();
+
+
+
     if (contentData && contentData.type === 'artist') {
         showAlert('No se pueden crear reseñas de artistas. Por favor, selecciona una canción o un álbum.', 'warning');
         return;
@@ -343,7 +348,7 @@ export function showCreateReviewModal(contentData = null, state) {
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
     
-    // Resetear estrellas
+    
     const stars = document.querySelectorAll('#createReviewStars .star-input');
     if (stars.length > 0) {
         stars.forEach(star => star.classList.remove('active'));
@@ -401,9 +406,7 @@ function setSelectedContent(contentData, state) {
     }
 }
     
-/**
- * Cierra y resetea el modal de "Crear Reseña".
- */
+
 function hideCreateReviewModal(state) {
     const modal = document.getElementById('createReviewModalOverlay');
     if (modal) {
@@ -419,6 +422,55 @@ function hideCreateReviewModal(state) {
     }
 }
     
+function getCurrentRating() {
+    const stars = document.querySelectorAll('#createReviewStars .star-input.active');
+    return stars.length;
+}
+
+function displayFieldError(elementId, message) {
+    const inputElement = document.getElementById(elementId);
+    if (!inputElement) return;
+
+    const isStarsInput = elementId === 'createReviewStars';
+
+    const borderElement = isStarsInput 
+        ? document.getElementById('createReviewStars').closest('.create-review-rating') 
+        : inputElement;
+
+    const errorElementId = (elementId === 'createReviewStars') 
+        ? 'createReviewRatingError' 
+        : elementId.replace('Input', 'Error');
+    const errorElement = document.getElementById(errorElementId);
+    
+    if (!borderElement) return;
+
+    if (message) {
+        borderElement.classList.add('is-invalid-custom'); 
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.add('show-error'); 
+        }
+    } else {
+        borderElement.classList.remove('is-invalid-custom');
+        if (errorElement) {
+            errorElement.textContent = '';
+            errorElement.classList.remove('show-error'); 
+        }
+    }
+}
+
+
+function clearReviewFormErrors() {
+    displayFieldError('createReviewTitleInput', null);
+    displayFieldError('createReviewTextInput', null);
+    displayFieldError('createReviewStars', null); 
+}
+
+
+
+
+
+
 /**
  * Envía la reseña (nueva o editada) al backend.
  */
@@ -437,30 +489,44 @@ async function submitCreateReview(state) {
     
     const title = titleInput ? titleInput.value.trim() : '';
     const content = textInput ? textInput.value.trim() : '';
-    
-    let rating = 0;
-    // Primero intentar obtener el rating del estado
-    if (state && state.currentRating) {
-        rating = state.currentRating;
-    } else if (createReviewStars) {
-        // Fallback: contar estrellas activas
-        const activeStars = createReviewStars.querySelectorAll('.star-input.active');
-        rating = activeStars.length;
-    }
-    
+    const rating = getCurrentRating(); 
+    const contentData = state.currentReviewData;
+
+    let hasError = false;
+
     if (!title) {
-        showAlert('Por favor, ingresa un título para la reseña', 'warning');
-        return;
+        displayFieldError('createReviewTitleInput', 'El título de la reseña es obligatorio.');
+        hasError = true;
+    } else {
+        displayFieldError('createReviewTitleInput', null);
     }
+
+    // 2. Validar Texto
     if (!content) {
-        showAlert('Por favor, escribe tu reseña', 'warning');
-        return;
+        displayFieldError('createReviewTextInput', 'El contenido de la reseña es obligatorio.');
+        hasError = true;
+    } else {
+        displayFieldError('createReviewTextInput', null);
     }
-    if (rating === 0) {
-        showAlert('Por favor, selecciona una calificación', 'warning');
-        return;
+
+    // 3. Validar Calificación
+    if (rating === 0) { 
+        displayFieldError('createReviewStars', 'Debes seleccionar una calificación (1-5 estrellas).');
+        hasError = true;
+    } else {
+        displayFieldError('createReviewStars', null); 
     }
     
+    if (hasError) {
+        return;
+    }
+
+    if (!contentData || !contentData.id) {
+        console.error('❌ currentReviewData inválido (Contenido no seleccionado):', state.currentReviewData);
+        showAlert('Error: No se seleccionó contenido.', 'warning');
+        return; 
+    }
+
     const userId = localStorage.getItem('userId');
     const modal = document.getElementById('createReviewModalOverlay');
     const editReviewId = modal ? modal.getAttribute('data-edit-review-id') : null;
@@ -479,9 +545,6 @@ async function submitCreateReview(state) {
             
             await updateReview(editReviewId, reviewData, authToken);
             
-            // ============================================================
-            // === NUEVO: SINCRONIZACIÓN DE PROMEDIO AL EDITAR ===
-            // ============================================================
             if (state.currentReviewData && state.currentReviewData.id) {
                 try {
                     console.log("🔄 (Edición) Recalculando promedio para actualizar Content...");
@@ -603,8 +666,6 @@ async function submitCreateReview(state) {
         
         const response = await createReview(reviewData, authToken);
         
-        // === NUEVO CÓDIGO: ACTUALIZACIÓN DE PROMEDIO ===
-        // === LÓGICA DE SINCRONIZACIÓN ===
         try {
             console.log("🔄 1. Iniciando cálculo de promedio...");
             
@@ -676,7 +737,7 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
         console.error('Modal de crear reseña no encontrado');
         return;
     }
-    
+    clearReviewFormErrors();
     modal.setAttribute('data-edit-review-id', reviewId);
     
     const normalizedReviewId = String(reviewId).trim();

@@ -1,4 +1,3 @@
-// --- 1. IMPORTACIONES CORREGIDAS ---
 import {
     getSongByApiId,
     getOrCreateSong,
@@ -180,7 +179,7 @@ function renderSongHeader(song) {
     document.getElementById('ratingCount').textContent = `(${reviewCount} reviews)`;
 
     // ------------------------------------------------------
-    // 2. LÓGICA DE AUDIO (Plan Híbrido Spotify/Deezer)
+    // 2. LÓGICA DE AUDIO
     // ------------------------------------------------------
     const audioContainer = document.getElementById('audioPlayerContainer');
     if (audioContainer) {
@@ -217,7 +216,7 @@ function renderReviews(reviews) {
         ? reviews.map(createReviewCard).join('')
         : '<p class="text-light text-center">Aún no hay reseñas.</p>';
         
-    attachReviewActionListeners(listEl); // <-- ¡IMPORTANTE! Añadir listeners
+    attachReviewActionListeners(listEl); 
 
     document.getElementById('aiSummary').style.display = reviews.length > 2 ? 'flex' : 'none';
     if(document.getElementById('aiSummaryText')) {
@@ -225,7 +224,7 @@ function renderReviews(reviews) {
     }
 }
 
-// --- LÓGICA DEL MODAL "CREAR RESEÑA" (¡CORREGIDA!) ---
+// --- LÓGICA DEL MODAL "CREAR RESEÑA" ---
 
 function initializeCreateReviewModal() {
     const btnAgregar = document.getElementById('btnAgregarResena');
@@ -278,37 +277,22 @@ function highlightStars(rating) {
 function displayFieldError(elementId, message) {
     const inputElement = document.getElementById(elementId);
     if (!inputElement) return;
-
     const isStarsContainer = elementId === 'starsRatingInput';
-    
-    // El elemento donde se aplica el borde rojo.
-    // Esto es vital para que funcione el CSS: input para el texto, o el padre para las estrellas.
     const borderElement = isStarsContainer ? inputElement.parentElement : inputElement;
-
-    // Aunque no mostraremos el texto, mantenemos la limpieza del div por si acaso.
-    // Usaremos el ID de error que enviaste en el HTML para evitar errores.
     const errorElementId = (elementId === 'starsRatingInput') ? 'reviewRatingError' : elementId.replace('Input', 'Error');
     const errorElement = document.getElementById(errorElementId);
     
-    // Obtenemos el contenedor padre para la limpieza del texto (aunque esté oculto por CSS)
-    const textVisibilityContainer = isStarsContainer 
-        ? inputElement.parentElement 
-        : inputElement.closest('.mb-3'); 
-    
-
     if (message) {
         borderElement.classList.add('is-invalid-custom'); 
         if (errorElement) {
             errorElement.textContent = message;
+            errorElement.classList.add('show-error'); 
         }
     } else {
         borderElement.classList.remove('is-invalid-custom');
-        if (textVisibilityContainer) {
-            textVisibilityContainer.classList.remove('is-invalid-field');
-        }
         if (errorElement) {
             errorElement.textContent = '';
-            errorElement.style.display = 'none';
+            errorElement.classList.remove('show-error');
         }
     }
 }
@@ -328,36 +312,44 @@ async function handleSubmitReview() {
     
     if (!authToken || !userId) {
         showAlert('Debes iniciar sesión para crear una reseña', 'warning');
-        // showLoginRequiredModal(); // Descomentar si tienes esta función
+        
         return;
     }
 
     const reviewTitle = document.getElementById('reviewTitleInput').value.trim();
-    const reviewText = document.getElementById('reviewTextInput').value.trim(); // <--- Aquí se define reviewText
-
+    const reviewText = document.getElementById('reviewTextInput').value.trim(); 
     let hasError = false;
 
-    // 1. Validar Título
     if (!reviewTitle) {
+        
         displayFieldError('reviewTitleInput', 'El título de la reseña es obligatorio.');
         hasError = true;
+    } else {
+        
+        displayFieldError('reviewTitleInput', null); 
     }
 
-    // 2. Validar Texto
+    
     if (!reviewText) {
         displayFieldError('reviewTextInput', 'El contenido de la reseña es obligatorio.');
         hasError = true;
+    } else {
+        
+        displayFieldError('reviewTextInput', null);
     }
 
-    // 3. Validar Calificación
-    // currentRating se actualiza al hacer clic en las estrellas (lógica en setStarRating)
+    
     if (currentRating === 0) { 
+        
         displayFieldError('starsRatingInput', 'Debes seleccionar una calificación (1-5 estrellas).');
         hasError = true;
+    } else {
+        
+        displayFieldError('starsRatingInput', null); 
     }
 
     if (hasError) {
-        // Detiene el proceso y muestra los errores localizados
+        
         return; 
     }
 
@@ -368,10 +360,10 @@ async function handleSubmitReview() {
 
     const reviewData = {
         Title: reviewTitle,
-        Content: reviewText, // <--- CORRECCIÓN: Usamos 'reviewText', no 'content'
+        Content: reviewText, 
         Rating: currentRating,
         UserId: userId,
-        SongId: currentSongData.songId, // GUID Local
+        SongId: currentSongData.songId, 
         AlbumId: null
     };
     
@@ -381,16 +373,12 @@ async function handleSubmitReview() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'SUBIENDO...';
 
-        // ¡LLAMADA A API CORREGIDA!
-        const response = await createReview(reviewData, authToken);
         
-        // Guardar datos del contenido en localStorage para uso futuro (igual que en createReviewModal.js)
+        const response = await createReview(reviewData, authToken);
         const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
         if (reviewId) {
             const storageKey = `review_content_${String(reviewId).trim()}`;
             try {
-                // Obtener artista de todas las posibles fuentes
-                // Debug: ver qué campos tiene currentSongData
                 console.log('🔍 currentSongData completo:', currentSongData);
                 
                 const artistName = currentSongData.ArtistName || 
@@ -432,10 +420,8 @@ async function handleSubmitReview() {
         const allReviews = await getReviews();
         const reviewsData = allReviews.filter(r => r.songId === currentSongData.songId || r.SongId === currentSongData.songId);
         updateHeaderStatistics(reviewsData);
-        // ¡Volver a enriquecer las reseñas!
         const enrichedReviews = await Promise.all(
             reviewsData.map(async (review) => {
-                // (Copiamos la lógica de 'loadPageData' para enriquecer)
                 try {
                     const reviewId = review.reviewId || review.ReviewId || review.id;
                     const userId = review.userId || review.UserId;
@@ -478,8 +464,6 @@ async function handleSubmitReview() {
     }
 }
 
-// --- 8. LÓGICA DE MODALS (COPIADA DE ALBUMADMIN) ---
-// (Estas funciones son necesarias para renderReviews y attach...Listeners)
 
 function attachReviewActionListeners(reviewsListElement) {
     if (!reviewsListElement) return;
@@ -551,7 +535,7 @@ function attachReviewActionListeners(reviewsListElement) {
         btn.addEventListener('click', function(e) {
             e.stopPropagation(); 
             const authToken = localStorage.getItem('authToken');
-         if (!authToken) {
+            if (!authToken) {
                 showLoginRequiredModal();
                 return;
             }
@@ -566,8 +550,7 @@ function attachReviewActionListeners(reviewsListElement) {
             }
             const reviewId = this.getAttribute('data-review-id');
             if (reviewId) {
-                // showReviewDetailModal(reviewId); // Esta función no está definida en este archivo
-         }
+            }
         });
     });
 }
@@ -583,7 +566,7 @@ function initializeCommentsModalLogic() {
     if (commentInput) {
         commentInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') submitComment();
-     });
+        });
     }
     if (commentsModalOverlay) {
         commentsModalOverlay.addEventListener('click', (e) => {
@@ -625,7 +608,7 @@ async function loadCommentsIntoModal(reviewId) {
                 const username = comment.UserName || comment.username || 'Usuario';
                 const text = comment.Text || comment.text || '';
                 let commentId = comment.Id_Comment || comment.id_Comment || comment.IdComment || comment.idComment || comment.id || comment.Id || '';
-         if (commentId) commentId = String(commentId).trim();
+            if (commentId) commentId = String(commentId).trim();
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
                 const likes = comment.Likes || comment.likes || 0;
                 const userLiked = comment.userLiked || false;
@@ -645,7 +628,7 @@ async function loadCommentsIntoModal(reviewId) {
                 } else {
                     actionButtons = '';
                 }
-              
+        
                 return `
                 <div class="comment-item" data-comment-id="${commentId}">
                     <div class="comment-avatar"><img src="../Assets/default-avatar.png" alt="${username}"></div>
@@ -657,7 +640,7 @@ async function loadCommentsIntoModal(reviewId) {
                         <p class="comment-text" id="comment-text-${commentId}">${text}</p>
                         <div class="comment-footer">
                             <button class="comment-like-btn ${userLiked ? 'liked' : ''}" data-comment-id="${commentId}" title="Me gusta">
-                         <i class="fa-solid fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.6)'};"></i>
+                            <i class="fa-solid fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.6)'};"></i>
                                 <span class="comment-likes-count">${likes}</span>
                             </button>
                             ${actionButtons}
@@ -675,7 +658,7 @@ async function loadCommentsIntoModal(reviewId) {
     }
     
     const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
-   if (commentBtn) {
+    if (commentBtn) {
         const countSpan = commentBtn.querySelector('.review-comments-count');
         if (countSpan) {
             const comments = await getCommentsByReview(reviewId);
@@ -744,7 +727,7 @@ function attachCommentActionListeners() {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const commentId = this.getAttribute('data-comment-id');
-          toggleCommentLike(commentId, this);
+            toggleCommentLike(commentId, this);
         });
     });
 }
@@ -752,7 +735,7 @@ function attachCommentActionListeners() {
 async function toggleCommentLike(commentId, btn) {
     const authToken = localStorage.getItem('authToken');
     if (!authToken) { return showLoginRequiredModal(); }
-   Indentation
+    Indentation
     const icon = btn.querySelector('i');
     const likesSpan = btn.querySelector('.comment-likes-count');
     const isLiked = btn.classList.contains('liked');
@@ -767,8 +750,6 @@ async function toggleCommentLike(commentId, btn) {
         icon.style.color = 'var(--magenta, #EC4899)';
         likesSpan.textContent = currentLikes + 1;
     }
-    
-    // TODO: Conectar esto con addCommentReaction y deleteCommentReaction
     console.log('Like en comentario (simulado):', commentId);
 }
     
@@ -918,8 +899,7 @@ async function updateCommentInData(reviewId, commentId, newText) {
     
     await updateComment(commentId, newText, authToken);
 }
-    
-// --- MODAL DE BORRAR COMENTARIO ---
+
 
 function initializeDeleteModalsLogic() {
     const cancelDeleteCommentBtn = document.getElementById('cancelDeleteCommentBtn');
@@ -1000,7 +980,6 @@ async function confirmDeleteComment() {
     }
 }
     
-// --- MODAL DE BORRAR RESEÑA ---
 
 function showDeleteReviewModal(reviewId, reviewTitle) {
     if (!reviewId) {
@@ -1093,14 +1072,10 @@ Indentation    }
     }
 }
     
-// --- 9. DATOS DE EJEMPLO ---
 function initializeSampleComments() {
         const authToken = localStorage.getItem('authToken');
         if (authToken && authToken.startsWith('dev-token-')) {
-            // Los comentarios se agregarán después de cargar las reseñas
-            // para usar los IDs reales de las reseñas
             setTimeout(() => {
-                // Obtener todas las reseñas renderizadas
                 const reviewItems = document.querySelectorAll('.review-item');
                 if (reviewItems.length > 0) {
                     const firstReviewId = reviewItems[0].getAttribute('data-review-id');
@@ -1109,13 +1084,13 @@ function initializeSampleComments() {
                         commentsData[firstReviewId] = [
                             {
                                 Id_Comment: 'dev-comment-1',
-                       Text: '¡Excelente canción! Me encanta.',
-                                Created: new Date(Date.now() - 3600000).toISOString(), // Hace 1 hora
+                                Text: '¡Excelente canción! Me encanta.',
+                                Created: new Date(Date.now() - 3600000).toISOString(), 
                                 ReviewId: firstReviewId,
-                                IdUser: currentUserId || 'sample-user-1', // Tu comentario para poder editarlo
+                                IdUser: currentUserId || 'sample-user-1', 
                                 UserName: localStorage.getItem('username') || 'Usuario Demo',
                                 Likes: 0, // 0 likes para poder editar
-                            	userLiked: false
+                                userLiked: false
                        },
                             {
                                 Id_Comment: 'dev-comment-2',
@@ -1129,7 +1104,6 @@ function initializeSampleComments() {
                             }
                         ];
                         
-                        // Actualizar contador en el botón de comentarios
                         const commentBtn = document.querySelector(`.comment-btn[data-review-id="${firstReviewId}"]`);
                      if (commentBtn) {
                             const countSpan = commentBtn.querySelector('.review-comments-count');
@@ -1139,7 +1113,7 @@ function initializeSampleComments() {
                         }
                     }
                 }
-         }, 2000); // Esperar a que se carguen las reseñas
+         }, 2000);
         }
     }
 
@@ -1162,7 +1136,7 @@ function updateHeaderStatistics(reviews) {
         return sum + Number(rating);
     }, 0);
 
-    // 2. Calcular promedio crudo (ej: 4.23333...)
+    // 2. Calcular promedio crudo 
     const rawAverage = totalRating / reviews.length;
 
     // 3. Redondear al 0.5 más cercano

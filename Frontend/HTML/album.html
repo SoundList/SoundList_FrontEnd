@@ -170,7 +170,7 @@
         </div>
         <div class="review-modal-content">
             <div class="review-song-info">
-            <img src="./../Assets/default-avatar.png" alt="Portada" class="review-song-cover" id="modalAlbumCover">
+            <img src="./../Assets/logo_perfil.png" alt="Portada" class="review-song-cover" id="modalAlbumCover">
             <div class="review-song-text">
                 <h3 class="review-song-title" id="modalAlbumTitle">-</h3>
                 <p class="review-song-artist" id="modalAlbumArtist">-</p>
@@ -186,14 +186,19 @@
                     <i class="far fa-star" data-value="4"></i>
                     <i class="far fa-star" data-value="5"></i>
                 </div>
+                <div class="invalid-feedback-custom" id="reviewRatingError"></div>
             </div>
 
             <div class="mb-3">
-                <label for="reviewTitleInput" class="form-label">Reseña</label>
+                <label for="reviewTitleInput" class="form-label">Título de la reseña</label>
                 <input type="text" class="form-control" id="reviewTitleInput" placeholder="Título de la reseña">
+                <div class="invalid-feedback-custom" id="reviewTitleError"></div>
             </div>
+
             <div class="mb-3">
+                <label for="reviewTextInput" class="form-label">Escribe tu reseña</label>
                 <textarea class="form-control" id="reviewTextInput" rows="4" placeholder="Escribe tu reseña"></textarea>
+                <div class="invalid-feedback-custom" id="reviewTextError"></div>
             </div>
 
             <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">SUBIR</button>

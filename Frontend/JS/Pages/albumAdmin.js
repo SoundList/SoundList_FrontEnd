@@ -1,9 +1,8 @@
-//  ---  IMPORTACIONES  ACTUALIZADAS  ---
 import {
     getAlbumByApiId,
     getAlbumSongsByApiId,
     getOrCreateAlbum,
-    updateAlbumRating // Importante para crear reseñas
+    updateAlbumRating 
 } from './../APIs/contentApi.js';
 import { 
     createSongListItem, 
@@ -37,7 +36,6 @@ let deletingReviewId = null;
 let deletingCommentId = null;
 
 //  ---  INICIO  DE  LA  APLICACIÓN  ---
-// ¡CORREGIDO! Esta es la función que main.js llama.
 export function initializeAlbumPage() {
     console.log("Inicializando lógica de Album...");
     initializeTabNavigation();
@@ -49,12 +47,6 @@ export function initializeAlbumPage() {
     initializeDeleteModalsLogic();
 };
 
-//  ---  FUNCIONES  PRINCIPALES  ---
-
-/**
- * Función  maestra  que  carga  toda  la  data  de  la  página  DESDE  LA  API  REAL.
- */
-// Pega esta función COMPLETA en JavaScript/Pages/albumAdmin.js
 
 async function loadPageData() {
     const loadingEl = document.getElementById('loadingSpinner');
@@ -83,8 +75,6 @@ async function loadPageData() {
         currentAlbumData = albumData; // Guardamos globalmente
         const localAlbumId = albumData.albumId; 
 
-        // 4. Renderizar el header INMEDIATAMENTE (Mejor UX)
-        // Ya no esperamos a las canciones porque el backend C# ya manda el artista bien.
         renderAlbumHeader(albumData);
         
         // 5. Obtener canciones y reseñas en paralelo
@@ -93,14 +83,12 @@ async function loadPageData() {
             getReviews()
         ]);
 
-        // --- (AQUÍ BORRAMOS EL PARCHE DEL ARTISTA) ---
-
         // 6. Filtrar reseñas
         const filteredReviews = allReviews.filter(review => {
             return (review.albumId === localAlbumId || review.AlbumId === localAlbumId);
         });
 
-        // 7. Enriquecer reseñas (Lógica optimizada que hicimos antes)
+        // 7. Enriquecer reseñas 
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
                 try {
@@ -122,7 +110,7 @@ async function loadPageData() {
                         avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
                         contentType: 'Álbum',
                         song: albumData.title,
-                        artist: albumData.artistName, // Ahora viene limpio del backend
+                        artist: albumData.artistName, 
                         title: review.title || review.Title,
                         comment: review.content || review.Content,
                         rating: review.rating || review.Rating,
@@ -159,17 +147,16 @@ async function loadPageData() {
         loadingEl.style.display = 'none';
     }
 }
+
 //  ---  FUNCIONES  DE  RENDERIZADO  (Sin  cambios)  ---
 
 function renderAlbumHeader(album) {
-    // 1. Imagen y Título (con soporte para Mayúsculas por si acaso)
+    // 1. Imagen y Título 
     document.getElementById('albumCover').src = album.image || album.Image || '../Assets/album-de-musica.png';
     document.getElementById('albumTitle').textContent = album.title || album.Title;
     
     const artistLink = document.getElementById('albumArtistLink');
     
-    // --- CORRECCIÓN DEL ARTISTA ---
-    // Buscamos el nombre en todas las estructuras posibles que devuelve .NET
     const artistName = album.artistName || 
                     album.ArtistName || 
                     (album.artist ? (album.artist.name || album.artist.Name) : null) ||
@@ -177,28 +164,22 @@ function renderAlbumHeader(album) {
                     "Artista Desconocido";
 
     artistLink.textContent = artistName;
-    
-    // --- CORRECCIÓN DEL LINK AL ARTISTA ---
-    // También aseguramos obtener el ID correcto para que el click funcione
     const artistId = album.apiArtistId || 
                     album.ApiArtistId || 
                     (album.artist ? album.artist.id : null) ||
                     (album.Artist ? album.Artist.Id : null);
 
     if (artistId) {
-        // Estandarizado a 'artist.html' (singular) como mencionaste en el contexto
         artistLink.href = `./artist.html?id=${artistId}`;
     } else {
         artistLink.href = '#'; // Si no hay ID, que no lleve a ningun lado
         artistLink.style.pointerEvents = 'none'; // Deshabilitar click visualmente
     }
 
-    // Estadísticas (ya corregidas antes)
-    const rating = album.averageRating || 0; // Esto viene del backend si existiera
+    // Estadísticas 
+    const rating = album.averageRating || 0; 
     const reviewCount = album.reviewCount || 0;
     
-    // Nota: Aquí NO recalculamos, solo mostramos lo inicial. 
-    // La función updateHeaderStatistics se encarga de la matemática real después.
     document.getElementById('ratingNumber').textContent = rating.toFixed(1);
     document.getElementById('ratingStars').innerHTML = createStarRating(rating, true);
     document.getElementById('ratingCount').textContent = `(${reviewCount} reviews)`;
@@ -240,11 +221,6 @@ function renderReviews(reviews) {
     }
 }
 
-// --- LÓGICA DE MODALS (COPIADA DE HOMEADMIN.JS) ---
-
-/**
- * Agrega listeners a los botones de la tarjeta de reseña (like, comment, edit, delete).
- */
 function attachReviewActionListeners(reviewsListElement) {
     if (!reviewsListElement) return;
 
@@ -410,7 +386,7 @@ function showCreateReviewModal() {
     document.getElementById('reviewTextInput').value = '';
     setStarRating(0);
     currentRating = 0;
-
+    clearReviewFormErrors();
     modalOverlay.style.display = 'flex';
 }
 
@@ -438,6 +414,48 @@ function highlightStars(rating) {
     });
 }
 
+function displayFieldError(elementId, message) {
+    const inputElement = document.getElementById(elementId);
+    if (!inputElement) return;
+
+    // 'starsRatingInput' es especial, se trata como contenedor
+    const isStarsContainer = elementId === 'starsRatingInput';
+    
+    // 1. Elemento donde se aplica el BORDE ROJO
+    const borderElement = isStarsContainer ? inputElement : inputElement;
+
+    // 2. Elemento donde se muestra el MENSAJE ROJO
+    const errorElementId = (elementId === 'starsRatingInput') ? 'reviewRatingError' : elementId.replace('Input', 'Error');
+    const errorElement = document.getElementById(errorElementId);
+    
+    if (message) {
+        // Mostrar Error
+        borderElement.classList.add('is-invalid-custom'); 
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.add('show-error'); 
+        }
+    } else {
+        // Ocultar Error
+        borderElement.classList.remove('is-invalid-custom');
+        if (errorElement) {
+            errorElement.textContent = '';
+            errorElement.classList.remove('show-error');
+        }
+    }
+}
+
+
+function clearReviewFormErrors() {
+    displayFieldError('reviewTitleInput', null);
+    displayFieldError('reviewTextInput', null);
+    displayFieldError('starsRatingInput', null); 
+}
+
+
+
+
+
 async function handleSubmitReview() {
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
@@ -451,8 +469,33 @@ async function handleSubmitReview() {
     const reviewText = document.getElementById('reviewTextInput').value.trim();
     const rating = currentRating; 
 
-    if (reviewTitle === '' || reviewText === '' || rating === 0) {
-        showAlert('Por favor, completa todos los campos y selecciona una calificación.', 'warning');
+    let hasError = false;
+
+    // 1. Validar Título
+    if (!reviewTitle) {
+        displayFieldError('reviewTitleInput', 'El título de la reseña es obligatorio.');
+        hasError = true;
+    } else {
+        displayFieldError('reviewTitleInput', null);
+    }
+
+    // 2. Validar Texto
+    if (!reviewText) {
+        displayFieldError('reviewTextInput', 'El contenido de la reseña es obligatorio.');
+        hasError = true;
+    } else {
+        displayFieldError('reviewTextInput', null);
+    }
+
+    // 3. Validar Calificación
+    if (rating === 0) { 
+        displayFieldError('starsRatingInput', 'Debes seleccionar una calificación (1-5 estrellas).');
+        hasError = true;
+    } else {
+        displayFieldError('starsRatingInput', null); 
+    }
+
+    if (hasError) {
         return;
     }
 
@@ -478,7 +521,7 @@ async function handleSubmitReview() {
         // 6. Llamar a la API
         const response = await createReview(reviewData, authToken);
         
-        // Guardar datos del contenido en localStorage para uso futuro (igual que en createReviewModal.js)
+
         const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
         if (reviewId) {
             const storageKey = `review_content_${String(reviewId).trim()}`;
@@ -486,7 +529,7 @@ async function handleSubmitReview() {
                 // Debug: ver qué campos tiene currentAlbumData
                 console.log('🔍 currentAlbumData completo:', currentAlbumData);
                 
-                // Obtener artista de todas las posibles fuentes (para álbumes puede estar en Songs[0])
+                // Obtener artista de todas las posibles fuentes 
                 let artistName = currentAlbumData.ArtistName || 
                                 currentAlbumData.artistName || 
                                 (currentAlbumData.artist ? (currentAlbumData.artist.name || currentAlbumData.artist.Name) : null) ||
@@ -521,8 +564,6 @@ async function handleSubmitReview() {
         showAlert('¡Reseña enviada con éxito!', 'success');
         hideCreateReviewModal();
         
-        // --- INICIO DE LA CORRECCIÓN ---
-        // 7A. Recargar reseñas BÁSICAS
         const allReviews = await getReviews();
         const filteredReviews = allReviews.filter(r => r.albumId === currentAlbumData.albumId || r.AlbumId === currentAlbumData.albumId);
         if (filteredReviews.length > 0) {
@@ -533,25 +574,19 @@ async function handleSubmitReview() {
             
             // Promedio exacto
             const rawAverage = totalRating / filteredReviews.length;
-            
-            // IMPORTANTE: Tu Backend espera un Entero (int) según el Controller que vi antes.
-            // Así que redondeamos al entero más cercano (Ej: 3.6 -> 4).
             const integerRating = Math.round(rawAverage);
 
             console.log(`📡 Actualizando Ranking del Álbum a: ${integerRating} (Promedio real: ${rawAverage})`);
 
-            // Llamamos al PATCH del ContentService
             try {
                 // Usamos apiAlbumId (ID de Spotify) porque es lo que espera tu endpoint UpdateAlbumRating
                 await updateAlbumRating(currentAlbumData.apiAlbumId, integerRating);
             } catch (err) {
                 console.error("Error actualizando el rating en ContentService:", err);
-                // No bloqueamos el flujo si falla esto, pero lo logueamos
             }
         }
         
         updateHeaderStatistics(filteredReviews);
-        // 7B. "Enriquecer" las reseñas (¡ESTO FALTABA!)
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
                 try {
@@ -590,7 +625,6 @@ async function handleSubmitReview() {
         );
         
         const validReviews = reviewsData.filter(r => r !== null);
-        // --- FIN DE LA CORRECCIÓN ---
 
         renderReviews(validReviews); // 8. Renderizar datos COMPLETOS
 
@@ -607,8 +641,6 @@ async function handleSubmitReview() {
     }
 }
 
-
-// --- LÓGICA DE MODALS PEGADA DE HOMEADMIN.JS ---
 // (Estas funciones son necesarias para renderReviews y attach...Listeners)
 
 function initializeCommentsModalLogic() {
@@ -817,8 +849,6 @@ async function toggleCommentLike(commentId, btn) {
         icon.style.color = 'var(--magenta, #EC4899)';
         likesSpan.textContent = currentLikes + 1;
     }
-    
-    // TODO: Conectar esto con addCommentReaction y deleteCommentReaction
     console.log('Like en comentario (simulado):', commentId);
 }
     
@@ -968,8 +998,6 @@ const authToken = localStorage.getItem('authToken');
     
     await updateComment(commentId, newText, authToken);
 }
-    
-// --- MODAL DE BORRAR COMENTARIO ---
 
 function initializeDeleteModalsLogic() {
     const cancelDeleteCommentBtn = document.getElementById('cancelDeleteCommentBtn');
@@ -1005,9 +1033,6 @@ function initializeDeleteModalsLogic() {
     }
 }
 
-//function deleteComment(commentId) {
-//   showDeleteCommentModal(commentId);
-//}
 
 function showDeleteCommentModal(commentId) {
     deletingCommentId = commentId;
@@ -1133,7 +1158,7 @@ function updateHeaderStatistics(reviews) {
         return sum + Number(rating);
     }, 0);
 
-    // 2. Calcular promedio crudo (ej: 4.23333...)
+    // 2. Calcular promedio crudo 
     const rawAverage = totalRating / reviews.length;
 
     // 3. Redondear al 0.5 más cercano

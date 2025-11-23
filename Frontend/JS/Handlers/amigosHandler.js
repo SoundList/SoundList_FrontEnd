@@ -276,6 +276,8 @@ export function initializeReviewFilters(state) {
     });
 }
 
+// --- REEMPLAZAR EN JS/Handlers/amigosHandler.js ---
+
 export function addReviewEventListeners(reviewsListElement, state) {
     if (!reviewsListElement) return;
     
@@ -291,22 +293,33 @@ export function addReviewEventListeners(reviewsListElement, state) {
     });
 
     // Botones Grandes (Tarjetas de Usuario)
-    reviewsListElement.querySelectorAll('.review-follow-btn, .follow-btn').forEach(btn => {
+    reviewsListElement.querySelectorAll('.review-follow-btn, .follow-btn, .review-follow-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
-            e.stopPropagation();
+            e.stopPropagation(); // Evita abrir el detalle de reseña
             const userId = this.getAttribute('data-user-id');
             const username = this.getAttribute('data-username');
+            
+            // Llamamos a la función toggleFollow que ya tienes definida arriba
             toggleFollow(userId, username, this, state);
         });
     });
 
+    // 2. Botón LIKE
     reviewsListElement.querySelectorAll('.btn-like').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (window.handleLikeToggle) window.handleLikeToggle(e);
+            // Si tienes una función global para likes, úsala. Si no, implementamos lógica básica aquí
+            if (window.handleLikeToggle) {
+                window.handleLikeToggle(e);
+            } else if (state && state.toggleLike) {
+                // Usar la lógica local del estado si existe
+                const reviewId = this.getAttribute('data-review-id');
+                state.toggleLike(reviewId, this);
+            }
         });
     });
 
+    // 3. Botón COMENTARIOS
     reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -315,26 +328,27 @@ export function addReviewEventListeners(reviewsListElement, state) {
         });
     });
     
+    // 4. Clic en el CUERPO de la tarjeta (Para ver detalles)
+    // Ahora detectamos clicks en el header de usuario y en el contenido musical
     reviewsListElement.querySelectorAll('.review-clickable').forEach(div => {
         div.addEventListener('click', function(e) {
-            if (e.target.closest('button') || e.target.closest('.follow-btn-small')) return;
+            // Evitar que se dispare si clicamos en un botón interno
+            if (e.target.closest('button') || e.target.closest('.feed-follow-btn')) return;
+            
             const id = this.getAttribute('data-review-id');
-            if (window.showReviewDetailModal) window.showReviewDetailModal(id);
-        });
-    });
-
-    reviewsListElement.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-review-id');
-            if (typeof window.toggleReviewEditMode === 'function') window.toggleReviewEditMode(id);
-        });
-    });
-
-    reviewsListElement.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const id = this.getAttribute('data-review-id');
-            if (window.showDeleteReviewModal) window.showDeleteReviewModal(id, "esta reseña");
+            
+            // Determinar qué hacer: ¿Ir al perfil o ver detalle de reseña?
+            if (this.classList.contains('feed-user-info')) {
+                // Si clickeó en el usuario -> Ir al perfil (Tu lógica de redirección existente)
+                // (Esto se maneja globalmente con attachProfileRedirectionListeners, pero por si acaso)
+                const followBtn = this.parentElement.querySelector('.feed-follow-btn');
+                const userId = followBtn ? followBtn.getAttribute('data-user-id') : null;
+                if (userId) window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
+                
+            } else {
+                // Si clickeó en la música -> Ver detalle de reseña
+                if (window.showReviewDetailModal) window.showReviewDetailModal(id);
+            }
         });
     });
 }

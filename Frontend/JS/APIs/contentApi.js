@@ -1,5 +1,3 @@
-
-
 import { API_BASE_URL } from './configApi.js'; // (Debe ser 'http://localhost:5000')
 /**
  * Helper unificado para manejar las respuestas de fetch y parsear el JSON.
@@ -176,20 +174,24 @@ export async function getOrCreateAlbum(apiAlbumId) {
 
 /**
  * Busca una canción por su ID (GUID) de base de datos.
- * Endpoint: GET /api/Song/{id}
+ * CORRECCIÓN: Usamos 'song' (minúscula) porque el Gateway así lo define en su "Match".
  */
 export async function getSongById(songId) {
     try {
-        // CORRECCIÓN: Usamos la ruta completa del Gateway con /db/
-        // Esto arregla el error 404 localhost:5000/Song/...
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/song/db/${songId}`, {
-             validateStatus: (status) => status === 200 || status === 404 || status === 500
+        // CORRECCIÓN: /api/gateway/contents/song/ (minúscula)
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/song/${songId}`, {
+            validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
-        if (response.status === 200) return response.data;
-        return null;
+        // Si el Gateway deja pasar la petición pero la DB no tiene el dato, devuelve 404
+        if (response.status === 404 || response.status === 500) {
+            console.warn(`[DATA] Canción no encontrada en DB para ID: ${songId}`);
+            return null;
+        }
+        
+        return response.data;
     } catch (error) {
-        console.error("Error en getSongById:", error);
+        console.error("Error de conexión:", error);
         return null;
     }
 }

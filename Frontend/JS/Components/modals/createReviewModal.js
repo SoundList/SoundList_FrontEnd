@@ -707,7 +707,7 @@ async function submitCreateReview(state) {
             console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`);
         }
         
-        showAlert('✅ Reseña creada y guardada exitosamente', 'success');
+        showAlert(' Reseña creada y guardada exitosamente', 'success');
         hideCreateReviewModal(state);
         
         setReviewFilter('recent', () => {}, state.loadReviews);

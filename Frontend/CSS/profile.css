@@ -1131,3 +1131,67 @@ body.is-editing-something .review-card.is-editing {
 .stat-clickable:hover strong {
     color: #EC4899;
 }
+
+.custom-alert {
+    width: 95%;
+    max-width: 1400px;
+    margin: 0 auto 1rem auto;
+    height: 46px !important;  
+    min-height: 46px !important;
+    display: flex !important;      
+    align-items: center !important; 
+    justify-content: center;        
+    border-radius: 6px;
+    padding: 0 !important;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 900;
+    overflow: hidden; 
+}
+
+.alert-content {
+    width: 100%;
+    height: 100%;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between;
+    padding: 0 20px !important; 
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.alert-message {
+    flex: 1;
+    margin: 0 !important;  
+    padding: 0 !important;
+    line-height: normal !important; 
+    display: flex;         
+    align-items: center;    
+}
+
+.alert-icon {
+    margin-right: 12px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    padding: 0;
+    margin-left: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+.custom-alert-success { background: linear-gradient(90deg, #10b981, #059669); border-left: 3px solid #047857; }
+.custom-alert-info { background: linear-gradient(90deg, #06b6d4, #3b82f6); border-left: 3px solid #0891b2; }
+.custom-alert-warning { background: linear-gradient(90deg, #f59e0b, #ea580c); border-left: 3px solid #c2410c; }
+.custom-alert-danger { background: linear-gradient(90deg, #ef4444, #b91c1c); border-left: 3px solid #b91c1c; }

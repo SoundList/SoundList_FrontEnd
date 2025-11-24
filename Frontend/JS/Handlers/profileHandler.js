@@ -2996,9 +2996,9 @@ async function submitCreateReview() {
         hideCreateReviewModal();
         
         if (typeof showAlert === 'function') {
-            showAlert('✅ Reseña creada exitosamente', 'success');
+            showAlert(' Reseña creada exitosamente', 'success');
         } else {
-            alert('✅ Reseña creada exitosamente');
+            alert(' Reseña creada exitosamente');
         }
         
         // Recargar las reseñas del perfil

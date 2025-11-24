@@ -1,5 +1,8 @@
 import { getFollowing, searchUsers } from '../APIs/AmigosApi.js';
 
+const alertQueue = [];
+let isAlertVisible = false;
+let alertTimeout = null;
 // ----------------------------------------------------------------------
 // A. FUNCIONES DE UTILIDAD VISUAL
 // ----------------------------------------------------------------------
@@ -21,16 +24,29 @@ export function renderStars(rating) {
  * @param {string} message - Mensaje a mostrar
  * @param {string} type - Tipo de alerta (success, error, info, warning)
  */
+
 export function showAlert(message, type = 'info') {
-    const existingAlerts = document.querySelectorAll('.custom-alert');
-    existingAlerts.forEach(alert => alert.remove());
+    alertQueue.push({ message, type });
+    processAlertQueue();
+}
+
+function processAlertQueue() {
+    if (isAlertVisible || alertQueue.length === 0) return;
+    isAlertVisible = true;
+
+    const nextAlert = alertQueue.shift();
+    renderAlert(nextAlert.message, nextAlert.type);
+}
+
+function renderAlert(message, type) {
+    const alertContainer = document.getElementById('alertContainer') || createAlertContainer();
 
     let iconClass = 'fa-info-circle';
     if (type === 'success') iconClass = 'fa-check-circle';
     if (type === 'warning') iconClass = 'fa-exclamation-triangle';
     if (type === 'danger' || type === 'error') {
         iconClass = 'fa-times-circle';
-        type = 'danger'; 
+        type = 'danger';
     }
 
     const alertDiv = document.createElement('div');
@@ -48,34 +64,37 @@ export function showAlert(message, type = 'info') {
         </div>
     `;
 
-    const mainContent = document.querySelector('.main-content');
-    const alertContainer = document.getElementById('alertContainer'); 
+    alertContainer.innerHTML = '';
+    alertContainer.append(alertDiv);
+
+    const closeThisAlert = () => {
+        if (alertTimeout) clearTimeout(alertTimeout);
     
-    if (alertContainer) {
-        alertContainer.innerHTML = '';
-        alertContainer.append(alertDiv);
-    } else if (mainContent) {
-        mainContent.insertBefore(alertDiv, mainContent.firstChild);
-    } else {
-        document.body.insertBefore(alertDiv, document.body.firstChild);
-    }
+        alertDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        alertDiv.style.opacity = '0';
+        alertDiv.style.transform = 'translateY(-10px)';
 
-    const closeBtn = alertDiv.querySelector('.alert-close');
-    closeBtn.addEventListener('click', () => {
-        alertDiv.remove();
-    });
-
-    setTimeout(() => {
-        if (alertDiv && alertDiv.parentNode) {
+        setTimeout(() => {
             alertDiv.remove();
-        }
-    }, 4000);
+            isAlertVisible = false;
+            processAlertQueue(); 
+        }, 200); 
+    };
+    const closeBtn = alertDiv.querySelector('.alert-close');
+    closeBtn.addEventListener('click', closeThisAlert);
+    alertTimeout = setTimeout(closeThisAlert, 2500);
 }
 
-if (typeof window !== 'undefined') {
-    window.showAlert = showAlert;
+function createAlertContainer() {
+    let container = document.getElementById('alertContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'alertContainer';
+        const mainContent = document.querySelector('.main-content') || document.body;
+        mainContent.insertBefore(container, mainContent.firstChild);
+    }
+    return container;
 }
-
 /**
  * @param {Array<Object>} reviews La lista de reseñas a enriquecer.
  * @returns {Promise<Array<Object>>} La lista de reseñas con la bandera isFollowingAuthor.

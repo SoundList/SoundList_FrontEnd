@@ -175,23 +175,6 @@
 
             </div> </main>
     </div>
-
-    
-    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
-        <div class="logout-modal">
-            <div class="logout-modal-content">
-                <div class="logout-modal-logo">
-                    <img src="./../Assets/logo_perfil.png" alt="SoundList Logo" class="logout-logo-img">
-                </div>
-                <h2 class="logout-modal-title">¿Salir de Usuario?</h2>
-                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
-                <div class="logout-modal-buttons">
-                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
-                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="review-modal-overlay" id="createReviewModalOverlay" style="display: none;">
             <div class="review-modal">
         <div class="review-modal-header">
@@ -234,8 +217,23 @@
             <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">SUBIR</button>
         </div>
     </div>
-    
 </div>
+
+    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logout-logo-img">
+                </div>
+                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>

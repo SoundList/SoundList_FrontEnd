@@ -99,7 +99,10 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
             return '';
         }
 
-        const isLiked = review.userLiked || false;
+        // El isLiked viene del procesamiento de la reseña (userLiked calculado desde localStorage)
+        // NO usar review.userLiked del backend directamente porque puede estar desactualizado
+        // Si userLiked es explícitamente true, usarlo; si es false o undefined, usar false
+        const isLiked = review.userLiked === true;
         const likeCount = review.likes || 0;
         const commentCount = review.comments || 0;
 
@@ -212,27 +215,35 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                     localStorage.setItem(likesCacheKey, String(newLikesCount));
                 } catch (e) { /* ignore */ }
                 
-                const reactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-                if (typeof deleteReviewReaction === 'function') {
-                    deleteReviewReaction(reviewId, currentUserId, authToken, reactionId)
+                // Eliminar del localStorage INMEDIATAMENTE (antes de llamar al backend)
+                // Esto asegura que al recargar, el estado sea correcto
+                localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
+                localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
+                
+                const deleteReviewReactionFn = window.socialApi?.deleteReviewReaction || (typeof deleteReviewReaction !== 'undefined' ? deleteReviewReaction : null);
+                if (deleteReviewReactionFn) {
+                    // La función ahora solo acepta reviewId (usa JWT)
+                    deleteReviewReactionFn(reviewId)
                         .then(() => {
-                            localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                            localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
                             // Mantener cache actualizado
                             try {
                                 localStorage.setItem(likesCacheKey, String(newLikesCount));
                             } catch (e) { /* ignore */ }
                         })
                         .catch(err => {
-                            console.warn('No se pudo eliminar like:', err);
-                            // Revertir cambio si falla
-                            this.classList.add('liked');
-                            icon.style.color = 'var(--magenta, #EC4899)';
-                            likesSpan.textContent = currentLikes;
+                            console.warn('No se pudo eliminar like del backend:', err);
+                            // NO revertir el cambio visual si el backend falla
+                            // El localStorage ya fue limpiado, así que el estado es correcto
+                            // Solo actualizar el cache de likes
                             try {
-                                localStorage.setItem(likesCacheKey, String(currentLikes));
+                                localStorage.setItem(likesCacheKey, String(newLikesCount));
                             } catch (e) { /* ignore */ }
                         });
+                } else {
+                    // Si no hay función disponible, al menos actualizar el cache
+                    try {
+                        localStorage.setItem(likesCacheKey, String(newLikesCount));
+                    } catch (e) { /* ignore */ }
                 }
             } else {
                 // Agregar like (Optimistic Update)
@@ -499,12 +510,28 @@ async function loadUserReviews(userIdToLoad) {
                         comments = await getCommentsByReview(reviewId).catch(() => []);
                     }
 
-                    // Verificar si el usuario actual dio like desde localStorage (fuente de verdad)
+                    // Verificar si el usuario actual dio like (igual que en home/reviewFeed.js)
+                    // IMPORTANTE: localStorage es la fuente de verdad inicial
                     let userLiked = false;
+                    
                     if (currentUserId) {
+                        // Verificar localStorage PRIMERO (fuente de verdad)
                         const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
                         const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-                        userLiked = storedReactionId !== null || localLike === 'true';
+                        
+                        // Solo marcar como liked si AMBOS están presentes o si localLike es explícitamente 'true'
+                        // Si alguno está null o undefined, significa que NO hay like
+                        if (storedReactionId !== null && storedReactionId !== 'null' && storedReactionId !== 'undefined') {
+                            userLiked = true;
+                        } else if (localLike === 'true') {
+                            userLiked = true;
+                        } else {
+                            // Si no hay en localStorage (null, undefined, o cualquier otro valor), NO hay like
+                            userLiked = false;
+                        }
+                        
+                        // NUNCA usar review.userLiked del backend aquí porque puede estar desactualizado
+                        // El localStorage es la única fuente de verdad
                     }
 
                     // Obtener datos del contenido

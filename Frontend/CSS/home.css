@@ -1329,19 +1329,18 @@ button.nav-btn.active:hover {
 
 /* Alert Styles */
 .custom-alert {
-    margin-bottom: 1.5rem;
-    border-radius: 12px;
+margin-bottom: 1rem;
+    border-radius: 8px; 
     padding: 0;
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
     animation: slideDown 0.3s ease-out;
+    overflow: hidden; 
 }
 
 .custom-alert-warning {
     background: linear-gradient(135deg, rgba(255, 216, 94, 0.9), rgba(236, 72, 153, 0.85));
     border-left: 4px solid #FFD85E;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
 }
 
 .custom-alert-info {
@@ -1352,8 +1351,6 @@ button.nav-btn.active:hover {
 .custom-alert-success {
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(139, 92, 246, 0.85));
     border-left: 4px solid #7C3AED;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
 }
 
 .custom-alert-danger {
@@ -1363,49 +1360,40 @@ button.nav-btn.active:hover {
 
 .alert-content {
     display: flex;
-    align-items: center;
-    padding: 1rem 1.25rem;
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 0.7rem 1rem; 
     color: #fff;
     font-weight: 500;
+    font-size: 0.9rem; 
+    min-height: 50px; 
 }
 
 .alert-icon {
-    margin-right: 0.75rem;
-    font-size: 1.2rem;
-    font-weight: bold;
+margin-right: 12px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
-.custom-alert-warning .alert-icon::before {
-    content: "⚠️";
-}
-
-.custom-alert-info .alert-icon::before {
-    content: "ℹ️";
-}
-
-.custom-alert-success .alert-icon::before {
-    content: "✅";
-}
-
-.custom-alert-danger .alert-icon::before {
-    content: "❌";
-}
 
 .alert-message {
     flex: 1;
-    font-size: 0.95rem;
+    line-height: 1.2;
 }
 
 .alert-close {
     background: none;
     border: none;
     color: #fff;
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     cursor: pointer;
     padding: 0;
-    margin-left: 0.75rem;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
+    margin-left: 10rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
 }
 
 .alert-close:hover {

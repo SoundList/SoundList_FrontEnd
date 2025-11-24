@@ -1033,19 +1033,38 @@ function getNotificationIcon(type) {
 }
 
 function getNotificationText(notification) {
-    const username = notification.username || 'Alguien';
-    switch(notification.type) {
-        case 'NewReaction':
-        case 'NewNotification':
-            return `<span class="notification-username">${username}</span> le dio me gusta a tu reseña`;
-        case 'NewComment':
-            const songName = notification.songName || 'tu reseña';
-            return `<span class="notification-username">${username}</span> comentó en tu review de <strong>${songName}</strong>`;
-        case 'NewFollower':
-            return `<span class="notification-username">${username}</span> comenzó a seguirte`;
-        default:
-            return `Nueva notificación de <span class="notification-username">${username}</span>`;
-    }
+    const username = notification.username || 'Alguien';
+    
+    // DETECTIVE: Si el TIPO dice explícitamente que es de comentario, confiamos en él
+    // aunque el ID venga nulo.
+    const isExplicitCommentType = notification.type === 'NewCommentReaction';
+    
+    const commentId = notification.commentId || notification.CommentId;
+    const isCommentIdPresent = commentId && commentId !== '00000000-0000-0000-0000-000000000000';
+
+    // Es comentario si el tipo lo dice O si trae ID
+    const isComment = isExplicitCommentType || isCommentIdPresent;
+
+    switch(notification.type) {
+        case 'NewCommentReaction': // <--- ¡ESTE ES EL NUEVO CASO CLAVE!
+        case 'NewReaction':
+        case 'NewNotification':
+        case 'Like':
+            if (isComment) {
+                return `<span class="notification-username">${username}</span> le dio me gusta a tu comentario`;
+            }
+            return `<span class="notification-username">${username}</span> le dio me gusta a tu reseña`;
+
+        case 'NewComment':
+            const songName = notification.songName || 'tu reseña';
+            return `<span class="notification-username">${username}</span> comentó en tu review de <strong>${songName}</strong>`;
+            
+        case 'NewFollower':
+            return `<span class="notification-username">${username}</span> comenzó a seguirte`;
+            
+        default:
+            return `Nueva notificación de <span class="notification-username">${username}</span>`;
+    }
 }
 
 export function formatNotificationTime(dateString) {
@@ -1100,9 +1119,12 @@ async function loadNotifications() {
                     type: notification.Type || notification.type || 'NewNotification',
                     date: notification.Date || notification.date || new Date().toISOString(),
                     username: username,
-                    songName: notification.SongName || notification.songName || null,
-                    reviewId: notification.ReviewId || notification.reviewId || null,
-                    userId: actorUserId // Guardar el userId para referencia
+                    
+                    // Capturamos TODO lo que pueda servir
+                    reviewId: notification.ReviewId || notification.reviewId || notification.ReferenceId || null,
+                    commentId: notification.CommentId || notification.commentId || null, // <--- Esto es vital
+                    
+                    userId: actorUserId
                 };
             })
         );
@@ -1197,7 +1219,8 @@ function initializeSignalR() {
              date: notificationData.Date || notificationData.date,
              username: realUsername, // <--- ¡AQUÍ ESTÁ EL CAMBIO!
              userId: senderId,
-             reviewId: notificationData.ReferenceId
+             reviewId: notificationData.ReferenceId,
+             commentId: notificationData.CommentId || notificationData.commentId || null
         });
 
         // 5. Actualizar el badge rojo
@@ -1255,12 +1278,21 @@ async function showNotificationAlert(notification) {
     let messageHtml = '';
     const rawType = notification.Type || notification.type || '';
     
-    // Nombre en negrita y color blanco para resaltar
+    // LÓGICA DE DETECCIÓN MEJORADA
+    const commentId = notification.CommentId || notification.commentId;
+    // Es comentario si trae ID O si el tipo lo dice explícitamente
+    const isComment = (commentId && commentId !== '00000000-0000-0000-0000-000000000000') || 
+                      rawType === 'NewCommentReaction';
+
     const userHtml = `<strong style="color: #fff;">${username}</strong>`;
 
     if (rawType.includes('Reaction') || rawType.includes('Like')) {
-        messageHtml = `${userHtml} le dio me gusta a tu reseña`;
-    } 
+        if (isComment) {
+            messageHtml = `${userHtml} le dio me gusta a tu comentario`;
+        } else {
+            messageHtml = `${userHtml} le dio me gusta a tu reseña`;
+        }
+    }
     else if (rawType.includes('Comment')) {
         // Diferenciar si es like a comentario o comentario nuevo
         if (rawType.includes('Reaction')) {

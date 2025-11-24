@@ -372,11 +372,13 @@ export async function getNotifications() {
 
 export async function getUser(userId) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/users`, {
-             headers: getAuthHeaders() // Opcional si es público
+        // CORRECCIÓN: Agregamos /${userId} para buscar al usuario específico
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, {
+             headers: getAuthHeaders() 
         });
         return response.data;
     } catch (error) {
+        console.warn(`Error obteniendo usuario ${userId}`, error);
         return null;
     }
 }

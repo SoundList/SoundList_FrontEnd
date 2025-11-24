@@ -24,7 +24,22 @@ async function handleResponse(response) {
     }
     return response.status === 204 ? null : response.json();
 }
-
+// ===========================================
+//  FUNCIONES DE IA
+// ===========================================
+export async function generateSongSummary(songId) {
+    try {
+        // Llamamos a la ruta que definiste en el Gateway
+        // POST /api/gateway/summary/song/{songId}
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/summary/song/${songId}`);
+        
+        // El backend devuelve: { songId, resumen, fuentesProcesadas }
+        return response.data; 
+    } catch (error) {
+        console.error("Error generando resumen IA:", error);
+        throw error;
+    }
+}
 // ===========================================
 //  FUNCIONES DE ÁLBUM
 // ===========================================
@@ -184,12 +199,29 @@ export async function getSongById(songId) {
         return null;
     }
 }
+export async function getSongByDbId(songId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/song/db/${songId}`, {
+            headers: getHeaders(), // Inyectamos Token
+            validateStatus: (status) => status === 200 || status === 404 || status === 500
+        });
+        
+        if (response.status === 404 || response.status === 500) {
+            console.warn(`[DATA] Canción no encontrada en DB para ID: ${songId}`);
+            return null;
+        }
+        return response.data;
+    } catch (error) {
+        console.error("Error de conexión:", error);
+        return null;
+    }
+}
 
 export async function getAlbumById(albumId) {
     try {
         const response = await axios.get(`${API_BASE_URL}/api/gateway/contents/album/db/${albumId}`, {
              headers: getHeaders(), // Inyectamos Token
-             validateStatus: (status) => status === 200 || status === 404 || status === 500
+            validateStatus: (status) => status === 200 || status === 404 || status === 500
         });
         
         if (response.status === 200) return response.data;

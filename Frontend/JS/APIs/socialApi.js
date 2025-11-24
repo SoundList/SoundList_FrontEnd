@@ -320,18 +320,20 @@ export async function getUserReactionToReview(reviewId) {
 
 export async function addCommentReaction(commentId) {
     const reactionData = {
-        UserId: null, // Token manda
-        ReviewId: null,
+        UserId: null, // El backend lo llena con el token
+        // CAMBIO: Usamos GUID vacío en vez de null para evitar errores de deserialización
+        ReviewId: null, 
         CommentId: commentId
     };
 
     try {
-        // Nota: La URL con GUID 000... es rara, pero la mantuve de tu código original
-        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews/00000000-0000-0000-0000-000000000000/reactions`, reactionData, {
+        // CAMBIO: Usamos la nueva ruta limpia del Gateway
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/comments/${commentId}/reactions`, reactionData, {
             headers: getAuthHeaders()
         });
         return response.data;
     } catch (error) {
+         // Fallback directo (por si acaso)
          const response = await axios.post(`${SOCIAL_DIRECT_URL}/api/reactions`, reactionData, {
             headers: getAuthHeaders()
         });

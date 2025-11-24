@@ -240,6 +240,40 @@
         </div>
     </div>
 
+    <!-- Delete Comment Modal -->
+    <div class="delete-comment-modal-overlay" id="deleteCommentModalOverlay" style="display: none;">
+        <div class="delete-comment-modal">
+            <div class="delete-comment-modal-content">
+                <div class="delete-comment-icon">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h2 class="delete-comment-title">Eliminar comentario</h2>
+                <p class="delete-comment-message">¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.</p>
+                <div class="delete-comment-buttons">
+                    <button class="delete-comment-btn delete-comment-cancel" id="cancelDeleteCommentBtn">Cancelar</button>
+                    <button class="delete-comment-btn delete-comment-confirm" id="confirmDeleteCommentBtn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Review Modal -->
+    <div class="delete-review-modal-overlay" id="deleteReviewModalOverlay" style="display: none;">
+        <div class="delete-review-modal">
+            <div class="delete-review-modal-content">
+                <div class="delete-review-icon">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h2 class="delete-review-title">Eliminar reseña</h2>
+                <p class="delete-review-message">¿Estás seguro de que quieres eliminar esta reseña? Esta acción no se puede deshacer.</p>
+                <div class="delete-review-buttons">
+                    <button class="delete-review-btn delete-review-cancel" id="cancelDeleteReviewBtn">Cancelar</button>
+                    <button class="delete-review-btn delete-review-confirm" id="confirmDeleteReviewBtn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>

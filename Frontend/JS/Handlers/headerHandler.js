@@ -1438,32 +1438,42 @@ function stopNotificationPolling() {
 // (Esta función es llamada por otros módulos, así que la exportamos y la hacemos global)
 export function showAlert(message, type) {
     const existingAlerts = document.querySelectorAll('.custom-alert');
-    existingAlerts.forEach(alert => alert.remove());
+    existingAlerts.forEach(alert => alert.remove());
 
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `custom-alert custom-alert-${type}`;
-    alertDiv.innerHTML = `
-        <div class="alert-content">
-            <i class="alert-icon"></i>
-            <span class="alert-message">${message}</span>
-            <button type="button" class="alert-close">&times;</button>
-        </div>
-    `;
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `custom-alert custom-alert-${type}`;
+    alertDiv.innerHTML = `
+        <div class="alert-content">
+            <i class="alert-icon"></i>
+            <span class="alert-message">${message}</span>
+            <button type="button" class="alert-close">&times;</button>
+        </div>
+    `;
 
-    // Intenta encontrar 'main-content', si no, usa 'body'
-    const mainContent = document.querySelector('.main-content') || document.body;
-    mainContent.insertBefore(alertDiv, mainContent.firstChild);
+    // Insertar directamente en el body para que esté por encima de los modales
+    document.body.appendChild(alertDiv);
+    
+    // Asegurar que el alert tenga posición fixed y z-index alto
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.left = '50%';
+    alertDiv.style.transform = 'translateX(-50%)';
+    alertDiv.style.zIndex = '10010';
+    alertDiv.style.pointerEvents = 'auto';
+    alertDiv.style.width = '95%';
+    alertDiv.style.maxWidth = '500px';
+    alertDiv.style.margin = '0 auto';
 
-    const closeBtn = alertDiv.querySelector('.alert-close');
-    closeBtn.addEventListener('click', () => {
-        alertDiv.remove();
-    });
+    const closeBtn = alertDiv.querySelector('.alert-close');
+    closeBtn.addEventListener('click', () => {
+        alertDiv.remove();
+    });
 
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-                alertDiv.remove();
-        }
-    }, 5000);
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+                alertDiv.remove();
+        }
+    }, 5000);
 }
 
 // (Exportamos estas también para que los handlers de reseñas puedan usarlas)

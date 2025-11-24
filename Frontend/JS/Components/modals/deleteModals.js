@@ -61,6 +61,20 @@ export function showDeleteCommentModal(commentId, state) {
     state.deletingCommentId = commentId;
     const modal = document.getElementById('deleteCommentModalOverlay');
     if(modal) {
+        // Guardar el reviewId en el modal si está disponible en el state
+        if (state.currentReviewId) {
+            modal.setAttribute('data-review-id', state.currentReviewId);
+        } else {
+            // Intentar obtenerlo del modal de comentarios si está abierto
+            const commentsModal = document.getElementById('commentsModalOverlay');
+            if (commentsModal && commentsModal.style.display === 'flex') {
+                const reviewId = commentsModal.getAttribute('data-review-id');
+                if (reviewId) {
+                    modal.setAttribute('data-review-id', reviewId);
+                    state.currentReviewId = reviewId;
+                }
+            }
+        }
         modal.style.display = 'flex';
         // Asegurar que el modal tenga el z-index más alto
         modal.style.zIndex = '10005';

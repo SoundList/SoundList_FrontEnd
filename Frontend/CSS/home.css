@@ -1335,13 +1335,17 @@ button.nav-btn.active:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     animation: slideDown 0.3s ease-out;
     overflow: hidden;
-    position: relative;
-    z-index: 900;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10010;
     width: 95%; 
-    max-width: 1200px; 
-    margin: 0 auto 1rem auto; 
+    max-width: 500px; 
+    margin: 0 auto; 
     display: flex; 
     flex-direction: column;
+    pointer-events: auto;
 }
 
 .custom-alert-warning {

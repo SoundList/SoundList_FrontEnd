@@ -790,14 +790,34 @@ async function confirmEditCommentInDetail(commentId, reviewId, state) {
     
     try {
         const authToken = localStorage.getItem('authToken');
-        await updateComment(commentId, newText, authToken);
+        if (!authToken) {
+            showAlert('Debes iniciar sesión para editar comentarios', 'warning');
+            return;
+        }
+        
+        // updateComment solo acepta commentId y newText, el authToken se obtiene internamente
+        await updateComment(commentId, newText);
         
         await loadReviewDetailComments(reviewId, null, state);
         
         showAlert('Comentario editado exitosamente', 'success');
     } catch (error) {
         console.error('❌ Error al actualizar comentario:', error);
-        showAlert('Error al actualizar el comentario. Por favor, intenta nuevamente.', 'danger');
+        
+        // Manejar diferentes tipos de errores
+        let errorMessage = 'Error al actualizar el comentario. Por favor, intenta nuevamente.';
+        
+        if (error.response?.status === 409) {
+            errorMessage = 'No se puede editar este comentario porque ya tiene reacciones (likes).';
+        } else if (error.response?.status === 404) {
+            errorMessage = 'El comentario no fue encontrado o no tienes permiso para editarlo.';
+        } else if (error.response?.status === 401) {
+            errorMessage = 'Debes iniciar sesión para editar comentarios.';
+        } else if (error.response?.status === 405) {
+            errorMessage = 'El método de actualización no está disponible. Por favor, intenta más tarde.';
+        }
+        
+        showAlert(errorMessage, 'danger');
     }
     
     state.editingCommentId = null;

@@ -5,6 +5,7 @@ import { initializeCommentsModalLogic, showCommentsModal } from '../Components/m
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
 import { initializeDeleteModalsLogic, showDeleteReviewModal } from '../Components/modals/deleteModals.js';
 import * as socialApi from '../APIs/socialApi.js';
+// Importamos todo de contentApi para tener acceso a tus nuevas funciones
 import * as contentApi from '../APIs/contentApi.js';
 
 // --- CONFIGURACIÓN ---
@@ -54,12 +55,9 @@ async function loadReviewsLogic(filterType) {
 
     try {
         const allReviews = await socialApi.getAllReviews();
-        console.log("📦 [DEBUG] Raw Reviews del Backend:", allReviews); // LOG CLAVE 1
-
-        // 1. MAPEO 
+        
         let processedReviews = allReviews.map(mapBackendReviewToFrontend);
 
-        // 2. FILTRADO 
         if (filterType === 'seguidos') {
             processedReviews = processedReviews.filter(r => 
                 modalsState.followingUsers.has(normalizeId(r.userId))
@@ -84,6 +82,8 @@ async function loadReviewsLogic(filterType) {
         } else {
             if (reviewsEmpty) reviewsEmpty.style.display = 'none';
             renderReviews(processedReviews);
+            
+            // Aquí llamamos a la función que usa tus NUEVOS endpoints
             enrichReviewsData(processedReviews);
         }
 
@@ -96,10 +96,10 @@ async function loadReviewsLogic(filterType) {
 function mapBackendReviewToFrontend(r) {
     const emptyGuid = "00000000-0000-0000-0000-000000000000";
     
-    // --- CORRECCIÓN CRÍTICA: "RED DE ARRASTRE" DE IDs ---
-    // Buscamos en TODAS las posibles propiedades donde el backend pudo haber puesto el ID
-    const rawSongId = r.songId || r.SongId || r.apiSongId || r.APISongId || r.ApiSongId;
-    const rawAlbumId = r.albumId || r.AlbumId || r.apiAlbumId || r.APIAlbumId || r.ApiAlbumId;
+    // Capturamos IDs. Priorizamos el GUID (songId) porque tus nuevos endpoints
+    // getSongByDbId funcionan con el ID de base de datos.
+    const rawSongId = r.songId || r.SongId;
+    const rawAlbumId = r.albumId || r.AlbumId;
 
     const validSongId = (rawSongId && rawSongId !== emptyGuid) ? rawSongId : null;
     const validAlbumId = (rawAlbumId && rawAlbumId !== emptyGuid) ? rawAlbumId : null;
@@ -114,7 +114,7 @@ function mapBackendReviewToFrontend(r) {
         contentType: type,
         
         username: 'Usuario', 
-        song: 'Cargando...',
+        song: 'Cargando...', // Se actualizará en enrichReviewsData
         artist: '...',
         image: FALLBACK_COVER, 
         
@@ -132,7 +132,7 @@ function enrichReviewsData(reviews) {
     let hayCambios = false;
     const promises = [];
 
-    // A. USUARIOS
+    // A. USUARIOS (Lógica existente)
     const missingUsers = reviews.filter(r => r.username === 'Usuario' && r.userId);
     if (missingUsers.length > 0) {
         const userIds = [...new Set(missingUsers.map(r => r.userId))];
@@ -151,44 +151,51 @@ function enrichReviewsData(reviews) {
         }));
     }
 
-    // B. MÚSICA
+    // B. MÚSICA - USANDO TUS NUEVOS ENDPOINTS DE DB
     const missingContent = reviews.filter(r => r.song === 'Cargando...' && (r.songId || r.albumId));
     
     if (missingContent.length > 0) {
-        console.log(`[Enrich] Intentando enriquecer ${missingContent.length} reseñas.`); // LOG CLAVE 2
+        console.log(`[Enrich] Buscando metadata para ${missingContent.length} reseñas...`);
         
         const contentPromises = missingContent.map(async r => {
             try {
                 if (r.songId) {
-                    console.log(`[Enrich] Pidiendo Canción ID: ${r.songId}`); // LOG CLAVE 3
-                    const data = await contentApi.getSongById(r.songId);
+                    // 1. Usamos tu nueva función getSongByDbId
+                    console.log(`[Enrich] Buscando canción por DB ID: ${r.songId}`);
+                    // Asegúrate de que en contentApi exportes 'getSongByDbId'
+                    const data = await contentApi.getSongByDbId(r.songId);
                     
                     if (data) {
-                        r.song = data.title || data.Title || data.name;
-                        r.artist = data.artistName || data.ArtistName || data.artist?.name;
-                        r.image = data.image || data.Image || data.coverImage || r.image;
+                        // Mapeamos según tu Swagger (title, artistName, image)
+                        r.song = data.title || data.Title;
+                        r.artist = data.artistName || data.ArtistName || 'Artista Desconocido';
+                        r.image = data.image || data.Image || FALLBACK_COVER;
                         hayCambios = true;
                     } else {
-                        console.warn(`[Enrich] Canción NULL para ID: ${r.songId}`);
                         r.song = "Canción no disponible";
                     }
                 } else if (r.albumId) {
+                    // 2. Usamos tu nueva función getAlbumById (versión DB)
+                    console.log(`[Enrich] Buscando álbum por DB ID: ${r.albumId}`);
                     const data = await contentApi.getAlbumById(r.albumId);
+                    
                     if (data) {
-                        r.song = data.title || data.Title || data.name;
-                        r.artist = data.artistName || data.ArtistName || data.artist?.name;
-                        r.image = data.image || data.Image || data.coverImage || r.image;
+                        r.song = data.title || data.Title;
+                        r.artist = data.artistName || data.ArtistName || 'Artista Desconocido';
+                        r.image = data.image || data.Image || FALLBACK_COVER;
                         hayCambios = true;
                     } else {
                         r.song = "Álbum no disponible";
                     }
                 }
-            } catch(e) { console.log("Error fetch content", e); }
+            } catch(e) { 
+                console.error("Error enriqueciendo contenido:", e); 
+            }
         });
         promises.push(Promise.all(contentPromises));
     }
 
-    // C. ACTUALIZAR DOM
+    // C. ACTUALIZAR DOM SI HUBO CAMBIOS
     Promise.all(promises).then(() => {
         if (hayCambios) renderReviews(reviews);
     });
@@ -216,6 +223,10 @@ function renderReviews(reviews) {
         const heartClass = review.userLiked ? 'fas' : 'far';
         const likeBtnClass = review.userLiked ? 'liked' : '';
 
+        // Determinar icono según tipo
+        const iconClass = review.contentType === 'song' ? 'fa-music' : 'fa-compact-disc';
+        const contentTypeText = review.contentType === 'song' ? 'una canción' : 'un álbum';
+
         return `
         <div class="feed-card" data-review-id="${review.id}">
             <div class="feed-header">
@@ -223,7 +234,7 @@ function renderReviews(reviews) {
                     <img src="${review.avatar}" class="feed-avatar" onerror="this.src='${FALLBACK_IMAGE}'">
                     <div class="feed-meta">
                         <span class="feed-username">${review.username}</span>
-                        <span class="feed-action">reseñó ${review.contentType === 'song' ? 'una canción' : 'un álbum'}</span>
+                        <span class="feed-action">reseñó ${contentTypeText}</span>
                     </div>
                 </div>
                 ${followBtnHTML}
@@ -232,7 +243,7 @@ function renderReviews(reviews) {
             <div class="feed-music-content review-clickable" data-review-id="${review.id}">
                 <div class="music-cover-wrapper">
                     <img src="${contentImage}" class="music-cover" onerror="this.src='${FALLBACK_COVER}'">
-                    <div class="music-badge"><i class="fas ${review.contentType === 'song' ? 'fa-music' : 'fa-compact-disc'}"></i></div>
+                    <div class="music-badge"><i class="fas ${iconClass}"></i></div>
                 </div>
                 <div class="music-details">
                     <h3 class="music-title">${review.song}</h3>

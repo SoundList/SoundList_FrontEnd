@@ -90,8 +90,15 @@ function createAlertContainer() {
     if (!container) {
         container = document.createElement('div');
         container.id = 'alertContainer';
-        const mainContent = document.querySelector('.main-content') || document.body;
-        mainContent.insertBefore(container, mainContent.firstChild);
+        // Insertar directamente en el body para que esté por encima de los modales
+        document.body.appendChild(container);
+        // Asegurar que el contenedor tenga un z-index alto
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+        container.style.zIndex = '10010';
+        container.style.pointerEvents = 'none';
     }
     return container;
 }

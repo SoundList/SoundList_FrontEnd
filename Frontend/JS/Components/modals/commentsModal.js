@@ -380,16 +380,48 @@ async function submitComment(state) {
  * Adjunta listeners a los botones de acción de comentarios
  */
 function attachCommentActionListeners(state, reviewId) {
+    // Remover listeners anteriores para evitar duplicados
+    document.querySelectorAll('.comment-edit-btn[data-listener-attached]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
     document.querySelectorAll('.comment-edit-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        // Marcar que ya tiene listener para evitar duplicados
+        if (btn.hasAttribute('data-listener-attached')) return;
+        btn.setAttribute('data-listener-attached', 'true');
+        
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
             const commentId = this.getAttribute('data-comment-id');
+            if (!commentId) {
+                console.warn('Botón de editar sin data-comment-id');
+                return;
+            }
             editComment(commentId, state);
         });
     });
     
+    // Remover listeners anteriores para evitar duplicados
+    document.querySelectorAll('.comment-delete-btn[data-listener-attached]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
     document.querySelectorAll('.comment-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
+        // Marcar que ya tiene listener para evitar duplicados
+        if (btn.hasAttribute('data-listener-attached')) return;
+        btn.setAttribute('data-listener-attached', 'true');
+        
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            e.preventDefault();
             const commentId = this.getAttribute('data-comment-id');
+            if (!commentId) {
+                console.warn('Botón de eliminar sin data-comment-id');
+                return;
+            }
             const { showDeleteCommentModal } = await import('./deleteModals.js');
             // Asegurar que el reviewId esté disponible en el state
             if (reviewId && state) {
@@ -399,10 +431,25 @@ function attachCommentActionListeners(state, reviewId) {
         });
     });
     
+    // Remover listeners anteriores para evitar duplicados
+    document.querySelectorAll('.comment-like-btn[data-listener-attached]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
     document.querySelectorAll('.comment-like-btn').forEach(btn => {
+        // Marcar que ya tiene listener para evitar duplicados
+        if (btn.hasAttribute('data-listener-attached')) return;
+        btn.setAttribute('data-listener-attached', 'true');
+        
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
             const commentId = this.getAttribute('data-comment-id');
+            if (!commentId) {
+                console.warn('Botón de like sin data-comment-id');
+                return;
+            }
             toggleCommentLike(commentId, this);
         });
     });
@@ -500,10 +547,63 @@ function editComment(commentId, state) {
  * Muestra el modal de edición de comentario
  */
 function showEditCommentModal(commentId, state) {
+    if (!commentId || !state) {
+        console.error('showEditCommentModal: commentId o state no está definido', { commentId, state });
+        return;
+    }
+    
+    // Verificar si ya hay otro comentario en edición
+    if (state.editingCommentId && state.editingCommentId !== commentId) {
+        const currentlyEditing = document.querySelector(`.comment-item[data-comment-id="${state.editingCommentId}"]`);
+        if (currentlyEditing && currentlyEditing.classList.contains('editing')) {
+            if (typeof window.showAlert === 'function') {
+                window.showAlert('Termina de editar el otro comentario primero.', 'warning');
+            } else {
+                alert('Termina de editar el otro comentario primero.');
+            }
+            return;
+        }
+    }
+    
     const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
     const commentTextElement = document.getElementById(`comment-text-${commentId}`);
-    if (!commentItem || !commentTextElement) return;
-    if (commentItem.classList.contains('editing')) return;
+    
+    if (!commentItem) {
+        console.error(`No se encontró commentItem con ID: ${commentId}`);
+        return;
+    }
+    
+    if (!commentTextElement) {
+        console.error(`No se encontró commentTextElement con ID: comment-text-${commentId}`);
+        return;
+    }
+    
+    if (commentItem.classList.contains('editing')) {
+        console.warn(`El comentario ${commentId} ya está en modo edición`);
+        return;
+    }
+    
+    // Verificar si el comentario tiene likes antes de permitir editar
+    try {
+        const likeBtn = commentItem.querySelector('.comment-like-btn');
+        if (likeBtn) {
+            const likesCountEl = likeBtn.querySelector('.comment-likes-count');
+            if (likesCountEl) {
+                const likesCount = parseInt(likesCountEl.textContent, 10) || 0;
+                if (likesCount > 0) {
+                    if (typeof window.showAlert === 'function') {
+                        window.showAlert('No se puede editar este comentario porque ya tiene reacciones (likes).', 'warning');
+                    } else {
+                        alert('No se puede editar este comentario porque ya tiene reacciones (likes).');
+                    }
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Error al verificar likes del comentario:', error);
+        // Continuar con la edición si no se puede verificar
+    }
     
     state.originalCommentText = commentTextElement.textContent.trim();
     state.editingCommentId = commentId;
@@ -560,8 +660,21 @@ function showEditCommentModal(commentId, state) {
  * Cancela la edición de un comentario
  */
 function cancelEditComment(commentId, state) {
+    if (!commentId || !state) {
+        console.error('cancelEditComment: commentId o state no está definido', { commentId, state });
+        return;
+    }
+    
     const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
-    if (!commentItem) return;
+    if (!commentItem) {
+        console.warn(`No se encontró commentItem con ID: ${commentId} para cancelar edición`);
+        // Limpiar el estado de todas formas
+        if (state) {
+            state.editingCommentId = null;
+            state.originalCommentText = null;
+        }
+        return;
+    }
     
     const textarea = document.getElementById(`comment-text-edit-${commentId}`);
     const buttonsContainer = commentItem.querySelector('.comment-edit-buttons');
@@ -571,7 +684,7 @@ function cancelEditComment(commentId, state) {
         const commentTextElement = document.createElement('p');
         commentTextElement.className = 'comment-text';
         commentTextElement.id = `comment-text-${commentId}`;
-        commentTextElement.textContent = state.originalCommentText;
+        commentTextElement.textContent = state.originalCommentText || '';
         textarea.replaceWith(commentTextElement);
     }
     
@@ -580,8 +693,11 @@ function cancelEditComment(commentId, state) {
     
     commentItem.classList.remove('editing');
     
-    state.editingCommentId = null;
-    state.originalCommentText = null;
+    // Limpiar el estado solo si este comentario es el que está en edición
+    if (state.editingCommentId === commentId) {
+        state.editingCommentId = null;
+        state.originalCommentText = null;
+    }
 }
     
 /**
@@ -624,7 +740,27 @@ async function confirmEditComment(commentId, state) {
         showAlert('Comentario editado exitosamente', 'success');
     } catch (error) {
         console.error('❌ Error al actualizar comentario:', error);
-        showAlert('Error al actualizar el comentario. Por favor, intenta nuevamente.', 'danger');
+        
+        // Manejar diferentes tipos de errores
+        let errorMessage = 'Error al actualizar el comentario. Por favor, intenta nuevamente.';
+        
+        if (error.response?.status === 409) {
+            errorMessage = 'No se puede editar este comentario porque ya tiene reacciones (likes).';
+        } else if (error.response?.status === 404) {
+            errorMessage = 'El comentario no fue encontrado o no tienes permiso para editarlo.';
+        } else if (error.response?.status === 401) {
+            errorMessage = 'Debes iniciar sesión para editar comentarios.';
+        } else if (error.response?.status === 405) {
+            errorMessage = 'El método de actualización no está disponible. Por favor, intenta más tarde.';
+        }
+        
+        showAlert(errorMessage, 'danger');
+        
+        // Revertir el estado de edición si falla
+        const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+        if (commentItem && commentItem.classList.contains('editing')) {
+            cancelEditComment(commentId, state);
+        }
     }
     
     state.editingCommentId = null;
@@ -652,6 +788,7 @@ async function updateCommentInData(reviewId, commentId, newText, state) {
         }
     }
     
-    await updateComment(commentId, newText, authToken);
+    // updateComment solo acepta commentId y newText, el authToken se obtiene internamente
+    await updateComment(commentId, newText);
 }
 

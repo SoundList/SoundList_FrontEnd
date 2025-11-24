@@ -24,7 +24,22 @@ async function handleResponse(response) {
     }
     return response.status === 204 ? null : response.json();
 }
-
+// ===========================================
+//  FUNCIONES DE IA
+// ===========================================
+export async function generateSongSummary(songId) {
+    try {
+        // Llamamos a la ruta que definiste en el Gateway
+        // POST /api/gateway/summary/song/{songId}
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/summary/song/${songId}`);
+        
+        // El backend devuelve: { songId, resumen, fuentesProcesadas }
+        return response.data; 
+    } catch (error) {
+        console.error("Error generando resumen IA:", error);
+        throw error;
+    }
+}
 // ===========================================
 //  FUNCIONES DE ÁLBUM
 // ===========================================

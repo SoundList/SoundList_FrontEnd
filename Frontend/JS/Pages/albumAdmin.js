@@ -204,6 +204,40 @@ function renderAlbumDetails(album, trackCount) {
     document.getElementById('detailGenre').textContent = album.genre || "Urbano"; 
 }
 
+async function loadAiSummaryLogic(albumId, reviews) {
+    const summaryBox = document.getElementById('aiSummary');
+    const summaryText = document.getElementById('aiSummaryText');
+    
+    // Regla de negocio: Solo resumir si hay más de 2 reseñas (para que valga la pena)
+    if (!reviews || reviews.length <= 2) {
+        summaryBox.style.display = 'none';
+        return;
+    }
+
+    // 1. Mostrar estado de carga
+    summaryBox.style.display = 'flex';
+    summaryText.innerHTML = '<em><i class="fas fa-spinner fa-spin"></i> Analizando opiniones con IA...</em>';
+
+    try {
+        // 2. Llamar al backend (Gateway -> Content -> Social + AI -> Vertex)
+        const data = await generateSongSummary(albumId);
+        
+        // 3. Mostrar el resultado
+        if (data && data.resumen) {
+            // Efecto de escritura tipo máquina (opcional, o solo texto directo)
+            summaryText.textContent = data.resumen;
+        } else {
+            summaryBox.style.display = 'none';
+        }
+    } catch (error) {
+        console.warn("No se pudo generar el resumen:", error);
+        // Si falla, ocultamos la caja o mostramos un mensaje de error suave
+        summaryText.textContent = "No se pudo generar el resumen en este momento.";
+        // Ocultar después de unos segundos si falló
+        setTimeout(() => { summaryBox.style.display = 'none'; }, 5000);
+    }
+}
+
 function renderReviews(reviews) {
     const reviewsListEl = document.getElementById('reviewsList');
     if (!reviews || reviews.length === 0) {
@@ -215,9 +249,8 @@ function renderReviews(reviews) {
     // Llama a la función para agregar los listeners
     attachReviewActionListeners(reviewsListEl);
 
-    if (reviews.length > 2) {
-        document.getElementById('aiSummary').style.display = 'flex';
-        document.getElementById('aiSummaryText').textContent = "El álbum muestra una clara evolución del artista...";
+    if (currentSongData && currentSongData.albumId) {
+        loadAiSummaryLogic(currentSongData.albumId, reviews);
     }
 }
 

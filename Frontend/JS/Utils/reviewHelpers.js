@@ -21,27 +21,44 @@ export function renderStars(rating) {
  * @param {string} message - Mensaje a mostrar
  * @param {string} type - Tipo de alerta (success, error, info, warning)
  */
-export function showAlert(message, type) {
+export function showAlert(message, type = 'info') {
     const existingAlerts = document.querySelectorAll('.custom-alert');
     existingAlerts.forEach(alert => alert.remove());
 
+    let iconClass = 'fa-info-circle';
+    if (type === 'success') iconClass = 'fa-check-circle';
+    if (type === 'warning') iconClass = 'fa-exclamation-triangle';
+    if (type === 'danger' || type === 'error') {
+        iconClass = 'fa-times-circle';
+        type = 'danger'; 
+    }
+
     const alertDiv = document.createElement('div');
     alertDiv.className = `custom-alert custom-alert-${type}`;
+    
     alertDiv.innerHTML = `
         <div class="alert-content">
-            <i class="alert-icon"></i>
+            <div class="alert-icon">
+                <i class="fas ${iconClass}"></i>
+            </div>
             <span class="alert-message">${message}</span>
-            <button type="button" class="alert-close">&times;</button>
+            <button type="button" class="alert-close">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     `;
 
     const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
+    const alertContainer = document.getElementById('alertContainer'); 
+    
+    if (alertContainer) {
+        alertContainer.innerHTML = '';
+        alertContainer.append(alertDiv);
+    } else if (mainContent) {
         mainContent.insertBefore(alertDiv, mainContent.firstChild);
     } else {
         document.body.insertBefore(alertDiv, document.body.firstChild);
     }
-
 
     const closeBtn = alertDiv.querySelector('.alert-close');
     closeBtn.addEventListener('click', () => {
@@ -49,10 +66,14 @@ export function showAlert(message, type) {
     });
 
     setTimeout(() => {
-        if (alertDiv.parentNode) {
+        if (alertDiv && alertDiv.parentNode) {
             alertDiv.remove();
         }
-    }, 5000);
+    }, 4000);
+}
+
+if (typeof window !== 'undefined') {
+    window.showAlert = showAlert;
 }
 
 /**

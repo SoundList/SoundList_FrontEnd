@@ -54,9 +54,19 @@ export function initializeDeleteModalsLogic(state) {
  * Muestra el modal de eliminar comentario
  */
 export function showDeleteCommentModal(commentId, state) {
+    if (!state) {
+        console.error('showDeleteCommentModal: state no está definido');
+        return;
+    }
     state.deletingCommentId = commentId;
     const modal = document.getElementById('deleteCommentModalOverlay');
-    if(modal) modal.style.display = 'flex';
+    if(modal) {
+        modal.style.display = 'flex';
+        // Asegurar que el modal tenga el z-index más alto
+        modal.style.zIndex = '10005';
+    } else {
+        console.error('Modal de eliminar comentario no encontrado');
+    }
 }
     
 /**
@@ -72,7 +82,14 @@ function hideDeleteCommentModal(state) {
  * Confirma la eliminación de un comentario
  */
 async function confirmDeleteComment(state) {
-    if (!state.deletingCommentId) return;
+    console.log('confirmDeleteComment llamado con state:', state);
+    if (!state || !state.deletingCommentId) {
+        console.error('confirmDeleteComment: state o deletingCommentId no está definido', { state, deletingCommentId: state?.deletingCommentId });
+        return;
+    }
+    
+    const commentId = state.deletingCommentId;
+    console.log('Eliminando comentario:', commentId);
     
     // Obtener reviewId desde diferentes modales posibles
     let reviewId = null;
@@ -80,12 +97,19 @@ async function confirmDeleteComment(state) {
     const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
     const deleteCommentModal = document.getElementById('deleteCommentModalOverlay');
     
-    if (commentsModal && commentsModal.style.display === 'flex') {
+    // Primero intentar obtener del state si está disponible
+    if (state && state.currentReviewId) {
+        reviewId = state.currentReviewId;
+        console.log('reviewId obtenido del state:', reviewId);
+    } else if (commentsModal && commentsModal.style.display === 'flex') {
         reviewId = commentsModal.getAttribute('data-review-id');
+        console.log('reviewId obtenido del commentsModal:', reviewId);
     } else if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
         reviewId = reviewDetailModal.getAttribute('data-review-id');
+        console.log('reviewId obtenido del reviewDetailModal:', reviewId);
     } else if (deleteCommentModal) {
         reviewId = deleteCommentModal.getAttribute('data-review-id');
+        console.log('reviewId obtenido del deleteCommentModal:', reviewId);
     }
     
     if (!reviewId) {
@@ -95,10 +119,10 @@ async function confirmDeleteComment(state) {
         return;
     }
     
-    const authToken = localStorage.getItem('authToken');
-    
     try {
-        await deleteComment(state.deletingCommentId, authToken);
+        console.log('Llamando a deleteComment con commentId:', commentId);
+        await deleteComment(commentId);
+        console.log('Comentario eliminado exitosamente');
         
         hideDeleteCommentModal(state);
         

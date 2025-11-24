@@ -53,6 +53,62 @@ export async function showCommentsModal(reviewId, state) {
         state.currentReviewId = reviewId;
     }
     
+    // Actualizar el avatar del input con la foto de perfil del usuario actual
+    const avatarImg = document.getElementById('commentsModalAvatar') || 
+                     document.querySelector('.comments-input-avatar');
+    if (avatarImg) {
+        // Detectar la ruta correcta para el avatar por defecto
+        const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+        const isAmigosPage = window.location.pathname.includes('/amigos.html');
+        const defaultAvatar = isProfilePage ? '../../Assets/default-avatar.png' : 
+                             isAmigosPage ? '../Assets/default-avatar.png' :
+                             '../Assets/default-avatar.png';
+        
+        // Intentar obtener el avatar desde localStorage primero
+        let userAvatar = localStorage.getItem('userAvatar');
+        
+        // Siempre intentar obtener el avatar más reciente del usuario (por si cambió)
+        try {
+            const currentUserId = localStorage.getItem('userId');
+            if (currentUserId) {
+                // Intentar obtener el perfil del usuario
+                const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
+                    try {
+                        if (window.userApi && window.userApi.getUserProfile) {
+                            return await window.userApi.getUserProfile(userId);
+                        }
+                        const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                        const token = localStorage.getItem('authToken');
+                        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                        const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                        if (axiosInstance) {
+                            const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
+                            return response.data;
+                        }
+                        return null;
+                    } catch (error) {
+                        console.debug(`No se pudo obtener usuario ${userId}:`, error);
+                        return null;
+                    }
+                });
+                
+                const userData = await getUserFn(currentUserId);
+                if (userData) {
+                    const newAvatar = userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image;
+                    if (newAvatar) {
+                        userAvatar = newAvatar;
+                        localStorage.setItem('userAvatar', newAvatar);
+                    }
+                }
+            }
+        } catch (e) {
+            console.debug('Error obteniendo avatar del usuario:', e);
+        }
+        
+        // Usar el avatar obtenido o el default
+        avatarImg.src = userAvatar || defaultAvatar;
+    }
+    
     await loadCommentsIntoModal(reviewId, state);
 }
 

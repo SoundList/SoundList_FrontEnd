@@ -747,6 +747,38 @@ function loadUserData() {
             usernameDisplay.textContent = 'Usuario';
         }
         
+        // Cargar y guardar el avatar del usuario en localStorage si no está
+        const currentUserId = localStorage.getItem('userId');
+        if (currentUserId && !localStorage.getItem('userAvatar')) {
+            // Cargar el avatar en segundo plano sin bloquear
+            (async () => {
+                try {
+                    if (window.userApi && window.userApi.getUserProfile) {
+                        const userData = await window.userApi.getUserProfile(currentUserId);
+                        if (userData) {
+                            const avatar = userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image;
+                            if (avatar) {
+                                localStorage.setItem('userAvatar', avatar);
+                                // Actualizar el avatar en el header si existe
+                                const headerAvatar = document.getElementById('userMenuButton');
+                                if (headerAvatar) {
+                                    headerAvatar.src = avatar;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.debug('Error cargando avatar del usuario:', e);
+                }
+            })();
+        } else if (localStorage.getItem('userAvatar')) {
+            // Si ya está en localStorage, actualizar el header
+            const headerAvatar = document.getElementById('userMenuButton');
+            if (headerAvatar) {
+                headerAvatar.src = localStorage.getItem('userAvatar');
+            }
+        }
+        
         // Configurar el botón de agregar reseña
         if (addReviewBtn) {
             // Remover listeners anteriores si existen

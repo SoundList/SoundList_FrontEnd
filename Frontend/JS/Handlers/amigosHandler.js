@@ -304,8 +304,29 @@ export function addReviewEventListeners(reviewsListElement, state) {
     reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                if (typeof window.showLoginRequiredModal === 'function') {
+                    window.showLoginRequiredModal();
+                } else if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal();
+                }
+                return;
+            }
+            
             const id = this.getAttribute('data-review-id');
-            if (window.showCommentsModal) window.showCommentsModal(id);
+            if (!id) {
+                console.warn('Botón de comentarios sin data-review-id');
+                return;
+            }
+            if (typeof window.showCommentsModal === 'function') {
+                window.showCommentsModal(id);
+            } else if (typeof showCommentsModal === 'function') {
+                showCommentsModal(id);
+            } else {
+                console.warn('showCommentsModal no está disponible');
+            }
         });
     });
 

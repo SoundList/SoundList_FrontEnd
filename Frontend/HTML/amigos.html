@@ -210,6 +210,36 @@
         </div>
     </div>
 
+    <!-- Comments Modal (igual que en home) -->
+    <div class="comments-modal-overlay" id="commentsModalOverlay" style="display: none;">
+        <div class="comments-modal">
+            <div class="comments-modal-content">
+                <div class="comments-modal-header">
+                    <h2 class="comments-modal-title">Comentarios <span id="commentsCount">0</span></h2>
+                    <button class="comments-modal-close" id="closeCommentsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="comments-list-container" id="commentsList">
+                    <!-- Comments will be populated here -->
+                </div>
+                <div class="comments-input-container">
+                    <div class="comments-input-wrapper">
+                        <img src="../Assets/default-avatar.png" alt="Avatar" class="comments-input-avatar" id="commentsModalAvatar">
+                        <input type="text" 
+                               class="comments-input" 
+                               id="commentInput" 
+                               placeholder="Escribe un comentario..."
+                               maxlength="500">
+                        <button class="comments-send-btn" id="submitCommentBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>

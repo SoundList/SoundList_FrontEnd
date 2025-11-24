@@ -4,11 +4,7 @@ import { getFollowing, searchUsers } from '../APIs/AmigosApi.js';
 // A. FUNCIONES DE UTILIDAD VISUAL
 // ----------------------------------------------------------------------
 
-/**
- * Renderiza estrellas según el rating
- * @param {number} rating - Rating de 0 a 5
- * @returns {string} HTML de las estrellas
- */
+
 export function renderStars(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;

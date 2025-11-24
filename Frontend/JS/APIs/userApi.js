@@ -4,6 +4,7 @@
     const API_BASE_URL = "http://localhost:5000";
     const GATEWAY_USERS = `${API_BASE_URL}/api/gateway/users`; 
 
+    
     // ==========================================
     // 🛡️ CONFIGURACIÓN AXIOS & INTERCEPTORES
     // ==========================================
@@ -30,19 +31,20 @@
     }
 
     // Helper de Auth blindado
-    function getAuthHeaders() {
-        const token = localStorage.getItem("authToken");
-        // Si no hay token o es inválido, devolvemos headers vacíos para evitar errores 400
-        if (!token || token === "null" || token === "undefined" || token.length < 20) {
-            return { headers: { 'Content-Type': 'application/json' } };
-        }
-        return { 
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            } 
-        };
+   function getAuthHeaders() {
+    const token = localStorage.getItem("authToken");
+    // Si no hay token o es inválido, devolvemos headers vacíos para evitar errores 400
+    if (!token || token === "null" || token === "undefined" || token.length < 20) {
+        // En Axios, esto devuelve el objeto de configuración.
+        return { headers: { 'Content-Type': 'application/json' } };
     }
+    return { 
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        } 
+    };
+}
 
     // ==========================================
     // 👤 1. GESTIÓN DE PERFIL (Profile)
@@ -58,16 +60,27 @@
         }
     }
 
-    async function updateUserProfile(userId, profileData) {
-        try {
-            const response = await axios.patch(`${GATEWAY_USERS}/${userId}`, profileData, getAuthHeaders());
-            console.log("✅ Perfil actualizado:", response.data);
-            return response.data;
-        } catch (error) {
-            console.error("❌ Error en updateUserProfile:", error);
-            throw error;
-        }
+ async function updateUserProfile(userId, profileData) { 
+    // 1. Construir la URL completa: /api/gateway/users/{userId}
+    const url = `${GATEWAY_USERS}/${userId}`;
+    
+    // 2. Obtener los encabezados de autenticación
+    const config = getAuthHeaders();
+    
+    try {
+        // Usamos axios.patch para el método de actualización parcial
+        const response = await axios.patch(url, profileData, config); 
+        
+        console.log("✅ Perfil actualizado:", response.data);
+        return response.data;
+    } catch (error) {
+        // Registrar el error para la depuración
+        console.error("❌ Error en updateUserProfile:", error);
+        
+        // Re-lanzar el error para que la función que llama (ej: handleImageSubmit) lo maneje
+        throw error;
     }
+}
 
     // ==========================================
     // 🔐 2. SEGURIDAD DE CUENTA

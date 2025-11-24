@@ -54,13 +54,15 @@ export function initializeSongPage() {
 
 // --- 4. FUNCIONES PRINCIPALES ---
 
+// --- 4. FUNCIONES PRINCIPALES ---
+
 async function loadPageData() {
     const loadingEl = document.getElementById('loadingSpinner');
     const contentEl = document.getElementById('songContent');
 
     try {
         const params = new URLSearchParams(window.location.search);
-        const apiSongId = params.get('id'); // ID de Spotify
+        const apiSongId = params.get('id'); // ID de Spotify (ej: 7d6yK...)
         
         // Validación más estricta del ID
         if (!apiSongId || apiSongId.trim() === '' || 
@@ -74,8 +76,14 @@ async function loadPageData() {
         contentEl.style.display = 'none';
         loadingEl.style.display = 'block';
 
-        // 1. Obtener datos principales
-        const songData = await getSongByApiId(apiSongId);
+        // 1. Obtener datos principales (USANDO getOrCreateSong en lugar de getSongByApiId)
+        // Esto soluciona el error "Cannot read properties of null"
+        let songData = await getOrCreateSong(apiSongId);
+
+        if (!songData) {
+             throw new Error("No se pudo obtener la información de la canción (API retornó null).");
+        }
+
         currentSongData = songData; // Guardamos globalmente
         const localSongId = songData.songId; // GUID local
 
@@ -83,7 +91,7 @@ async function loadPageData() {
         renderSongHeader(songData);
         renderSongDetails(songData);
 
-        // 3. Obtener reseñas (¡LÓGICA CORREGIDA!)
+        // 3. Obtener reseñas
         const allReviews = await getReviews();
         
         // Normalizamos el ID local para comparar
@@ -91,18 +99,19 @@ async function loadPageData() {
 
         const filteredReviews = allReviews.filter(review => {
             // Obtenemos el ID de la reseña de forma segura
+            // Intentamos obtener el ID del contenido asociado
             const reviewSongId = review.songId || review.SongId;
             
             // Si la reseña no tiene SongId, la descartamos
             if (!reviewSongId) return false;
 
-            // Normalizamos y comparamos
+            // Normalizamos y comparamos con el GUID Local
             return String(reviewSongId).trim().toLowerCase() === targetId;
         });
 
         console.log(`Reseñas filtradas: ${filteredReviews.length} de ${allReviews.length}`);
         
-        // 4. Enriquecer reseñas (¡LÓGICA CORREGIDA!)
+        // 4. Enriquecer reseñas
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
                 try {
@@ -116,7 +125,7 @@ async function loadPageData() {
                     ]);
                     
                     const currentUserId = localStorage.getItem('userId');
-                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true'; // (O lógica de 'reactionId')
+                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true'; 
 
                     return {
                         id: reviewId,
@@ -150,7 +159,13 @@ async function loadPageData() {
         contentEl.style.display = 'block';
     } catch (error) {
         console.error("Error fatal al cargar página de canción:", error);
-        contentEl.innerHTML = `<h2 class="text-light text-center py-5">Error al cargar la canción: ${error.message}</h2>`;
+        // Si falla, mostramos mensaje amigable
+        loadingEl.style.display = 'none';
+        contentEl.innerHTML = `<div class="container text-center py-5">
+            <h2 class="text-white mb-3">Oops! Algo salió mal.</h2>
+            <p class="text-white-50">${error.message}</p>
+            <a href="index.html" class="btn btn-primary mt-3">Volver al Inicio</a>
+        </div>`;
         contentEl.style.display = 'block';
     } finally {
         loadingEl.style.display = 'none';

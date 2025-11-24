@@ -927,10 +927,12 @@ async function submitReviewDetailComment(state) {
             return;
         }
         
-        await createComment(reviewId, commentText, userId, authToken);
+        await createComment(reviewId, commentText);
         
         commentInput.value = '';
-        await loadReviewDetailComments(reviewId, null, state);
+        // Recargar comentarios para obtener el username del backend
+        const comments = await getCommentsByReview(reviewId);
+        await loadReviewDetailComments(reviewId, comments, state);
         
         const commentsCount = document.getElementById('reviewDetailCommentsCount');
         if (commentsCount) {

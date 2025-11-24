@@ -9,6 +9,13 @@ let getOrCreateSong = null;
 let getOrCreateAlbum = null;
 let createReview = null;
 
+// Estado del modal de comentarios (igual que en home)
+const profileCommentsModalState = {
+    editingCommentId: null,
+    originalCommentText: null,
+    commentsData: {}
+};
+
 // Intentar importar funciones si están disponibles
 if (typeof window !== 'undefined') {
     // fetchSearchResults puede estar en window.searchApi o como función global
@@ -315,51 +322,35 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 }
                 
                 const reviewId = this.getAttribute('data-review-id');
-                if (reviewId && typeof showReviewDetailModal === 'function') {
-                    showReviewDetailModal(reviewId);
-                }
-            });
-        });
-    } else {
-        // Comentarios
-        container.querySelectorAll('.comment-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const authToken = localStorage.getItem('authToken');
-                if (!authToken) {
-                    if (typeof showLoginRequiredModal === 'function') {
-                        showLoginRequiredModal();
-                    }
-                    return;
-                }
-                
-                const reviewId = this.getAttribute('data-review-id');
-                if (typeof showCommentsModal === 'function') {
-                    showCommentsModal(reviewId);
-                } else {
-                    console.warn('showCommentsModal no está disponible');
-                }
-            });
-        });
-
-        // Click en la reseña para ver detalles
-        container.querySelectorAll('.review-clickable').forEach(element => {
-            element.addEventListener('click', function(e) {
-                if (e.target.closest('.review-actions') || 
-                    e.target.closest('.btn-edit') || 
-                    e.target.closest('.btn-delete') || 
-                    e.target.closest('.btn-like') || 
-                    e.target.closest('.comment-btn')) {
-                    return;
-                }
-                
-                const reviewId = this.getAttribute('data-review-id');
-                if (reviewId && typeof showReviewDetailModal === 'function') {
-                    showReviewDetailModal(reviewId);
+                if (reviewId && typeof window.showReviewDetailModal === 'function') {
+                    window.showReviewDetailModal(reviewId);
                 }
             });
         });
     }
+    
+    // Comentarios (funciona tanto en perfil propio como ajeno)
+    container.querySelectorAll('.comment-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal();
+                }
+                return;
+            }
+            
+            const reviewId = this.getAttribute('data-review-id');
+            if (typeof window.showCommentsModal === 'function') {
+                window.showCommentsModal(reviewId);
+            } else if (typeof showCommentsModal === 'function') {
+                showCommentsModal(reviewId);
+            } else {
+                console.warn('showCommentsModal no está disponible');
+            }
+        });
+    });
 }
 
 /**
@@ -1198,25 +1189,43 @@ async function deleteReviewLogic(reviewId) {
 }
 
 /**
- * Muestra el modal de comentarios - usa el modal de detalles de reseña que ya incluye comentarios
+ * Muestra el modal de comentarios (igual que en home)
  */
 async function showCommentsModal(reviewId) {
-    // Usar el modal de detalles de reseña que ya tiene la funcionalidad de comentarios
-    if (typeof showReviewDetailModal === 'function') {
-        await showReviewDetailModal(reviewId);
-    } else {
-        // Fallback: intentar abrir directamente el modal de detalles
-        const modal = document.getElementById('reviewDetailModalOverlay');
-        if (modal) {
-            modal.setAttribute('data-review-id', reviewId);
-            modal.style.display = 'flex';
-            // Cargar la reseña y comentarios
-            if (typeof showReviewDetailModal === 'function') {
-                await showReviewDetailModal(reviewId);
+    // Intentar usar el modal de comentarios del módulo (igual que en home)
+    try {
+        const { showCommentsModal: showCommentsModalFromModule } = await import('../../Components/modals/commentsModal.js');
+        if (showCommentsModalFromModule) {
+            await showCommentsModalFromModule(reviewId, profileCommentsModalState);
+            
+            // Actualizar el avatar del input
+            const avatarImg = document.getElementById('commentsModalAvatar');
+            if (avatarImg) {
+                avatarImg.src = localStorage.getItem('userAvatar') || '../../Assets/default-avatar.png';
             }
-        } else {
-            console.warn('Modal de detalles de reseña no disponible');
+            return;
         }
+    } catch (importError) {
+        console.warn('No se pudo importar showCommentsModal del módulo:', importError);
+    }
+    
+    // Fallback: usar el modal directamente si existe
+    const modal = document.getElementById('commentsModalOverlay');
+    if (modal) {
+        modal.setAttribute('data-review-id', reviewId);
+        modal.style.display = 'flex';
+        
+        // Intentar cargar comentarios
+        try {
+            const { loadCommentsIntoModal } = await import('../../Components/modals/commentsModal.js');
+            if (loadCommentsIntoModal) {
+                await loadCommentsIntoModal(reviewId, profileCommentsModalState);
+            }
+        } catch (loadError) {
+            console.warn('No se pudieron cargar los comentarios:', loadError);
+        }
+    } else {
+        console.warn('Modal de comentarios no disponible');
     }
 }
 
@@ -1485,9 +1494,14 @@ async function loadReviewDetailComments(reviewId, comments) {
         }
         
         // Enriquecer comentarios con datos de usuario si no tienen username
-        const getUserFn = window.socialApi?.getUser || (async (userId) => {
+        // Usar getUserProfile de userApi que ya está bien implementada
+        const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/gateway/users/${userId}`);
+                // Usar axios directamente con el endpoint correcto
+                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
                 return response.data;
             } catch (error) {
                 console.debug(`No se pudo obtener usuario ${userId}:`, error);
@@ -1511,7 +1525,7 @@ async function loadReviewDetailComments(reviewId, comments) {
                             ...comment,
                             UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
                             username: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || userData.image || comment.UserProfilePicUrl
                         };
                     }
                 } catch (error) {
@@ -1532,7 +1546,12 @@ async function loadReviewDetailComments(reviewId, comments) {
                 }
             }
             
-            return comment;
+            // Si aún no tenemos username, devolver con "Usuario" como fallback
+            return {
+                ...comment,
+                UserName: 'Usuario',
+                username: 'Usuario'
+            };
         }));
         
         const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
@@ -2310,7 +2329,7 @@ async function submitReviewDetailComment() {
         }
         
         if (createCommentFn) {
-            await createCommentFn(reviewId, commentText, userId, authToken);
+            await createCommentFn(reviewId, commentText);
         } else {
             console.error('No se encontró función createComment en ninguna fuente disponible');
             if (typeof showAlert === 'function') {
@@ -2322,23 +2341,23 @@ async function submitReviewDetailComment() {
         // Limpiar input
         commentInput.value = '';
         
-        // Recargar comentarios en el modal de detalle
-        await loadReviewDetailComments(reviewId);
+        // Recargar comentarios para obtener el username del backend
+        const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
+        const comments = await getCommentsByReviewFn(reviewId);
+        await loadReviewDetailComments(reviewId, comments);
         
         // Actualizar contador en el modal de detalles
         const commentsCount = document.getElementById('reviewDetailCommentsCount');
         if (commentsCount) {
-            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
-            const comments = await getCommentsByReviewFn(reviewId);
             commentsCount.textContent = comments.length;
-            
-            // Actualizar también el contador en la tarjeta de reseña del perfil
-            const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
-            if (reviewItem) {
-                const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
-                if (reviewCommentsCount) {
-                    reviewCommentsCount.textContent = comments.length;
-                }
+        }
+        
+        // Actualizar también el contador en la tarjeta de reseña del perfil
+        const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+        if (reviewItem) {
+            const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
+            if (reviewCommentsCount) {
+                reviewCommentsCount.textContent = comments.length;
             }
         }
         

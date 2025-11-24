@@ -4,7 +4,7 @@
     const API_BASE = `${GATEWAY_BASE_URL}/comments`; 
 
     function getAuthHeaders() {
-        const token = localStorage.getItem("authToken");
+        const token = localStorage.getItem("authToken"); // Confirmado que esta es la key
         if (!token) {
             console.warn("No se encontró authToken para la petición API.");
             return {};
@@ -27,19 +27,17 @@
     }
 
     async function createComment(reviewId, commentText) {
-        const userId = localStorage.getItem("userId"); 
-        if (!userId) {
-             console.error("❌ Error en createComment: No se encontró userId en localStorage.");
-             throw new Error("Usuario no identificado. No se puede comentar.");
-        }
+        // ELIMINADO: Ya no buscamos userId en localStorage.
+        // La identidad viaja segura dentro del token en los headers.
 
         const payload = {
             reviewId: reviewId,
-            userId: userId,
+            // userId: userId, <--- ELIMINADO
             text: commentText 
         };
 
         try {
+            // El backend extraerá el usuario del token 'Authorization'
             const response = await axios.post(API_BASE, payload, getAuthHeaders());
             return response.data; 
         } catch (error) {

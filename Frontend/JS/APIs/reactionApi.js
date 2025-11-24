@@ -1,5 +1,5 @@
 
-(function() {
+/*(function() {
 
     const GATEWAY_BASE_URL = "://localhost:5000/api/gateway";
 
@@ -116,4 +116,5 @@
         getRecentReviews
     };
 
-})();
+})(); 
+*/

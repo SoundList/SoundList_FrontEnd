@@ -1,9 +1,8 @@
-
 import { API_BASE_URL } from './configApi.js';
 
 // API_BASE_URL suele ser http://localhost:5000
 const REVIEWS_ENDPOINT = `${API_BASE_URL}/api/gateway/reviews`;
-
+const FEEDS_ENDPOINT = `${API_BASE_URL}/api/gateway/feeds`;
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
@@ -16,15 +15,22 @@ const getAuthHeaders = () => {
 };
 
 export const ReviewApi = {
-    // Crear Reseña
+    // 1. CREAR RESEÑA (Secure)
     createReview: async (reviewData) => {
         try {
+            // SEGURIDAD: Extraemos userId para NO enviarlo. El Backend lo saca del Token.
+            const { userId, ...payload } = reviewData; 
+
             const response = await fetch(REVIEWS_ENDPOINT, {
                 method: 'POST',
                 headers: getAuthHeaders(),
-                body: JSON.stringify(reviewData)
+                body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error('Error creating review');
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Error creating review');
+            }
             return await response.json();
         } catch (error) {
             console.error("❌ Error createReview:", error);
@@ -50,7 +56,6 @@ export const ReviewApi = {
     // Actualizar Reseña
     updateReview: async (reviewId, newText, newRating) => {
         try {
-            // Nota: Agregué rating por si acaso, si no lo usas, el backend lo ignorará
             const payload = { text: newText, rating: newRating }; 
             const response = await fetch(`${REVIEWS_ENDPOINT}/${reviewId}`, {
                 method: 'PUT',
@@ -81,7 +86,7 @@ export const ReviewApi = {
 
     // --- 2. FUNCIONES DE FILTRADO DE USUARIO ---
 
-    // Top reseñas de un usuario
+    // Top reseñas de un usuario (Público o Privado, pero de OTRO usuario)
     getTopReviewsByUser: async (userId) => {
         try {
             const response = await fetch(`${REVIEWS_ENDPOINT}/user/${userId}/top`, {
@@ -92,19 +97,18 @@ export const ReviewApi = {
             return await response.json();
         } catch (error) {
             console.warn("⚠️ Fallback: getTopReviewsByUser falló, devolviendo todas.");
-            return ReviewApi.getAllReviews(); // Tu fallback original
+            return ReviewApi.getAllReviews(); 
         }
     },
 
-    // Todas las reseñas de un usuario
+    // Todas las reseñas de un usuario (Perfil de terceros)
     getReviewsByUser: async (userId) => {
         try {
-            // Intento optimizado si tuvieras endpoint directo
-            // const response = await fetch(`${REVIEWS_ENDPOINT}/user/${userId}`, ...);
+            // Opción 1: Si el backend soporta filtrado server-side
+            // const response = await fetch(`${REVIEWS_ENDPOINT}/user/${userId}`, { headers: getAuthHeaders() });
             
-            // Tu lógica original (Fallback): Traer todas y filtrar en el cliente
+            // Opción 2 (Tu Fallback actual): Traer todas y filtrar en cliente
             const allReviews = await ReviewApi.getAllReviews();
-            // Filtrar por userId o UserId (el backend puede usar cualquiera)
             return allReviews.filter(r => {
                 const reviewUserId = r.userId || r.UserId;
                 return String(reviewUserId).trim() === String(userId).trim();
@@ -115,25 +119,37 @@ export const ReviewApi = {
         }
     },
 
+    // --- 3. FUNCIONES DE IDENTIDAD (Token Dependent) ---
+
     // Mis reseñas
     getMyReviews: async () => {
-        const myUserId = localStorage.getItem("userId");
-        if (!myUserId) return [];
-        return await ReviewApi.getReviewsByUser(myUserId);
+        try {
+            // INTENTO 1: Endpoint seguro (Token decide quién soy)
+            // Si tu backend no tiene '/my-reviews', caerá al catch
+            const response = await fetch(`${REVIEWS_ENDPOINT}/my-reviews`, {
+                method: 'GET',
+                headers: getAuthHeaders()
+            });
+            
+            if (response.ok) return await response.json();
+            
+            throw new Error("Endpoint no encontrado");
+        } catch (error) {
+            // FALLBACK: Usar localStorage solo si falla el endpoint dedicado
+            const myUserId = localStorage.getItem("userId");
+            if (!myUserId) return [];
+            return await ReviewApi.getReviewsByUser(myUserId);
+        }
     },
 
-// Obtener reseñas de quienes YO SIGO (Endpoint: /api/gateway/following)
-// Obtener reseñas de SEGUIDOS (Following)
+    // Obtener reseñas de quienes YO SIGO (Following)
     getReviewsByFollowing: async () => {
         try {
-            const userId = localStorage.getItem('userId');
-            if (!userId) return [];
-
-
-            // La URL base sigue siendo http://localhost:5000/api/gateway
-            const url = `${API_BASE_URL}/api/gateway/feeds/following?myUserId=${userId}&page=1&pageSize=50`;
+            // CAMBIO CRÍTICO: Eliminamos 'myUserId=' de la URL.
+            // El backend debe leer el token para saber quién soy.
+            const url = `${FEEDS_ENDPOINT}/following?page=1&pageSize=50`;
             
-            console.log(`🌐 Fetching Seguidos: ${url}`);
+            console.log(`🌐 Fetching Seguidos (Secure): ${url}`);
             const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
 
             if (!response.ok) return [];
@@ -145,15 +161,13 @@ export const ReviewApi = {
         }
     },
 
-    // Obtener reseñas de SEGUIDORES (Followers)
+    // Obtener reseñas de MIS SEGUIDORES (Followers)
     getReviewsByFollowers: async () => {
         try {
-            const userId = localStorage.getItem('userId');
-            if (!userId) return [];
-
-            const url = `${API_BASE_URL}/api/gateway/feeds/follow?myUserId=${userId}&page=1&pageSize=50`;
+            // CAMBIO CRÍTICO: Eliminamos 'myUserId=' de la URL.
+            const url = `${FEEDS_ENDPOINT}/follow?page=1&pageSize=50`;
             
-            console.log(`🌐 Fetching Seguidores: ${url}`);
+            console.log(`🌐 Fetching Seguidores (Secure): ${url}`);
             const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
 
             if (!response.ok) return [];
@@ -164,22 +178,23 @@ export const ReviewApi = {
             return [];
         }
     },
-    // --- 4. EXTRAS (Placeholders para evitar errores si los llamas) ---
+
+    // --- 4. EXTRAS ---
     reportReview: async (reviewId) => {
         console.log(`[MOCK] Reseña ${reviewId} reportada.`);
         return true;
     },
 
     getBestReviews: async () => {
-        return ReviewApi.getAllReviews(); // Fallback a todas
+        return ReviewApi.getAllReviews(); 
     },
 
     getRecentReviews: async () => {
-        return ReviewApi.getAllReviews(); // Fallback a todas
+        return ReviewApi.getAllReviews(); 
     }
 };
 
-// Mantener compatibilidad global por si algún HTML viejo usa onclick="window.reviewApi..."
+// Compatibilidad Global
 if (typeof window !== 'undefined') {
     window.reviewApi = ReviewApi;
 }

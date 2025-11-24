@@ -264,6 +264,36 @@
         </div>
     </div>
 
+    <!-- Comments Modal (igual que en home) -->
+    <div class="comments-modal-overlay" id="commentsModalOverlay" style="display: none;">
+        <div class="comments-modal">
+            <div class="comments-modal-content">
+                <div class="comments-modal-header">
+                    <h2 class="comments-modal-title">Comentarios <span id="commentsCount">0</span></h2>
+                    <button class="comments-modal-close" id="closeCommentsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="comments-list-container" id="commentsList">
+                    <!-- Comments will be populated here -->
+                </div>
+                <div class="comments-input-container">
+                    <div class="comments-input-wrapper">
+                        <img src="../../Assets/default-avatar.png" alt="Avatar" class="comments-input-avatar" id="commentsModalAvatar">
+                        <input type="text" 
+                               class="comments-input" 
+                               id="commentInput" 
+                               placeholder="Escribe un comentario..."
+                               maxlength="500">
+                        <button class="comments-send-btn" id="submitCommentBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
         <div class="review-detail-modal">
             <div class="review-detail-modal-content">
@@ -399,9 +429,41 @@
                 initializeReviewDetailModalLogic();
             }
 
-            if (typeof initializeDeleteModalsLogic === 'function') {
-                initializeDeleteModalsLogic();
-            }
+            // Inicializar modales con estado compartido (igual que en home)
+            (async () => {
+                try {
+                    // Crear estado compartido para todos los modales
+                    const modalsState = {
+                        editingCommentId: null,
+                        originalCommentText: null,
+                        commentsData: {},
+                        deletingCommentId: null,
+                        deletingReviewId: null,
+                        currentReviewId: null
+                    };
+                    
+                    // Inicializar modal de comentarios
+                    const commentsModule = await import('../../JS/Components/modals/commentsModal.js');
+                    if (commentsModule && commentsModule.initializeCommentsModalLogic) {
+                        commentsModule.initializeCommentsModalLogic(modalsState);
+                        window.initializeCommentsModalLogic = commentsModule.initializeCommentsModalLogic;
+                        window.showCommentsModal = (reviewId) => commentsModule.showCommentsModal(reviewId, modalsState);
+                    }
+                    
+                    // Inicializar modales de eliminación
+                    const deleteModalsModule = await import('../../JS/Components/modals/deleteModals.js');
+                    if (deleteModalsModule && deleteModalsModule.initializeDeleteModalsLogic) {
+                        deleteModalsModule.initializeDeleteModalsLogic(modalsState);
+                        window.initializeDeleteModalsLogic = deleteModalsModule.initializeDeleteModalsLogic;
+                    }
+                } catch (err) {
+                    console.warn('No se pudo cargar los módulos de modales:', err);
+                    // Fallback: usar función local si existe
+                    if (typeof initializeDeleteModalsLogic === 'function') {
+                        initializeDeleteModalsLogic();
+                    }
+                }
+            })();
 
             const urlParams = new URLSearchParams(window.location.search);
             let userIdToLoad = urlParams.get('userId');

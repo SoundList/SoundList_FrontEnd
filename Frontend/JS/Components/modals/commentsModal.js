@@ -48,6 +48,11 @@ export async function showCommentsModal(reviewId, state) {
     modal.setAttribute('data-review-id', reviewId);
     modal.style.display = 'flex';
     
+    // Asegurar que el reviewId esté en el state
+    if (state) {
+        state.currentReviewId = reviewId;
+    }
+    
     await loadCommentsIntoModal(reviewId, state);
 }
 
@@ -65,16 +70,36 @@ export async function loadCommentsIntoModal(reviewId, state) {
         let comments = await getCommentsByReview(reviewId);
         
         // Enriquecer comentarios con datos de usuario si no tienen username (igual que en profileHandler.js)
-        const { getUser } = await import('../../APIs/socialApi.js');
-        const getUserFn = window.socialApi?.getUser || getUser;
+        // Usar getUserProfile de userApi que ya está bien implementada, o axios directamente
+        const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
+            try {
+                // Intentar usar getUserProfile de userApi si está disponible
+                if (window.userApi && window.userApi.getUserProfile) {
+                    return await window.userApi.getUserProfile(userId);
+                }
+                // Fallback: usar axios directamente con el endpoint correcto
+                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                if (axiosInstance) {
+                    const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
+                    return response.data;
+                }
+                return null;
+            } catch (error) {
+                console.debug(`No se pudo obtener usuario ${userId}:`, error);
+                return null;
+            }
+        });
         
         comments = await Promise.all(comments.map(async (comment) => {
-            // Si ya tiene username, devolverlo tal cual
-            if (comment.UserName || comment.username) {
+            // Si ya tiene username y avatar, devolverlo tal cual
+            if ((comment.UserName || comment.username) && (comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar)) {
                 return comment;
             }
             
-            // Si no tiene username, obtenerlo del User Service
+            // Si no tiene username o avatar, obtenerlo del User Service
             const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
             if (userId) {
                 try {
@@ -82,9 +107,9 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     if (userData) {
                         return {
                             ...comment,
-                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                            UserName: userData.Username || userData.username || userData.UserName || comment.UserName || comment.username || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || comment.UserName || comment.username || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image || comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar
                         };
                     }
                 } catch (error) {
@@ -132,6 +157,16 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     commentId = String(commentId).trim();
                 }
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
+                // Obtener la foto de perfil del usuario (con fallback a default)
+                let userAvatar = comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar || comment.imgProfile || comment.ImgProfile || comment.image;
+                // Si no hay avatar o es una cadena vacía, usar el default
+                // La ruta debe ser relativa al HTML donde se renderiza (home.html usa ../Assets, profile.html usa ../../Assets)
+                // Usamos una ruta que funcione desde ambos contextos detectando la ubicación
+                if (!userAvatar || userAvatar === '' || userAvatar === 'null' || userAvatar === 'undefined') {
+                    // Detectar si estamos en profile.html o home.html basado en la ruta actual
+                    const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                    userAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+                }
                 
                 // Verificar likes desde cache primero (igual que con reseñas)
                 const commentLikesCacheKey = `comment_likes_${commentId}`;
@@ -187,10 +222,14 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     actionButtons = '';
                 }
                 
+                // Determinar la ruta del fallback basado en la página actual
+                const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                const fallbackAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+                
                 return `
                 <div class="comment-item" data-comment-id="${commentId}">
                     <div class="comment-avatar">
-                        <img src="../Assets/default-avatar.png" alt="${username}">
+                        <img src="${userAvatar}" alt="${username}" onerror="this.src='${fallbackAvatar}'">
                     </div>
                     <div class="comment-content">
                         <div class="comment-header">
@@ -213,7 +252,7 @@ export async function loadCommentsIntoModal(reviewId, state) {
             }).join('');
         }
         
-        attachCommentActionListeners(state);
+        attachCommentActionListeners(state, reviewId);
     } catch (error) {
         console.error("Error cargando comentarios en modal:", error);
         commentsList.innerHTML = `<div class="comment-empty">Error al cargar comentarios.</div>`;
@@ -258,9 +297,10 @@ async function submitComment(state) {
         const authToken = localStorage.getItem('authToken');
         const userId = localStorage.getItem('userId');
         
-        await createComment(reviewId, commentText, userId, authToken);
+        await createComment(reviewId, commentText);
         
         commentInput.value = '';
+        // Recargar comentarios para obtener el username del backend
         await loadCommentsIntoModal(reviewId, state);
         
         // Actualizar vista detallada si está abierta
@@ -283,7 +323,7 @@ async function submitComment(state) {
 /**
  * Adjunta listeners a los botones de acción de comentarios
  */
-function attachCommentActionListeners(state) {
+function attachCommentActionListeners(state, reviewId) {
     document.querySelectorAll('.comment-edit-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const commentId = this.getAttribute('data-comment-id');
@@ -295,6 +335,10 @@ function attachCommentActionListeners(state) {
         btn.addEventListener('click', async function() {
             const commentId = this.getAttribute('data-comment-id');
             const { showDeleteCommentModal } = await import('./deleteModals.js');
+            // Asegurar que el reviewId esté disponible en el state
+            if (reviewId && state) {
+                state.currentReviewId = reviewId;
+            }
             showDeleteCommentModal(commentId, state);
         });
     });

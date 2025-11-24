@@ -1187,8 +1187,8 @@ button.nav-btn.active:hover {
     top: calc(100% + 0.5rem);
     left: 0;
     right: 0;
-    background: rgba(13, 17, 32, 0.95);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(13, 17, 32, 0.95); /* Fondo oscuro semitransparente */
+    -webkit-backdrop-filter: blur(10px); 
     backdrop-filter: blur(10px);
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1196,6 +1196,125 @@ button.nav-btn.active:hover {
     overflow-y: auto;
     z-index: 1001;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    padding: 10px 0; /* Padding interno */
+}
+
+
+
+
+/* --- Estilos de Secciones y Elementos (Copiado de home.css) --- */
+.search-dropdown-item {
+    padding: 0.75rem 1rem;
+    color: #fff;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.3s ease;
+    display: flex; /* Clave para la alineación */
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+}
+
+.search-dropdown-item:hover {
+    background: rgba(124, 58, 237, 0.2);
+}
+
+.search-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.search-section {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-section:last-child {
+    border-bottom: none;
+}
+
+.search-section-title {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-item-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px; /* Usa 8px para álbumes/canciones */
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* Estilo para artistas (circular en la imagen) */
+.search-item-image.artist {
+    border-radius: 50%; 
+}
+
+.search-item-text {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-item-icon {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+/* --- Estilos de Scrollbar (Copiado de home.css) --- */
+.search-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.search-dropdown::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Mensajes de Estado (Copiado de home.css) --- */
+.search-loading,
+.search-error,
+.search-no-results {
+    padding: 1.5rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-loading i,
+.search-error i,
+.search-no-results i {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.search-error {
+    color: #ff6b6b;
+}
+
+.search-error i {
+    color: #ff6b6b;
 }
 
 .header-center {

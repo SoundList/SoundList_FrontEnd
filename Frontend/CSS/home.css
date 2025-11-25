@@ -1347,7 +1347,7 @@ body #alertContainer .custom-alert {
 }
 
 .custom-alert {
-    width: 30% !important;
+    width: 20% !important;
     max-width:300 !important;
     margin: 0 auto 10px auto !important;
     height: 46px !important;

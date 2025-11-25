@@ -649,7 +649,27 @@ function showEditCommentModal(commentId, state) {
     textarea.parentNode.insertBefore(buttonsContainer, textarea.nextSibling);
         
     commentItem.classList.add('editing');
-    
+
+state.originalCommentText = commentTextElement.textContent.trim();
+state.editingCommentId = commentId;
+
+function handleClickOutside(e) {
+    // Si se hizo clic dentro del comentario en edición, no cancelar
+    if (commentItem.contains(e.target)) return;
+
+    commentItem.classList.remove('editing');
+    commentTextElement.textContent = state.originalCommentText;
+
+    state.editingCommentId = null;
+    state.originalCommentText = null;
+
+    document.removeEventListener('click', handleClickOutside);
+}
+
+setTimeout(() => {
+    document.addEventListener('click', handleClickOutside);
+});
+
     const commentFooter = commentItem.querySelector('.comment-footer');
     if (commentFooter) commentFooter.style.display = 'none';
     

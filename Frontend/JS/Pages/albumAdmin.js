@@ -24,7 +24,8 @@ import {
     deleteReviewReaction,
     getUser
 } from './../APIs/socialApi.js';
-import { showAlert, showLoginRequiredModal } from '../Handlers/headerHandler.js';
+import { showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { showAlert } from '../Utils/reviewHelpers.js';
 import { formatNotificationTime } from '../Handlers/headerHandler.js'; 
 
 let currentRating = 0;

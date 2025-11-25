@@ -4,11 +4,9 @@ getArtistByApiId,
 getArtistTopTracksByApiId,
 getArtistAlbumsByApiId
 }  from  './../APIs/contentApi.js';
-//  (Las  importaciones  de  reseñas  se  eliminaron)
-
 import  {  createSongListItem,  createStarRating,  createAlbumListItem  }  from  './../Components/renderContent.js';  //  (Asegúrate  de  que  'renderContent.js'  exista  y  exporte  estas  funciones)
-import  {  initializeTabNavigation  }  from  './../Handlers/albumHandler.js';  //  (albumHandler.js  puede  renombrarse  a  'tabHandler.js')
-import  {  showAlert  }  from  '../Handlers/headerHandler.js';  //  Importamos  la  alerta
+import  {  initializeTabNavigation  }  from  './../Handlers/albumHandler.js'; 
+import { showAlert } from '../Utils/reviewHelpers.js';
 
 //  ---  3.  PUNTO  DE  ENTRADA  (LLAMADO  POR  MAIN.JS)  ---
 export  function  initializeArtistPage()  {

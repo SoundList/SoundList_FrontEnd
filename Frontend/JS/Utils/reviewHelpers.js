@@ -3,10 +3,6 @@ import { getFollowing, searchUsers } from '../APIs/AmigosApi.js';
 const alertQueue = [];
 let isAlertVisible = false;
 let alertTimeout = null;
-// ----------------------------------------------------------------------
-// A. FUNCIONES DE UTILIDAD VISUAL
-// ----------------------------------------------------------------------
-
 
 export function renderStars(rating) {
     const fullStars = Math.floor(rating);
@@ -25,7 +21,26 @@ export function renderStars(rating) {
  * @param {string} type - Tipo de alerta (success, error, info, warning)
  */
 
+
+function ensureAlertContainerExists() {
+    let container = document.getElementById('alertContainer');
+    
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'alertContainer';
+
+        document.body.insertBefore(container, document.body.firstChild);
+        
+        console.log("🔧 Sistema de Alertas: Contenedor creado automáticamente.");
+    }
+    return container;
+}
+
+// --- LÓGICA PRINCIPAL ---
+
 export function showAlert(message, type = 'info') {
+    ensureAlertContainerExists();
+    
     alertQueue.push({ message, type });
     processAlertQueue();
 }
@@ -39,8 +54,9 @@ function processAlertQueue() {
 }
 
 function renderAlert(message, type) {
-    const alertContainer = document.getElementById('alertContainer') || createAlertContainer();
+    const alertContainer = document.getElementById('alertContainer'); // Ya sabemos que existe
 
+    // Iconos
     let iconClass = 'fa-info-circle';
     if (type === 'success') iconClass = 'fa-check-circle';
     if (type === 'warning') iconClass = 'fa-exclamation-triangle';
@@ -75,32 +91,16 @@ function renderAlert(message, type) {
         alertDiv.style.transform = 'translateY(-10px)';
 
         setTimeout(() => {
-            alertDiv.remove();
+            if (alertDiv.parentNode) alertDiv.remove();
             isAlertVisible = false;
             processAlertQueue(); 
         }, 200); 
     };
+
     const closeBtn = alertDiv.querySelector('.alert-close');
     closeBtn.addEventListener('click', closeThisAlert);
-    alertTimeout = setTimeout(closeThisAlert, 2500);
-}
-
-function createAlertContainer() {
-    let container = document.getElementById('alertContainer');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'alertContainer';
-        // Insertar directamente en el body para que esté por encima de los modales
-        document.body.appendChild(container);
-        // Asegurar que el contenedor tenga un z-index alto
-        container.style.position = 'fixed';
-        container.style.top = '20px';
-        container.style.left = '50%';
-        container.style.transform = 'translateX(-50%)';
-        container.style.zIndex = '10010';
-        container.style.pointerEvents = 'none';
-    }
-    return container;
+    
+    alertTimeout = setTimeout(closeThisAlert, 3000);
 }
 /**
  * @param {Array<Object>} reviews La lista de reseñas a enriquecer.

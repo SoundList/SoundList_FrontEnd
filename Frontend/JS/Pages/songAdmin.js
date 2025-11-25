@@ -27,7 +27,8 @@ import {
     getAverageRating,
     getUser
 } from './../APIs/socialApi.js';
-import { showAlert, showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { showAlert } from '../Utils/reviewHelpers.js';
 import { createAudioPlayer } from './../Components/audioPlayer.js';
 
 // --- 2. ESTADO GLOBAL ---

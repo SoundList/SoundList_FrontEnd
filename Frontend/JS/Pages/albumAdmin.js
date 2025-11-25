@@ -2,7 +2,8 @@ import {
     getAlbumByApiId,
     getAlbumSongsByApiId,
     getOrCreateAlbum,
-    updateAlbumRating 
+    updateAlbumRating,
+    generateSongSummary // <--- AGREGADO: Faltaba importar esto
 } from './../APIs/contentApi.js';
 import { 
     createSongListItem, 
@@ -210,31 +211,30 @@ async function loadAiSummaryLogic(albumId, reviews) {
     
     // Regla de negocio: Solo resumir si hay más de 2 reseñas (para que valga la pena)
     if (!reviews || reviews.length <= 2) {
-        summaryBox.style.display = 'none';
+        if(summaryBox) summaryBox.style.display = 'none';
         return;
     }
 
     // 1. Mostrar estado de carga
-    summaryBox.style.display = 'flex';
-    summaryText.innerHTML = '<em><i class="fas fa-spinner fa-spin"></i> Analizando opiniones con IA...</em>';
+    if(summaryBox) {
+        summaryBox.style.display = 'flex';
+        if(summaryText) summaryText.innerHTML = '<em><i class="fas fa-spinner fa-spin"></i> Analizando opiniones con IA...</em>';
+    }
 
     try {
         // 2. Llamar al backend (Gateway -> Content -> Social + AI -> Vertex)
         const data = await generateSongSummary(albumId);
         
         // 3. Mostrar el resultado
-        if (data && data.resumen) {
-            // Efecto de escritura tipo máquina (opcional, o solo texto directo)
+        if (data && data.resumen && summaryText) {
             summaryText.textContent = data.resumen;
-        } else {
+        } else if (summaryBox) {
             summaryBox.style.display = 'none';
         }
     } catch (error) {
         console.warn("No se pudo generar el resumen:", error);
-        // Si falla, ocultamos la caja o mostramos un mensaje de error suave
-        summaryText.textContent = "No se pudo generar el resumen en este momento.";
-        // Ocultar después de unos segundos si falló
-        setTimeout(() => { summaryBox.style.display = 'none'; }, 5000);
+        if(summaryText) summaryText.textContent = "No se pudo generar el resumen en este momento.";
+        if(summaryBox) setTimeout(() => { summaryBox.style.display = 'none'; }, 5000);
     }
 }
 
@@ -249,8 +249,9 @@ function renderReviews(reviews) {
     // Llama a la función para agregar los listeners
     attachReviewActionListeners(reviewsListEl);
 
-    if (currentSongData && currentSongData.albumId) {
-        loadAiSummaryLogic(currentSongData.albumId, reviews);
+    // --- CORRECCIÓN AQUÍ: Usamos currentAlbumData ---
+    if (currentAlbumData && currentAlbumData.albumId) {
+        loadAiSummaryLogic(currentAlbumData.albumId, reviews);
     }
 }
 
@@ -999,7 +1000,7 @@ return;
         const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
         if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
             await loadReviewDetailComments(reviewId);
-Read   }
+        }
         
         showAlert('Comentario editado exitosamente', 'success');
     } catch (error) {
@@ -1202,5 +1203,3 @@ function updateHeaderStatistics(reviews) {
     ratingStarsEl.innerHTML = createStarRating(roundedAverage, true); 
     ratingCountEl.textContent = `(${reviews.length} reviews)`;
 }
-
-

@@ -1,7 +1,8 @@
 import {
     getSongByApiId,
     getOrCreateSong,
-    updateSongRating
+    updateSongRating,
+    generateSongSummary
 } from './../APIs/contentApi.js'; 
 
 import { 
@@ -26,7 +27,8 @@ import {
     getAverageRating,
     getUser
 } from './../APIs/socialApi.js';
-import { showAlert, showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { showAlert } from '../Utils/reviewHelpers.js';
 import { createAudioPlayer } from './../Components/audioPlayer.js';
 
 // --- 2. ESTADO GLOBAL ---
@@ -54,13 +56,15 @@ export function initializeSongPage() {
 
 // --- 4. FUNCIONES PRINCIPALES ---
 
+// --- 4. FUNCIONES PRINCIPALES ---
+
 async function loadPageData() {
     const loadingEl = document.getElementById('loadingSpinner');
     const contentEl = document.getElementById('songContent');
 
     try {
         const params = new URLSearchParams(window.location.search);
-        const apiSongId = params.get('id'); // ID de Spotify
+        const apiSongId = params.get('id'); // ID de Spotify (ej: 7d6yK...)
         
         // Validación más estricta del ID
         if (!apiSongId || apiSongId.trim() === '' || 
@@ -74,8 +78,14 @@ async function loadPageData() {
         contentEl.style.display = 'none';
         loadingEl.style.display = 'block';
 
-        // 1. Obtener datos principales
-        const songData = await getSongByApiId(apiSongId);
+        // 1. Obtener datos principales (USANDO getOrCreateSong en lugar de getSongByApiId)
+        // Esto soluciona el error "Cannot read properties of null"
+        let songData = await getOrCreateSong(apiSongId);
+
+        if (!songData) {
+             throw new Error("No se pudo obtener la información de la canción (API retornó null).");
+        }
+
         currentSongData = songData; // Guardamos globalmente
         const localSongId = songData.songId; // GUID local
 
@@ -83,7 +93,7 @@ async function loadPageData() {
         renderSongHeader(songData);
         renderSongDetails(songData);
 
-        // 3. Obtener reseñas (¡LÓGICA CORREGIDA!)
+        // 3. Obtener reseñas
         const allReviews = await getReviews();
         
         // Normalizamos el ID local para comparar
@@ -91,18 +101,19 @@ async function loadPageData() {
 
         const filteredReviews = allReviews.filter(review => {
             // Obtenemos el ID de la reseña de forma segura
+            // Intentamos obtener el ID del contenido asociado
             const reviewSongId = review.songId || review.SongId;
             
             // Si la reseña no tiene SongId, la descartamos
             if (!reviewSongId) return false;
 
-            // Normalizamos y comparamos
+            // Normalizamos y comparamos con el GUID Local
             return String(reviewSongId).trim().toLowerCase() === targetId;
         });
 
         console.log(`Reseñas filtradas: ${filteredReviews.length} de ${allReviews.length}`);
         
-        // 4. Enriquecer reseñas (¡LÓGICA CORREGIDA!)
+        // 4. Enriquecer reseñas
         const reviewsData = await Promise.all(
             filteredReviews.map(async (review) => {
                 try {
@@ -116,7 +127,7 @@ async function loadPageData() {
                     ]);
                     
                     const currentUserId = localStorage.getItem('userId');
-                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true'; // (O lógica de 'reactionId')
+                    const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true'; 
 
                     return {
                         id: reviewId,
@@ -150,7 +161,13 @@ async function loadPageData() {
         contentEl.style.display = 'block';
     } catch (error) {
         console.error("Error fatal al cargar página de canción:", error);
-        contentEl.innerHTML = `<h2 class="text-light text-center py-5">Error al cargar la canción: ${error.message}</h2>`;
+        // Si falla, mostramos mensaje amigable
+        loadingEl.style.display = 'none';
+        contentEl.innerHTML = `<div class="container text-center py-5">
+            <h2 class="text-white mb-3">Oops! Algo salió mal.</h2>
+            <p class="text-white-50">${error.message}</p>
+            <a href="index.html" class="btn btn-primary mt-3">Volver al Inicio</a>
+        </div>`;
         contentEl.style.display = 'block';
     } finally {
         loadingEl.style.display = 'none';
@@ -209,6 +226,42 @@ function renderSongDetails(song) {
     }
 }
 
+//load summaryIA
+// Función para manejar la carga del resumen
+async function loadAiSummaryLogic(songId, reviews) {
+    const summaryBox = document.getElementById('aiSummary');
+    const summaryText = document.getElementById('aiSummaryText');
+    
+    // Regla de negocio: Solo resumir si hay más de 2 reseñas (para que valga la pena)
+    if (!reviews || reviews.length <= 2) {
+        summaryBox.style.display = 'none';
+        return;
+    }
+
+    // 1. Mostrar estado de carga
+    summaryBox.style.display = 'flex';
+    summaryText.innerHTML = '<em><i class="fas fa-spinner fa-spin"></i> Analizando opiniones con IA...</em>';
+
+    try {
+        // 2. Llamar al backend (Gateway -> Content -> Social + AI -> Vertex)
+        const data = await generateSongSummary(songId);
+        
+        // 3. Mostrar el resultado
+        if (data && data.resumen) {
+            // Efecto de escritura tipo máquina (opcional, o solo texto directo)
+            summaryText.textContent = data.resumen;
+        } else {
+            summaryBox.style.display = 'none';
+        }
+    } catch (error) {
+        console.warn("No se pudo generar el resumen:", error);
+        // Si falla, ocultamos la caja o mostramos un mensaje de error suave
+        summaryText.textContent = "No se pudo generar el resumen en este momento.";
+        // Ocultar después de unos segundos si falló
+        setTimeout(() => { summaryBox.style.display = 'none'; }, 5000);
+    }
+}
+//Render Review
 function renderReviews(reviews) {
     const listEl = document.getElementById('reviewsList');
     if (!listEl) return;
@@ -218,11 +271,11 @@ function renderReviews(reviews) {
         
     attachReviewActionListeners(listEl); 
 
-    document.getElementById('aiSummary').style.display = reviews.length > 2 ? 'flex' : 'none';
-    if(document.getElementById('aiSummaryText')) {
-        document.getElementById('aiSummaryText').textContent = "Los fans destacan la energía de esta canción...";
+    if (currentSongData && currentSongData.songId) {
+        loadAiSummaryLogic(currentSongData.songId, reviews);
     }
 }
+
 
 // --- LÓGICA DEL MODAL "CREAR RESEÑA" ---
 

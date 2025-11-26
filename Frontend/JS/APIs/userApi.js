@@ -1,318 +1,206 @@
-
 (function() {
 
-    const GATEWAY_BASE = "http://localhost:5000/api/gateway"; 
+    // 1. CONSTANTES CENTRALIZADAS (Para evitar errores de URL)
+    const API_BASE_URL = "http://localhost:5000";
+    const GATEWAY_USERS = `${API_BASE_URL}/api/gateway/users`; 
 
-    const USER_GATEWAY_ROUTE = `${GATEWAY_BASE}/users`; 
+    
+    // ==========================================
+    // 🛡️ CONFIGURACIÓN AXIOS & INTERCEPTORES
+    // ==========================================
 
     if (typeof axios !== 'undefined') {
-        const originalRequest = axios.request;
+        // Interceptor para manejar 404s "esperados" en contadores
         axios.interceptors.response.use(
             response => response,
             error => {
-                if (error.config && 
-                    error.response && 
-                    error.response.status === 404 &&
-                    error.config.url && 
-                    (error.config.url.includes('/follow/count') || 
-                     error.config.url.includes('/followers') ||
-                     error.config.url.includes('/follow/status'))) {
-                    return Promise.resolve({
-                        status: 404,
-                        statusText: 'Not Found',
-                        data: 0,
-                        headers: {},
-                        config: error.config
-                    });
+                if (error.response && error.response.status === 404) {
+                    const url = error.config.url || '';
+                    if (url.includes('/follow/count') || 
+                        url.includes('/followers') ||
+                        url.includes('/follow/status')) {
+                        return Promise.resolve({
+                            data: 0,
+                            status: 200 
+                        });
+                    }
                 }
                 return Promise.reject(error);
             }
         );
     }
 
-    function getAuthHeaders() {
-        const token = localStorage.getItem("authToken");
-        if (!token) return {};
-        return { headers: { 'Authorization': `Bearer ${token}` } };
+    // Helper de Auth blindado
+   function getAuthHeaders() {
+    const token = localStorage.getItem("authToken");
+    // Si no hay token o es inválido, devolvemos headers vacíos para evitar errores 400
+    if (!token || token === "null" || token === "undefined" || token.length < 20) {
+        // En Axios, esto devuelve el objeto de configuración.
+        return { headers: { 'Content-Type': 'application/json' } };
     }
+    return { 
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        } 
+    };
+}
 
-    // --- PERFIL DE USUARIO ---
-    async function updateUserProfile(userId, profileData) {
-        try {
-            const response = await axios.patch(`${USER_GATEWAY_ROUTE}/${userId}`, profileData, getAuthHeaders());
-            console.log("✅ Perfil actualizado:", response.data);
-            return response.data;
-        } catch (error) {
-            console.error("❌ Error en updateUserProfile:", error.response?.data || error.message);
-            throw error;
-        }
-    }
+    // ==========================================
+    // 👤 1. GESTIÓN DE PERFIL (Profile)
+    // ==========================================
 
     async function getUserProfile(userId) {
         try {
-            const response = await axios.get(`${USER_GATEWAY_ROUTE}/${userId}`, getAuthHeaders());
+            const response = await axios.get(`${GATEWAY_USERS}/${userId}`, getAuthHeaders());
             return response.data;
         } catch (error) {
-            console.error("❌ Error en getUserProfile:", error.response?.data || error.message);
+            console.error("❌ Error en getUserProfile:", error);
             throw error;
         }
     }
 
-    async function updateUserEmail(userId, newEmail, confirmEmail) {
+ async function updateUserProfile(userId, profileData) { 
+    // 1. Construir la URL completa: /api/gateway/users/{userId}
+    const url = `${GATEWAY_USERS}/${userId}`;
+    
+    // 2. Obtener los encabezados de autenticación
+    const config = getAuthHeaders();
+    
+    try {
+        // Usamos axios.patch para el método de actualización parcial
+        const response = await axios.patch(url, profileData, config); 
+        
+        console.log("✅ Perfil actualizado:", response.data);
+        return response.data;
+    } catch (error) {
+        // Registrar el error para la depuración
+        console.error("❌ Error en updateUserProfile:", error);
+        
+        // Re-lanzar el error para que la función que llama (ej: handleImageSubmit) lo maneje
+        throw error;
+    }
+}
+
+    // ==========================================
+    // 🔐 2. SEGURIDAD DE CUENTA
+    // ==========================================
+
+    async function updateUserEmail(newEmail, confirmEmail) {
         try {
-            // Endpoint: PUT /api/User/email o PUT /api/gateway/users/email
-            const PORTS = [
-                { url: 'http://localhost:5000', isGateway: true },
-                { url: 'http://localhost:8003', isGateway: false }
-            ];
-
-            const payload = {
-                Id: userId,
-                NewEmail: newEmail,
-                EmailConfirm: confirmEmail
-            };
-
-            let lastError = null;
-            for (const port of PORTS) {
-                try {
-                    const endpoint = port.isGateway 
-                        ? `${port.url}/api/gateway/users/email`
-                        : `${port.url}/api/User/email`;
-                    
-                    const response = await axios.put(endpoint, payload, getAuthHeaders());
-                    console.log("📧 Email actualizado:", response.data);
-                    return response.data;
-                } catch (error) {
-                    lastError = error;
-                    const isConnectionError = !error.response || 
-                        error.code === 'ECONNREFUSED' || 
-                        error.code === 'ERR_NETWORK' ||
-                        error.code === 'ERR_FAILED';
-                    
-                    // También tratar 405 (Method Not Allowed) como error que requiere fallback
-                    const isMethodNotAllowed = error.response && error.response.status === 405;
-                    
-                    if (!isConnectionError && !isMethodNotAllowed) {
-                        // Si no es error de conexión ni 405, lanzar el error
-                        throw error;
-                    }
-                    // Si es error de conexión o 405, intentar siguiente puerto
-                }
-            }
-            
-            // Si todos los puertos fallaron, lanzar el último error
-            throw lastError;
+            const payload = { NewEmail: newEmail, EmailConfirm: confirmEmail };
+            const response = await axios.put(`${GATEWAY_USERS}/email`, payload, getAuthHeaders());
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en updateUserEmail:", error.response?.data || error.message);
             throw error;
         }
     }
 
-    async function updateUserPassword(userId, oldPassword, newPassword) {
+    async function updateUserPassword(oldPassword, newPassword) {
         try {
-            // Endpoint: PUT /api/User/password o PUT /api/gateway/users/password
-            const PORTS = [
-                { url: 'http://localhost:5000', isGateway: true },
-                { url: 'http://localhost:8003', isGateway: false }
-            ];
-
-            const payload = {
-                Id: userId,
-                oldPassword: oldPassword,
-                newHashedPassword: newPassword
-            };
-
-            let lastError = null;
-            for (const port of PORTS) {
-                try {
-                    const endpoint = port.isGateway 
-                        ? `${port.url}/api/gateway/users/password`
-                        : `${port.url}/api/User/password`;
-                    
-                    const response = await axios.put(endpoint, payload, getAuthHeaders());
-                    console.log("🔐 Contraseña actualizada:", response.data);
-                    return response.data;
-                } catch (error) {
-                    lastError = error;
-                    const isConnectionError = !error.response || 
-                        error.code === 'ECONNREFUSED' || 
-                        error.code === 'ERR_NETWORK' ||
-                        error.code === 'ERR_FAILED';
-                    
-                    // También tratar 405 (Method Not Allowed) como error que requiere fallback
-                    const isMethodNotAllowed = error.response && error.response.status === 405;
-                    
-                    if (!isConnectionError && !isMethodNotAllowed) {
-                        // Si no es error de conexión ni 405, lanzar el error
-                        throw error;
-                    }
-                    // Si es error de conexión o 405, intentar siguiente puerto
-                }
-            }
-            
-            // Si todos los puertos fallaron, lanzar el último error
-            throw lastError;
+            const payload = { oldPassword: oldPassword, newHashedPassword: newPassword };
+            const response = await axios.put(`${GATEWAY_USERS}/password`, payload, getAuthHeaders());
+            return response.data;
         } catch (error) {
-            console.error("❌ Error en updateUserPassword:", error.response?.data || error.message);
             throw error;
         }
     }
 
-    // --- FOLLOWS ---
+    async function deleteUserAccount() {
+        try {
+            const response = await axios.delete(`${GATEWAY_USERS}/delete-self`, getAuthHeaders());
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // ==========================================
+    // 🤝 3. SISTEMA DE SEGUIDORES (Social Graph)
+    // ==========================================
+
     async function getFollowerList(userId) {
         try {
-            // Endpoint: /api/gateway/users/{userId}/followers
-            const response = await axios.get(`${USER_GATEWAY_ROUTE}/${userId}/followers`, getAuthHeaders());
-            return response.data;
+            const response = await axios.get(`${GATEWAY_USERS}/${userId}/followers`, getAuthHeaders());
+            return response.data || [];
         } catch (error) {
-            console.error("❌ Error en getFollowerList:", error.response?.data || error.message);
             return [];
         }
     }
 
     async function getFollowCounts(userId) {
-        // El backend tiene un solo endpoint que devuelve ambos contadores
-        // Endpoint correcto: /api/gateway/users/{userId}/follow/count
-        // Devuelve: { FollowerNum: int, FollowingNum: int }
         try {
-            const token = localStorage.getItem("authToken");
-            const headers = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-            
-            const response = await fetch(`${USER_GATEWAY_ROUTE}/${userId}/follow/count`, {
-                method: 'GET',
-                headers: headers
-            }).catch(() => null);
-            
-            if (!response || response.status === 404) {
-                return { followerCount: 0, followingCount: 0 };
-            }
-            
-            if (!response.ok) {
-                return { followerCount: 0, followingCount: 0 };
-            }
-            
-            const data = await response.json();
+            const response = await axios.get(`${GATEWAY_USERS}/${userId}/follow/count`, getAuthHeaders());
+            const data = response.data;
             return {
                 followerCount: data?.FollowerNum || data?.followerNum || 0,
                 followingCount: data?.FollowingNum || data?.followingNum || 0
             };
         } catch (error) {
-            // Silenciosamente retornar 0 para cualquier error
             return { followerCount: 0, followingCount: 0 };
         }
     }
 
     async function getFollowerCount(userId) {
-        // Obtener ambos contadores y retornar solo el de seguidores
         const counts = await getFollowCounts(userId);
         return counts.followerCount;
     }
 
     async function getFollowingCount(userId) {
-        // Obtener ambos contadores y retornar solo el de seguidos
         const counts = await getFollowCounts(userId);
         return counts.followingCount;
     }
 
-    async function followUser(userIdToFollow) {
+    // ---------------------------------------------------------
+    // 🚀 AQUÍ ESTÁ LA CORRECCIÓN CLAVE: followUser con Hidratación
+    // ---------------------------------------------------------
+    async function followUser(targetId, targetName, targetImage) {
         const currentUserId = localStorage.getItem("userId");
+        const currentUserName = localStorage.getItem("username") || "Yo";
+        const currentUserImage = localStorage.getItem("userAvatar") || "default.png";
+
         if (!currentUserId) throw new Error("Usuario no logueado");
 
-        const payload = { FollowerId: currentUserId, FollowingId: userIdToFollow };
-          console.log("Payload follow:", payload); // para verificar
+        // Payload completo para que el backend no falle si el usuario no existe
+        const payload = { 
+            FollowingId: targetId,
+            FollowingUserName: targetName, // Datos del otro
+            FollowingImage: targetImage,
+            
+            FollowerUserName: currentUserName, // Mis datos
+            FollowerImage: currentUserImage
+        };
+
         try {
-            // Endpoint: POST /api/gateway/users/follow
-            const response = await axios.post(`${USER_GATEWAY_ROUTE}/follow`, payload, getAuthHeaders());
+            // ⚠️ USO CORRECTO DE LA CONSTANTE: GATEWAY_USERS
+            const response = await axios.post(`${GATEWAY_USERS}/follow`, payload, getAuthHeaders());
             return response.data;
         } catch (error) {
-            console.error("❌ Error en followUser:", error.response?.data || error.message);
+            console.error("❌ Error en followUser:", error);
             throw error;
         }
     }
 
     async function unfollowUser(userIdToUnfollow) {
-        const currentUserId = localStorage.getItem("userId");
-        if (!currentUserId) throw new Error("Usuario no logueado");
-
         try {
-            // Endpoint: DELETE /api/gateway/users/{followerId}/unfollow/{followingId}
-            await axios.delete(`${USER_GATEWAY_ROUTE}/${currentUserId}/unfollow/${userIdToUnfollow}`, getAuthHeaders());
+            await axios.delete(`${GATEWAY_USERS}/unfollow/${userIdToUnfollow}`, getAuthHeaders());
             return true;
         } catch (error) {
-            console.error("❌ Error en unfollowUser:", error.response?.data || error.message);
+            console.error("❌ Error en unfollowUser:", error);
             throw error;
         }
     }
 
     async function checkFollowStatus(userIdToCheck) {
-        const currentUserId = localStorage.getItem("userId");
-        if (!currentUserId) return false;
-
         try {
-
-            const payload = { FollowerId: currentUserId, FollowingId: userIdToCheck };
-            const response = await axios.post(`${USER_GATEWAY_ROUTE}/${currentUserId}/follow/status`, payload, getAuthHeaders());
+            const response = await axios.get(`${GATEWAY_USERS}/following/${userIdToCheck}/status`, getAuthHeaders());
             return response.data?.IsFollowing || response.data?.isFollowing || false;
         } catch (error) {
-            try {
-                const response = await axios.get(`${USER_GATEWAY_ROUTE}/${currentUserId}/follow/status`, {
-                    ...getAuthHeaders(),
-                    params: { FollowerId: currentUserId, FollowingId: userIdToCheck }
-                });
-                return response.data?.IsFollowing || response.data?.isFollowing || false;
-            } catch (getError) {
-                console.error("❌ Error en checkFollowStatus:", getError.response?.data || getError.message);
-                return false;
-            }
+            return false;
         }
     }
 
-    async function deleteUserAccount(userId) {
-        try {
-            // Endpoint: DELETE /api/User/delete-self?id={userId} o DELETE /api/gateway/users/delete-self?id={userId}
-            const PORTS = [
-                { url: 'http://localhost:8003', isGateway: false },
-                { url: 'http://localhost:5000', isGateway: true }
-            ];
-
-            let lastError = null;
-            for (const port of PORTS) {
-                try {
-                    const endpoint = port.isGateway 
-                        ? `${port.url}/api/gateway/users/delete-self`
-                        : `${port.url}/api/User/delete-self`;
-                    
-                    // El endpoint espera el id como parámetro en la URL
-                    const urlWithId = `${endpoint}?id=${userId}`;
-                    const response = await axios.delete(urlWithId, getAuthHeaders());
-                    console.log("🗑️ Cuenta eliminada:", response.status);
-                    return response.data;
-                } catch (error) {
-                    lastError = error;
-                    const isConnectionError = !error.response || 
-                        error.code === 'ECONNREFUSED' || 
-                        error.code === 'ERR_NETWORK' ||
-                        error.code === 'ERR_FAILED';
-                    
-                    if (!isConnectionError) {
-                        // Si no es error de conexión, lanzar el error
-                        throw error;
-                    }
-                    // Si es error de conexión, intentar siguiente puerto
-                }
-            }
-            
-            // Si todos los puertos fallaron, lanzar el último error
-            throw lastError;
-        } catch (error) {
-            console.error("❌ Error en deleteUserAccount:", error.response?.data || error.message);
-            throw error;
-        }
-    }
-
+    // Exposición Global
     window.userApi = {
         updateUserProfile,
         getUserProfile,

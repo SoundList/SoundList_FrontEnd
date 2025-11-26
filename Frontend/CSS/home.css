@@ -1327,102 +1327,71 @@ button.nav-btn.active:hover {
     box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
 }
 
-/* Alert Styles */
+body #alertContainer {
+    position: fixed !important;
+    top: 100px !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 2147483647 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    width: 100%;
+}
+
+body #alertContainer .custom-alert {
+    pointer-events: auto;
+}
+
 .custom-alert {
-    margin-bottom: 1.5rem;
-    border-radius: 12px;
-    padding: 0;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    animation: slideDown 0.3s ease-out;
+    width: 95% !important; 
+    max-width: 100% !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    margin: 0 auto 10px auto !important;
+    background: transparent;
+    border-radius: 6px !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    position: relative;
+    overflow: hidden;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-.custom-alert-warning {
-    background: linear-gradient(135deg, rgba(255, 216, 94, 0.9), rgba(236, 72, 153, 0.85));
-    border-left: 4px solid #FFD85E;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-}
-
-.custom-alert-info {
-    background: linear-gradient(135deg, #4ecdc4, #6dd5ed);
-    border-left: 4px solid #26d0ce;
-}
-
-.custom-alert-success {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(139, 92, 246, 0.85));
-    border-left: 4px solid #7C3AED;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-}
-
-.custom-alert-danger {
-    background: linear-gradient(135deg, #ef4444, #b91c1c);
-    border-left: 4px solid #dc2626;
+@media (min-width: 768px) {
+    .custom-alert {
+        width: 600px !important; 
+    }
 }
 
 .alert-content {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1.25rem;
+    width: 100%;
+    height: 100%;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 20px !important;
     color: #fff;
     font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1 !important;
 }
 
-.alert-icon {
-    margin-right: 0.75rem;
-    font-size: 1.2rem;
-    font-weight: bold;
-}
+.alert-message { flex: 1; margin: 0 !important; padding: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.alert-icon { margin-right: 10px; font-size: 1rem; display: flex; align-items: center; height: 100%; }
+.alert-close { background: none; border: none; color: rgba(255, 255, 255, 0.8); font-size: 1.2rem; padding: 0; margin-left: 15px; cursor: pointer; display: flex; align-items: center; height: 100%; }
 
-.custom-alert-warning .alert-icon::before {
-    content: "⚠️";
-}
+/* Colores */
+.custom-alert-success { background: linear-gradient(90deg, #10b981, #059669) !important; border-left: 4px solid #047857 !important; }
+.custom-alert-warning { background: linear-gradient(90deg, #f59e0b, #ea580c) !important; border-left: 4px solid #c2410c !important; }
+.custom-alert-danger  { background: linear-gradient(90deg, #ef4444, #b91c1c) !important; border-left: 4px solid #b91c1c !important; }
+.custom-alert-info    { background: linear-gradient(90deg, #06b6d4, #3b82f6) !important; border-left: 4px solid #0891b2 !important; }
 
-.custom-alert-info .alert-icon::before {
-    content: "ℹ️";
-}
-
-.custom-alert-success .alert-icon::before {
-    content: "✅";
-}
-
-.custom-alert-danger .alert-icon::before {
-    content: "❌";
-}
-
-.alert-message {
-    flex: 1;
-    font-size: 0.95rem;
-}
-
-.alert-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 0.75rem;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-}
-
-.alert-close:hover {
-    opacity: 1;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 /* ============================================
    RESPONSIVE DESIGN - UX/UI Optimized
    ============================================ */

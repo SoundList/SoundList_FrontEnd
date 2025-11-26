@@ -185,9 +185,9 @@ export async function showReviewDetailModal(reviewId, state = null) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar" onerror="this.src='../Assets/default-avatar.png'">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username">${username}</span>
+                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
                             <span class="review-detail-time">${timeAgo}</span>
                         </div>
                     </div>
@@ -229,9 +229,59 @@ export async function showReviewDetailModal(reviewId, state = null) {
             });
         }
         
+        // Actualizar el avatar del input con la foto de perfil del usuario actual
         const inputAvatar = document.getElementById('reviewDetailInputAvatar');
         if (inputAvatar) {
-            inputAvatar.src = localStorage.getItem('userAvatar') || '../Assets/default-avatar.png';
+            // Detectar la ruta correcta para el avatar por defecto
+            const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+            const isAmigosPage = window.location.pathname.includes('/amigos.html');
+            const defaultAvatar = isProfilePage ? '../../Assets/default-avatar.png' : 
+                                 isAmigosPage ? '../Assets/default-avatar.png' :
+                                 '../Assets/default-avatar.png';
+            
+            // Intentar obtener el avatar desde localStorage primero
+            let userAvatar = localStorage.getItem('userAvatar');
+            
+            // Siempre intentar obtener el avatar más reciente del usuario (por si cambió)
+            try {
+                const currentUserId = localStorage.getItem('userId');
+                if (currentUserId) {
+                    // Intentar obtener el perfil del usuario
+                    const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
+                        try {
+                            if (window.userApi && window.userApi.getUserProfile) {
+                                return await window.userApi.getUserProfile(userId);
+                            }
+                            const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                            const token = localStorage.getItem('authToken');
+                            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                            const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                            if (axiosInstance) {
+                                const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
+                                return response.data;
+                            }
+                            return null;
+                        } catch (error) {
+                            console.debug(`No se pudo obtener usuario ${userId}:`, error);
+                            return null;
+                        }
+                    });
+                    
+                    const userData = await getUserFn(currentUserId);
+                    if (userData) {
+                        const newAvatar = userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image;
+                        if (newAvatar) {
+                            userAvatar = newAvatar;
+                            localStorage.setItem('userAvatar', newAvatar);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.debug('Error obteniendo avatar del usuario:', e);
+            }
+            
+            // Usar el avatar obtenido o el default
+            inputAvatar.src = userAvatar || defaultAvatar;
         }
         
     } catch (error) {
@@ -271,12 +321,12 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
         const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
         
         comments = await Promise.all(comments.map(async (comment) => {
-            // Si ya tiene username, devolverlo tal cual
-            if (comment.UserName || comment.username) {
+            // Si ya tiene username y avatar, devolverlo tal cual
+            if ((comment.UserName || comment.username) && (comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar)) {
                 return comment;
             }
             
-            // Si no tiene username, obtenerlo del User Service
+            // Si no tiene username o avatar, obtenerlo del User Service
             const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
             if (userId) {
                 try {
@@ -284,9 +334,9 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                     if (userData) {
                         return {
                             ...comment,
-                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                            UserName: userData.Username || userData.username || userData.UserName || comment.UserName || comment.username || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || comment.UserName || comment.username || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image || comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar
                         };
                     }
                 } catch (error) {
@@ -333,6 +383,16 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                 }
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
                 
+                // Obtener la foto de perfil del usuario (con fallback a default)
+                let userAvatar = comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar || comment.imgProfile || comment.ImgProfile || comment.image;
+                // Si no hay avatar o es una cadena vacía, usar el default
+                // La ruta debe ser relativa al HTML donde se renderiza (home.html usa ../Assets, profile.html usa ../../Assets)
+                if (!userAvatar || userAvatar === '' || userAvatar === 'null' || userAvatar === 'undefined') {
+                    // Detectar si estamos en profile.html o home.html basado en la ruta actual
+                    const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                    userAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+                }
+                
                 // Verificar likes desde cache primero (igual que con reseñas)
                 const commentLikesCacheKey = `comment_likes_${commentId}`;
                 let cachedCommentLikes = null;
@@ -378,12 +438,16 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                     `;
                 }
                 
+                // Determinar la ruta del fallback basado en la página actual
+                const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                const fallbackAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+                
                 return `
                     <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar" onerror="this.src='../Assets/default-avatar.png'">
+                        <img src="${userAvatar}" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='${fallbackAvatar}'" style="cursor: pointer;">
                         <div class="review-detail-comment-content">
                             <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username">${username}</span>
+                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
                                 <span class="review-detail-comment-time">${timeAgo}</span>
                             </div>
                             <p class="review-detail-comment-text">${text}</p>
@@ -401,11 +465,32 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
             }).join('');
         }
         
+        // Agregar event listeners para navegación a perfil
+        attachProfileNavigationListeners();
+        
         attachReviewDetailCommentListeners(reviewId, state);
     } catch (error) {
         console.error('Error cargando comentarios en vista detallada:', error);
         commentsList.innerHTML = '<div class="review-detail-comment-empty">Error al cargar comentarios.</div>';
     }
+}
+
+/**
+ * Adjunta listeners para navegación a perfil desde avatares y usernames
+ */
+function attachProfileNavigationListeners() {
+    document.querySelectorAll('.profile-navigation-trigger').forEach(element => {
+        if (!element.hasAttribute('data-navigation-listener-attached')) {
+            element.setAttribute('data-navigation-listener-attached', 'true');
+            element.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                if (userId && typeof window.navigateToProfile === 'function') {
+                    window.navigateToProfile(userId);
+                }
+            });
+        }
+    });
 }
 
 /**
@@ -705,14 +790,34 @@ async function confirmEditCommentInDetail(commentId, reviewId, state) {
     
     try {
         const authToken = localStorage.getItem('authToken');
-        await updateComment(commentId, newText, authToken);
+        if (!authToken) {
+            showAlert('Debes iniciar sesión para editar comentarios', 'warning');
+            return;
+        }
+        
+        // updateComment solo acepta commentId y newText, el authToken se obtiene internamente
+        await updateComment(commentId, newText);
         
         await loadReviewDetailComments(reviewId, null, state);
         
         showAlert('Comentario editado exitosamente', 'success');
     } catch (error) {
         console.error('❌ Error al actualizar comentario:', error);
-        showAlert('Error al actualizar el comentario. Por favor, intenta nuevamente.', 'danger');
+        
+        // Manejar diferentes tipos de errores
+        let errorMessage = 'Error al actualizar el comentario. Por favor, intenta nuevamente.';
+        
+        if (error.response?.status === 409) {
+            errorMessage = 'No se puede editar este comentario porque ya tiene reacciones (likes).';
+        } else if (error.response?.status === 404) {
+            errorMessage = 'El comentario no fue encontrado o no tienes permiso para editarlo.';
+        } else if (error.response?.status === 401) {
+            errorMessage = 'Debes iniciar sesión para editar comentarios.';
+        } else if (error.response?.status === 405) {
+            errorMessage = 'El método de actualización no está disponible. Por favor, intenta más tarde.';
+        }
+        
+        showAlert(errorMessage, 'danger');
     }
     
     state.editingCommentId = null;
@@ -906,10 +1011,12 @@ async function submitReviewDetailComment(state) {
             return;
         }
         
-        await createComment(reviewId, commentText, userId, authToken);
+        await createComment(reviewId, commentText);
         
         commentInput.value = '';
-        await loadReviewDetailComments(reviewId, null, state);
+        // Recargar comentarios para obtener el username del backend
+        const comments = await getCommentsByReview(reviewId);
+        await loadReviewDetailComments(reviewId, comments, state);
         
         const commentsCount = document.getElementById('reviewDetailCommentsCount');
         if (commentsCount) {

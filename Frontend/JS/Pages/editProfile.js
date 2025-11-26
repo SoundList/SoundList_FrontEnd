@@ -69,8 +69,8 @@ async function handleDescriptionSubmit(e) {
     
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
-         (window.showAlert || alert)("Error de sesión.", "danger");
-         return;
+        (window.showAlert || alert)("Error de sesión. Por favor, reinicia la sesión.", "danger");
+        return;
     }
 
     const confirmBtn = form.querySelector('button[type="submit"]');
@@ -80,12 +80,15 @@ async function handleDescriptionSubmit(e) {
     let isSuccess = false; 
 
     try {
-        // Enviar tanto userQuote como bio para compatibilidad con el backend
+        // 💡 CORRECCIÓN CLAVE: Enviar solo la propiedad 'Bio' (PascalCase) o 'bio' (camelCase)
+        // Ya que tu backend espera 'Bio' o 'bio', solo enviamos una para evitar conflictos.
+        // Usaremos 'Bio' ya que es la convención en tu clase UserPatchRequest.
         const updateData = { 
-            userQuote: newQuote,
-            bio: newQuote,
             Bio: newQuote
+            // Si el backend es estricto en camelCase, usa: bio: newQuote
         };
+        
+        // 💡 IMPLEMENTACIÓN: Pasamos el ID del usuario primero.
         await window.userApi.updateUserProfile(currentUserId, updateData);
 
         (window.showAlert || alert)("Descripción actualizada exitosamente.", "success");
@@ -127,8 +130,9 @@ async function handleImageSubmit(e) {
     
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
-         (window.showAlert || alert)("Error de sesión.", "danger");
-         return;
+        // Mejorar el mensaje de error de sesión
+        (window.showAlert || alert)("Error de sesión. El ID de usuario no está disponible.", "danger");
+        return;
     }
 
     const confirmBtn = document.getElementById('confirm-image-btn');
@@ -140,27 +144,35 @@ async function handleImageSubmit(e) {
     try {
         const reader = new FileReader();
         reader.readAsDataURL(selectedAvatarFile);
+        
         await new Promise((resolve, reject) => {
             reader.onload = resolve;
             reader.onerror = reject;
         });
 
-        const base64Image = reader.result; 
-        const updateData = { imgProfile: base64Image };
+        const base64Url = reader.result; // URL completa: data:image/png;base64,...
+
+        // ❌ ELIMINAMOS esta línea: const base64Data = base64Url.split(',')[1];
+        // ❌ Y ELIMINAMOS esta línea: const updateData = { imgProfile: base64Data };
+
+        // 1. CORRECCIÓN CLAVE: Usamos la URL completa (base64Url) para enviar
+        const updateData = { imgProfile: base64Url }; 
         
-        await window.userApi.updateUserProfile(currentUserId, updateData);
+        // 2. CORRECCIÓN DE LA API: Llamar con el userId y el objeto de datos
+        await window.userApi.updateUserProfile(currentUserId, updateData); 
         
-        document.getElementById('avatar-preview').src = base64Image;
-        document.getElementById('image-upload-preview').src = base64Image;
-        localStorage.setItem('userAvatar', base64Image); 
+        // 3. CORRECCIÓN DE DOM/LOCALSTORAGE: Usamos base64Url para todo, ya que es la URL completa.
+        document.getElementById('avatar-preview').src = base64Url;
+        document.getElementById('image-upload-preview').src = base64Url;
+        localStorage.setItem('userAvatar', base64Url); 
         selectedAvatarFile = null;
 
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback');
-        (window.showAlert || alert)
+        
+        (window.showAlert || alert)("¡Imagen de perfil actualizada con éxito!", "success"); 
         isSuccess = true; 
         
-        // Recargar los datos del perfil para asegurar que todo esté actualizado
         await loadCurrentProfileData();
         
         setTimeout(() => {
@@ -172,7 +184,10 @@ async function handleImageSubmit(e) {
 
     } catch (error) {
         console.error("Error al subir la imagen:", error);
-        (window.showAlert || alert)("Error al actualizar la imagen.", "danger");
+        
+        // Mostrar el estado de error si está disponible (ej: 400, 403)
+        const status = error.response?.status || 'desconocido';
+        (window.showAlert || alert)(`Error al actualizar la imagen (Estado: ${status}).`, "danger");
 
     } finally {
         if (!isSuccess) {
@@ -185,8 +200,19 @@ async function handleImageSubmit(e) {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-
     loadCurrentProfileData();
+
+    // Verificar si hay un hash en la URL para mostrar una sección específica
+    const hash = window.location.hash;
+    if (hash) {
+        const sectionId = hash.substring(1); // Remover el #
+        if (sectionId === 'image' || sectionId === 'description') {
+            // Esperar un momento para que el DOM esté completamente cargado
+            setTimeout(() => {
+                showSection(sectionId);
+            }, 100);
+        }
+    }
 
     document.querySelectorAll('.sidebar button').forEach(button => {
         button.addEventListener('click', () => {
@@ -225,6 +251,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (imageForm) {
         imageForm.addEventListener('submit', handleImageSubmit);
+    }
+    const backBtn = document.getElementById('btn-back-profile');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '../../index.html'; 
+            }
+        });
     }
     
 });

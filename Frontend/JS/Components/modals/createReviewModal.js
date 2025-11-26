@@ -707,15 +707,31 @@ async function submitCreateReview(state) {
             console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`);
         }
         
-        showAlert('✅ Reseña creada y guardada exitosamente', 'success');
+        showAlert(' Reseña creada y guardada exitosamente', 'success');
         hideCreateReviewModal(state);
         
-        setReviewFilter('recent', () => {}, state.loadReviews);
-        if (typeof window.reloadCarousel === 'function') {
-            window.reloadCarousel();
-        }
+        // Esperar un momento para que el backend procese la reseña antes de recargar
+        // Esto asegura que la reseña nueva esté disponible cuando se recargue el feed
+        setTimeout(() => {
+            if (typeof state.loadReviews === 'function') {
+                console.log('[CREATE REVIEW] Recargando reseñas con filtro "recent"...');
+                // Primero cambiar el filtro a 'recent'
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                filterButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === 'recent');
+                });
+                // Luego recargar las reseñas
+                state.loadReviews();
+            } else if (typeof setReviewFilter === 'function') {
+                setReviewFilter('recent', () => {}, state.loadReviews);
+            }
+            
+            if (typeof window.reloadCarousel === 'function') {
+                window.reloadCarousel();
+            }
+        }, 500); // Esperar 500ms para que el backend procese
         
-        setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 500);
+        setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 1000);
         
     } catch (error) {
         console.error('❌ Error creando reseña:', error);

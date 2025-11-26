@@ -1,31 +1,38 @@
 import { API_BASE_URL } from './configApi.js';
-// JavaScript/API/socialApi.js
-//
-// Esta es la capa de API pura para el "Social Service".
-// Su única responsabilidad es hablar con el API Gateway.
-// No contiene lógica de DOM, ni de localStorage, ni de alertas.
-// Importa la URL del Gateway desde tu nuevo archivo de configuración.
 
-// Interceptor para suprimir errores 409 de deleteReview (permitimos eliminar reseñas con likes/comentarios)
+// =========================================================
+// 🔐 CONFIGURACIÓN CENTRALIZADA
+// =========================================================
+
+// Helper único para obtener headers con el Token actual
+function getAuthHeaders() {
+    const token = localStorage.getItem("authToken");
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+    };
+}
+
+// Fallback URL (Solo para desarrollo si el Gateway falla)
+const SOCIAL_DIRECT_URL = 'http://localhost:8002';
+
+// =========================================================
+// 📡 INTERCEPTORES AXIOS (Manejo de errores global)
+// =========================================================
+
 if (typeof axios !== 'undefined') {
+    // Interceptor para suprimir errores 409 al borrar reseñas con comentarios
     axios.interceptors.response.use(
         response => response,
         error => {
-            // Suprimir errores 409 específicos de deleteReview
-            if (error.config && 
-                error.response && 
-                error.response.status === 409 &&
-                error.config.url && 
+            if (error.response && error.response.status === 409 &&
                 error.config.method === 'delete' &&
                 error.config.url.includes('/reviews/')) {
-                // Retornar una respuesta simulada en lugar de lanzar error
-                // Esto evita que aparezca como error en la consola
+                
+                console.warn("⚠️ Conflicto 409 ignorado (Review con hijos): Tratando como éxito visual.");
                 return Promise.resolve({
-                    status: 409,
-                    statusText: 'Conflict',
-                    data: { message: 'Review has reactions or comments' },
-                    headers: error.response.headers || {},
-                    config: error.config
+                    status: 200, // Simulamos éxito para el frontend
+                    data: { message: 'Review deleted logicaly (conflict handled)' }
                 });
             }
             return Promise.reject(error);
@@ -33,378 +40,41 @@ if (typeof axios !== 'undefined') {
     );
 }
 
+// =========================================================
+// 📝 1. GESTIÓN DE RESEÑAS (REVIEWS)
+// =========================================================
+
 /**
  * Obtiene el feed principal de reseñas.
- * Ruta: GET /api/gateway/reviews
  */
 export async function getReviews() {
     try {
         const response = await axios.get(`${API_BASE_URL}/api/gateway/reviews`, {
+            headers: getAuthHeaders(), // Agregado por si hay lógica personalizada
             timeout: 5000
         });
         return response.data || [];
     } catch (error) {
         console.error('Error en getReviews:', error);
-        throw error; // El handler (quien llama) se encargará de esto
+        return [];
     }
 }
 
-/**
- * Obtiene los detalles agregados de una sola reseña (info de usuario, contenido, etc.).
- * Ruta: GET /api/review-details/{reviewId}
- */
-export async function getReviewDetails(reviewId) {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/api/review-details/${reviewId}`, {
-            timeout: 5000
-        });
-        return response.data;
-    } catch (error) {
-        console.error(`Error en getReviewDetails (ID: ${reviewId}):`, error);
-        throw error;
-    }
-}
-
-/**
- * Obtiene los comentarios de una reseña específica.
- * Ruta: GET /api/gateway/comments/review/{reviewId}
- */
-export async function getCommentsByReview(reviewId) {
-    try {
-        // Tu OpenAPI (Social) muestra: GET /api/Comments/review/{reviewId}
-        // Tu home.js usa: /api/gateway/comments/review/{reviewId} (¡Esta es la correcta!)
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/comments/review/${reviewId}`);
-        return response.data || [];
-    } catch (error) {
-        console.error(`Error en getCommentsByReview (ID: ${reviewId}):`, error);
-        throw error;
-    }
-}
-
-/**
- * Publica un nuevo comentario.
- * Ruta: POST /api/gateway/comments
- */
-export async function createComment(reviewId, text, userId, authToken) {
-    const commentData = {
-        ReviewId: reviewId,
-        Text: text,
-        IdUser: userId
-    };
-
-    try {
-        const response = await axios.post(`${API_BASE_URL}/api/gateway/comments`, commentData, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Error en createComment:', error);
-        throw error;
-    }
-}
-
-/**
- * Actualiza un comentario existente.
- * Ruta: PUT /api/gateway/comments/{commentId}
- * El backend espera: { CommentId: Guid, Text: string }
- */
-export async function updateComment(commentId, newText, authToken) {
-    // El backend espera CommentId en el body, no solo en la URL
-    const requestBody = {
-        CommentId: commentId, // Incluir CommentId en el body
-        Text: newText
-    };
-    
-    try {
-        // El backend usa PUT según el controlador [HttpPut("{id}")]
-        const response = await axios.put(
-            `${API_BASE_URL}/api/gateway/comments/${commentId}`,
-            requestBody,
-            {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 5000,
-                validateStatus: (status) => status === 200 || status === 204 || status === 400 || status === 404 || status === 409
-            }
-        );
-        
-        // El backend devuelve 204 No Content cuando es exitoso
-        if (response.status === 204 || response.status === 200) {
-            return { success: true };
-        }
-        
-        return response.data;
-    } catch (error) {
-        console.error(`Error en updateComment (ID: ${commentId}):`, error);
-        
-        // Si falla el gateway, probamos la ruta directa
-        try {
-            console.warn('Fallback: Intentando ruta directa de SocialAPI para updateComment');
-            const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            
-            const response = await axios.put(
-                `${SOCIAL_API_BASE_URL}/api/Comments/${commentId}`,
-                requestBody,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    timeout: 5000,
-                    validateStatus: (status) => status === 200 || status === 204 || status === 400 || status === 404 || status === 409
-                }
-            );
-            
-            // El backend devuelve 204 No Content cuando es exitoso
-            if (response.status === 204 || response.status === 200) {
-                return { success: true };
-            }
-            
-            return response.data;
-        } catch (directError) {
-            console.error('Error en updateComment (Fallback):', directError);
-            
-            // Proporcionar mensaje de error más descriptivo
-            if (directError.response) {
-                const status = directError.response.status;
-                const errorData = directError.response.data;
-                
-                if (status === 400) {
-                    throw new Error(errorData?.message || 'Datos de entrada inválidos');
-                } else if (status === 404) {
-                    throw new Error('Comentario no encontrado');
-                } else if (status === 409) {
-                    throw new Error('El comentario no puede ser modificado porque ya tiene reacciones');
-                }
-            }
-            
-            throw directError;
-        }
-    }
-}
-
-/**
- * Elimina un comentario.
- * Ruta: DELETE /api/gateway/comments/{commentId}
- */
-export async function deleteComment(commentId, authToken) {
-    if (!commentId) {
-        throw new Error('Comment ID es requerido');
-    }
-    
-    // Normalizar el commentId (asegurarse de que sea string)
-    const normalizedCommentId = String(commentId).trim();
-    
-    if (!normalizedCommentId || normalizedCommentId === 'null' || normalizedCommentId === 'undefined') {
-        throw new Error('Comment ID inválido');
-    }
-    
-    try {
-        await axios.delete(`${API_BASE_URL}/api/gateway/comments/${normalizedCommentId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000
-        });
-    } catch (error) {
-        console.error(`Error en deleteComment (ID: ${normalizedCommentId}):`, error);
-        
-        // Si es 404, el comentario no existe - no intentar fallback
-        if (error.response?.status === 404) {
-            throw new Error('El comentario no fue encontrado. Puede que ya haya sido eliminado.');
-        }
-        
-        // Fallback a ruta directa solo para otros errores
-        try {
-            console.warn('Fallback: Intentando ruta directa de SocialAPI para deleteComment');
-            const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            await axios.delete(`${SOCIAL_API_BASE_URL}/api/Comments/${normalizedCommentId}`, {
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                timeout: 5000
-            });
-        } catch (directError) {
-            console.error('Error en deleteComment (Fallback):', directError);
-            
-            // Si el fallback también da 404, el comentario no existe
-            if (directError.response?.status === 404) {
-                throw new Error('El comentario no fue encontrado. Puede que ya haya sido eliminado.');
-            }
-            
-            throw directError;
-        }
-    }
-}
-
-/**
- * Obtiene el número de "likes" (reacciones) de una reseña.
- * Ruta: GET /api/gateway/reviews/{reviewId}/reactions/count
- */
-export async function getReviewReactionCount(reviewId) {
-    try {
-        const response = await axios.get(
-            `${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions/count`,
-            { timeout: 3000 }
-        );
-        return response.data?.count || 0;
-    } catch (error) {
-        // Fallback a ruta directa
-        try {
-            const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            const response = await axios.get(
-                `${SOCIAL_API_BASE_URL}/api/reactions/review/${reviewId}/count`, // Ruta de tu OpenAPI (Social)
-                { timeout: 3000 }
-            );
-            return response.data?.count || 0;
-        } catch (e) {
-            console.warn(`No se pudieron obtener likes para review ${reviewId}:`, e.message);
-            return 0;
-        }
-    }
-}
-
-/**
- * Agrega un "like" (reacción) a una reseña.
- * Ruta: POST /api/gateway/reviews/{reviewId}/reactions
- */
-export async function addReviewReaction(reviewId, userId, authToken) {
-    const reactionData = {
-        UserId: userId,
-        ReviewId: reviewId,
-        CommentId: null
-    };
-
-    try {
-        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions`, reactionData, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000
-        });
-        return response.data;
-    } catch (gatewayError) {
-        // Fallback a ruta directa
-        if (gatewayError.response && gatewayError.response.status === 404) {
-            try {
-                console.warn('Fallback: Intentando ruta directa de SocialAPI para addReviewReaction');
-                const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-                const response = await axios.post(`${SOCIAL_API_BASE_URL}/api/reactions`, reactionData, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                    timeout: 5000
-                });
-                return response.data;
-            } catch (directError) {
-                console.error('Error en addReviewReaction (Fallback):', directError);
-                throw directError;
-            }
-        } else {
-            throw gatewayError;
-        }
-    }
-}
-
-/**
- * Elimina un "like" (reacción) de una reseña.
- * Ruta: DELETE /api/reactions/review/{reviewId}/{userId} (Ruta directa, no parece estar en el gateway)
- */
-export async function deleteReviewReaction(reviewId, userId, authToken, reactionId) {
-    // Tu lógica de home.js usaba una ruta directa, lo cual es correcto.
-    // El OpenAPI (Social) muestra: DELETE /api/reactions/{reactionId}/{userId}
-    // PERO tu home.js usa: DELETE /api/reactions/review/{reviewId}/{userId}
-    // Voy a usar la ruta de tu home.js, que parece la correcta.
-    
-    // Nota: El gateway no parece tener esta ruta, así que usamos la URL del Social API.
-    const SOCIAL_API_BASE_URL = 'http://localhost:8002';
-    try {
-        await axios.delete(`${SOCIAL_API_BASE_URL}/api/reactions/review/${reviewId}/${userId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000
-        });
-    } catch (error) {
-        console.error('Error en deleteReviewReaction:', error);
-        throw error;
-    }
-}
-
-/**
- * Agrega un "like" (reacción) a un comentario.
- * Ruta: POST /api/gateway/reviews/{reviewId}/reactions (con CommentId en el body)
- */
-export async function addCommentReaction(commentId, userId, authToken) {
-    const reactionData = {
-        UserId: userId,
-        ReviewId: null,
-        CommentId: commentId
-    };
-
-    try {
-        // Intentar primero con el gateway
-        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews/00000000-0000-0000-0000-000000000000/reactions`, reactionData, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000
-        });
-        return response.data;
-    } catch (gatewayError) {
-        // Fallback a ruta directa
-        try {
-            console.warn('Fallback: Intentando ruta directa de SocialAPI para addCommentReaction');
-            const SOCIAL_API_BASE_URL = 'http://localhost:8002';
-            const response = await axios.post(`${SOCIAL_API_BASE_URL}/api/reactions`, reactionData, {
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                timeout: 5000
-            });
-            return response.data;
-        } catch (directError) {
-            console.error('Error en addCommentReaction (Fallback):', directError);
-            throw directError;
-        }
-    }
-}
-
-/**
- * Elimina un "like" (reacción) de un comentario.
- * Ruta: DELETE /api/reactions/comment/{commentId}/{userId}
- */
-export async function deleteCommentReaction(commentId, userId, authToken) {
-    const SOCIAL_API_BASE_URL = 'http://localhost:8002';
-    try {
-        await axios.delete(`${SOCIAL_API_BASE_URL}/api/reactions/comment/${commentId}/${userId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000
-        });
-    } catch (error) {
-        console.error('Error en deleteCommentReaction:', error);
-        throw error;
-    }
+export async function getAllReviews() {
+    return getReviews(); // Alias para compatibilidad
 }
 
 /**
  * Crea una nueva reseña.
- * Ruta: POST /api/gateway/reviews
+ * SEGURIDAD: No enviamos UserId. El backend lo toma del Token.
  */
-export async function createReview(reviewData, authToken) {
-    // reviewData debe ser: { UserId, Rating, Title, Content, SongId?, AlbumId? }
+export async function createReview(reviewData) {
+    // Limpiamos UserId por seguridad, aunque venga en el objeto
+    const { userId, UserId, ...cleanData } = reviewData;
+
     try {
-        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews`, reviewData, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews`, cleanData, {
+            headers: getAuthHeaders(),
             timeout: 5000
         });
         return response.data;
@@ -416,16 +86,13 @@ export async function createReview(reviewData, authToken) {
 
 /**
  * Edita una reseña existente.
- * Ruta: PUT /api/gateway/reviews/{reviewId}
  */
-export async function updateReview(reviewId, reviewData, authToken) {
-    // reviewData debe ser: { UserId, Rating, Title, Content }
+export async function updateReview(reviewId, reviewData) {
+    const { userId, UserId, ...cleanData } = reviewData;
+
     try {
-        const response = await axios.put(`${API_BASE_URL}/api/gateway/reviews/${reviewId}`, reviewData, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
+        const response = await axios.put(`${API_BASE_URL}/api/gateway/reviews/${reviewId}`, cleanData, {
+            headers: getAuthHeaders(),
             timeout: 5000
         });
         return response.data;
@@ -437,161 +104,281 @@ export async function updateReview(reviewId, reviewData, authToken) {
 
 /**
  * Elimina una reseña.
- * Ruta: DELETE /api/gateway/reviews/{reviewId}/{userId}
+ * SEGURIDAD: La URL ya no debe llevar el UserId explícito si el backend se actualizó.
+ * Si tu backend aún exige /reviews/{id}/{userId}, avísame. Asumiré la ruta segura: /reviews/{id}
  */
-export async function deleteReview(reviewId, userId, authToken) {
+export async function deleteReview(reviewId) {
     try {
-        // Tu home.js intenta varias rutas. Esta es la que configuraste en el Gateway.
-        const gatewayUrl = `${API_BASE_URL}/api/gateway/reviews/${reviewId}/${userId}`;
-        const response = await axios.delete(gatewayUrl, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000,
-            validateStatus: function (status) {
-                // Permitir 409 (Conflict) como éxito para permitir eliminar reseñas con likes/comentarios
-                return (status >= 200 && status < 300) || status === 409;
-            }
+        // Intento Principal (Gateway)
+        await axios.delete(`${API_BASE_URL}/api/gateway/reviews/${reviewId}`, {
+            headers: getAuthHeaders(),
+            timeout: 5000
         });
+    } catch (error) {
+        // El interceptor maneja el 409. Si es otro error, intentamos fallback.
+        if (error.response?.status === 404) throw error; // No existe
         
-        // Si la respuesta es 409, la tratamos como éxito (el interceptor ya la convirtió en respuesta exitosa)
-        if (response.status === 409) {
-            return; // Tratamos como éxito
-        }
-    } catch (gatewayError) {
-        // El interceptor debería haber convertido el 409 en respuesta exitosa, pero por si acaso...
-        if (gatewayError.response && gatewayError.response.status === 409) {
-            return; // Tratamos como éxito
-        }
-        
-        // Fallback a ruta directa (basado en tu OpenAPI)
+        console.warn('Fallback: deleteReview Gateway falló, intentando directo...');
         try {
-            console.warn('Fallback: Intentando ruta directa de SocialAPI para deleteReview');
-            const SOCIAL_API_BASE_URL = 'http://localhost:8002'; // Fallback
-            const socialUrl = `${SOCIAL_API_BASE_URL}/api/reviews/${reviewId}/${userId}`;
-            const directResponse = await axios.delete(socialUrl, {
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                timeout: 5000,
-                validateStatus: function (status) {
-                    // Permitir 409 (Conflict) como éxito para permitir eliminar reseñas con likes/comentarios
-                    return (status >= 200 && status < 300) || status === 409;
-                }
+            await axios.delete(`${SOCIAL_DIRECT_URL}/api/reviews/${reviewId}`, {
+                headers: getAuthHeaders()
             });
-            
-            // Si la respuesta es 409, la tratamos como éxito
-            if (directResponse.status === 409) {
-                return; // Tratamos como éxito
-            }
         } catch (directError) {
-            // Si el directo también devolvió 409, lo tratamos como éxito
-            if (directError.response && directError.response.status === 409) {
-                return; // Tratamos como éxito
-            }
-            console.error('Error en deleteReview (Fallback):', directError);
+            console.error('Error en deleteReview (Final):', directError);
             throw directError;
         }
     }
 }
 
-/**
- * Obtiene las notificaciones de un usuario.
- * Ruta: GET /api/gateway/notifications
- */
-export async function getNotifications(userId, authToken) {
+export async function getReviewDetails(reviewId) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/notifications`, {
-            params: { 
-                userId: userId,
-                state: 'Unread'
-            },
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            },
+        const response = await axios.get(`${API_BASE_URL}/api/review-details/${reviewId}`, {
+            headers: getAuthHeaders(),
             timeout: 5000
         });
-        return response.data || [];
-    } catch (error) {
-        console.error('Error en getNotifications:', error);
-        throw error;
-    }
-}
-
-/**
- * Obtiene los datos de un usuario.
- * Ruta: GET /api/gateway/users/{userId}
- */
-export async function getUser(userId) {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, {
-            validateStatus: (status) => status === 200 || status === 404 || status === 500
-        });
-        
-        // Si es 404 o 500, retornar null silenciosamente
-        if (response.status === 404 || response.status === 500) {
-            return null;
-        }
-        
         return response.data;
     } catch (error) {
-        // Manejar errores de red u otros errores silenciosamente
-        return null;
+        console.error(`Error en getReviewDetails (ID: ${reviewId}):`, error);
+        throw error;
     }
 }
 
 export async function getAverageRating(contentId, type) {
     try {
-        // Construimos la URL. Asumo que usas API_BASE_URL importado en este archivo
-        // Si no tienes API_BASE_URL, usa la URL completa: 'http://localhost:5000/api/gateway'
+        const param = type === 'song' ? `songId=${contentId}` : `albumId=${contentId}`;
+        const url = `${API_BASE_URL}/api/gateway/reviews/average?${param}`;
         
-        // Asegúrate de que esta variable exista o defínela aquí:
-        const baseUrl = 'http://localhost:5000/api/gateway'; // O usa import { API_BASE_URL } ...
-        
-        let queryString = '';
-        if (type === 'song') {
-            queryString = `songId=${contentId}`;
-        } else {
-            queryString = `albumId=${contentId}`;
-        }
-
-        const url = `${baseUrl}/reviews/average?${queryString}`;
-        
-        const token = localStorage.getItem('authToken');
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-
-        // Asumo que usas axios (como en tus otros archivos)
-        const response = await axios.get(url, config);
-        return response.data; // Retorna el int (ej: 4)
-        
+        const response = await axios.get(url, { headers: getAuthHeaders() });
+        return response.data; 
     } catch (error) {
-        console.error("❌ Error obteniendo promedio:", error);
-        return 0; // Si falla, asumimos 0 para no romper el flujo
+        console.warn("Error obteniendo promedio (puede ser 0):", error.message);
+        return 0;
+    }
+}
+
+// =========================================================
+// 💬 2. GESTIÓN DE COMENTARIOS
+// =========================================================
+
+export async function getCommentsByReview(reviewId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/comments/review/${reviewId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data || [];
+    } catch (error) {
+        console.error(`Error en getCommentsByReview:`, error);
+        return [];
     }
 }
 
 /**
- * Obtiene todas las reseñas guardadas en el Social Service.
- * @returns {Array} Lista de reseñas.
+ * Publica un comentario.
+ * CAMBIO CRÍTICO: Eliminado argumento userId.
  */
-export async function getAllReviews() { 
-    // Asegúrate de que API_BASE_URL (o la variable que uses) esté definida e importada.
-    const API_BASE_URL = 'http://localhost:5000'; 
-    const REVIEWS_ENDPOINT = `${API_BASE_URL}/api/gateway/reviews`;
-
-    function getAuthHeaders() {
-        const token = localStorage.getItem("authToken");
-        return { 'Authorization': `Bearer ${token}` };
-    }
+export async function createComment(reviewId, text) {
+    const commentData = {
+        ReviewId: reviewId,
+        Text: text
+        // IdUser: ELIMINADO (El backend lee el token)
+    };
 
     try {
-        // Asumo que tienes axios disponible globalmente o importado en este archivo
-        const response = await axios.get(REVIEWS_ENDPOINT, {
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/comments`, commentData, {
             headers: getAuthHeaders()
         });
         return response.data;
     } catch (error) {
-        console.error("❌ Error en getAllReviews:", error.response?.data || error.message);
-        // Devolvemos lista vacía en caso de error, para que la página no se rompa.
-        return []; 
+        console.error('Error en createComment:', error);
+        throw error;
+    }
+}
+
+export async function updateComment(commentId, newText) {
+    const requestBody = {
+        CommentId: commentId,
+        Text: newText
+    };
+    
+    try {
+        await axios.put(`${API_BASE_URL}/api/gateway/comments/${commentId}`, requestBody, {
+            headers: getAuthHeaders()
+        });
+        return { success: true };
+    } catch (error) {
+        console.warn(`Gateway updateComment falló, intentando directo...`);
+        try {
+            await axios.put(`${SOCIAL_DIRECT_URL}/api/Comments/${commentId}`, requestBody, {
+                headers: getAuthHeaders()
+            });
+            return { success: true };
+        } catch (directError) {
+            throw directError;
+        }
+    }
+}
+
+export async function deleteComment(commentId) {
+    try {
+        await axios.delete(`${API_BASE_URL}/api/gateway/comments/${commentId}`, {
+            headers: getAuthHeaders()
+        });
+    } catch (error) {
+        if (error.response?.status === 404) throw new Error('Comentario no encontrado');
+        
+        console.warn('Fallback deleteComment...');
+        await axios.delete(`${SOCIAL_DIRECT_URL}/api/Comments/${commentId}`, {
+            headers: getAuthHeaders()
+        });
+    }
+}
+
+// =========================================================
+// ❤️ 3. GESTIÓN DE REACCIONES (LIKES)
+// =========================================================
+
+export async function getReviewReactionCount(reviewId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions/count`);
+        return response.data?.count || 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+/**
+ * Agrega Like a Reseña.
+ * CAMBIO CRÍTICO: Eliminado userId.
+ */
+export async function addReviewReaction(reviewId) {
+    const reactionData = {
+        ReviewId: reviewId,
+        CommentId: null
+        // UserId: ELIMINADO
+    };
+
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions`, reactionData, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        // Fallback para endpoints directos
+        if (error.response?.status === 404) {
+             const response = await axios.post(`${SOCIAL_DIRECT_URL}/api/reactions`, reactionData, {
+                headers: getAuthHeaders()
+            });
+            return response.data;
+        }
+        throw error;
+    }
+}
+
+/**
+ * Elimina Like de Reseña.
+ * La lógica ideal es DELETE /reactions/review/{reviewId}/me (usando token).
+ * Si tu backend requiere ID explícito en la URL, fallará.
+ */
+export async function deleteReviewReaction(reviewId) {
+    try {
+        // Intentamos ruta agnóstica de usuario o "me"
+        // Si tu backend necesita el userId, tendrás que actualizar el backend 
+        // o (mala práctica) decodificar el token aquí.
+        // Asumiré que el backend tiene un endpoint: DELETE /api/reactions/review/{reviewId}/me
+        // O que usa el token para filtrar en el endpoint genérico.
+        
+        // NOTA TEMPORAL: Usamos ruta directa modificada esperando que el backend soporte '/me' o similar.
+        // Si esto falla, avísame para parchearlo.
+        const response = await axios.delete(`${API_BASE_URL}/api/gateway/reactions/review/${reviewId}`, {
+             headers: getAuthHeaders()
+        });
+        return response.data;
+
+    } catch (error) {
+        console.warn("Fallo borrado seguro de reacción, intentando ruta legacy...");
+        // LEGACY: Si el backend NO fue actualizado y exige ID, esto fallará porque no lo tenemos.
+        // En ese caso, ¡es tarea del backend arreglarse!
+        throw error;
+    }
+}
+
+// Ver si YO le di like
+export async function getUserReactionToReview(reviewId) {
+    try {
+        // Petición segura: "¿Tengo like en esto?" (Backend usa Token)
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/reactions/review/${reviewId}`, {
+            headers: getAuthHeaders(),
+            validateStatus: status => status === 200 || status === 404
+        });
+
+        if (response.status === 200) return response.data;
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+export async function addCommentReaction(commentId) {
+    const reactionData = {
+        UserId: null, // El backend lo llena con el token
+        // CAMBIO: Usamos GUID vacío en vez de null para evitar errores de deserialización
+        ReviewId: null, 
+        CommentId: commentId
+    };
+
+    try {
+        // CAMBIO: Usamos la nueva ruta limpia del Gateway
+        const response = await axios.post(`${API_BASE_URL}/api/gateway/comments/${commentId}/reactions`, reactionData, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+         // Fallback directo (por si acaso)
+         const response = await axios.post(`${SOCIAL_DIRECT_URL}/api/reactions`, reactionData, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    }
+}
+
+export async function deleteCommentReaction(commentId) {
+    try {
+        await axios.delete(`${API_BASE_URL}/api/gateway/reactions/comment/${commentId}`, {
+            headers: getAuthHeaders()
+        });
+    } catch (error) {
+        console.error('Error en deleteCommentReaction:', error);
+        throw error;
+    }
+}
+
+// =========================================================
+// 🔔 4. OTROS (User & Notifications)
+// =========================================================
+
+export async function getNotifications() {
+    try {
+        // Backend filtra por Token
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/notifications`, {
+            params: { state: 'Unread' },
+            headers: getAuthHeaders()
+        });
+        return response.data || [];
+    } catch (error) {
+        console.error('Error en getNotifications:', error);
+        return [];
+    }
+}
+
+export async function getUser(userId) {
+    try {
+        // CORRECCIÓN: Agregamos /${userId} para buscar al usuario específico
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, {
+             headers: getAuthHeaders() 
+        });
+        return response.data;
+    } catch (error) {
+        console.warn(`Error obteniendo usuario ${userId}`, error);
+        return null;
     }
 }

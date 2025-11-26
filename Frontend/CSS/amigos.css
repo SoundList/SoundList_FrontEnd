@@ -1,564 +1,603 @@
+/* =========================================
+   1. CONFIGURACIÓN GENERAL Y LAYOUT
+   ========================================= */
 
-.amigos-container {
-    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
-    min-height: 100vh;
-    padding-bottom: 2rem;
-}
-
-.user-search-section {
-    padding: 2rem 0;
-    margin-top: 2rem;
-}
-
-.user-search-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
-}
-
-.section-title {
-    color: #fff;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-family: 'League Spartan', sans-serif;
-}
-
-.section-title i {
-    color: var(--magenta, #EC4899);
-    font-size: 1.25rem;
-}
-
-.user-search-box {
-    position: relative;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.user-search-input {
+/* 1. BLOQUEO TOTAL DE LA PÁGINA (Esto evita que scrollee toda la web) */
+html, body {
+    height: 100vh; 
     width: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 25px;
-    padding: 1rem 3rem 1rem 3.5rem;
-    color: #fff;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    font-family: 'Arimo', sans-serif;
-}
-
-.user-search-input:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0 0 0.2rem rgba(124, 58, 237, 0.3);
-}
-
-.user-search-input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.user-search-icon {
-    position: absolute;
-    left: 1.25rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 1.1rem;
-    pointer-events: none;
-}
-
-.user-search-clear {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
-    cursor: pointer;
-    padding: 0.5rem;
-    transition: color 0.3s ease;
-    font-size: 1rem;
-}
-
-.user-search-clear:hover {
-    color: #fff;
-}
-
-.user-search-results {
-    margin-top: 1.5rem;
-    background: rgba(13, 17, 32, 0.6);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1rem;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.user-result-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 12px;
-    margin-bottom: 0.75rem;
-    background: rgba(255, 255, 255, 0.05);
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.user-result-item:hover {
-    background: rgba(124, 58, 237, 0.2);
-    border-color: rgba(124, 58, 237, 0.4);
-    transform: translateX(5px);
-}
-
-.user-result-item:last-child {
-    margin-bottom: 0;
-}
-
-.user-result-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    flex-shrink: 0;
-}
-
-.user-result-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.user-result-username {
-    color: #fff;
-    font-weight: 600;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-    font-family: 'League Spartan', sans-serif;
-}
-
-.user-result-bio {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.875rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.user-result-actions {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.follow-btn {
-    padding: 0.5rem 1.25rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-    font-family: 'Arimo', sans-serif;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.follow-btn.follow {
-    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
-    color: #fff;
-    border: 1px solid rgba(124, 58, 237, 0.5);
-}
-
-.follow-btn.follow:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-    background: linear-gradient(135deg, #8B4AED 0%, #FC5AA9 100%);
-}
-
-.follow-btn.following {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.follow-btn.following:hover {
-    background: rgba(255, 77, 106, 0.2);
-    border-color: rgba(255, 77, 106, 0.4);
-    color: #FF4D6A;
-}
-
-.follow-btn:active {
-    transform: translateY(0);
-}
-
-.user-search-empty {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.user-search-empty i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-.user-search-empty p {
+    overflow: hidden !important; 
     margin: 0;
-    font-size: 1rem;
+    padding: 0;
 }
 
-/* Reviews Filter Section */
-.reviews-filter-section {
-    padding: 2rem 0 1rem;
+/* 2. CONTENEDOR FLEXIBLE VERTICAL */
+.amigos-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Ocupa exactamente la pantalla */
+    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
+    overflow: hidden;
 }
 
-.reviews-filter-container {
+/* El header se queda fijo arriba */
+.top-header {
+    flex-shrink: 0; 
+}
+
+/* 3. EL CONTENEDOR PRINCIPAL OCUPA EL ESPACIO RESTANTE */
+.main-content {
+    flex: 1; /* Toma todo el espacio que sobra debajo del header */
+    display: flex;
+    justify-content: center;
+    overflow: hidden; /* Importante: aquí no hay scroll */
+    padding-top: 1rem;
+    height: 100%;
+}
+
+/* =========================================
+   2. ESTRUCTURA DE GRILLA (2 COLUMNAS)
+   ========================================= */
+
+.explore-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px; /* Izquierda flexible | Derecha fija */
+    gap: 3rem;
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 2rem;
+    height: 100%; /* Hereda la altura completa */
 }
 
-.filter-buttons {
+/* --- Columna Izquierda: Feed --- */
+.explore-left-column {
+    height: 100%; /* Toma toda la altura */
     display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
+    overflow: hidden; /* Evita que empuje el body */
 }
 
-.filter-btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 25px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.7);
-    font-family: 'Arimo', sans-serif;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+.reviews-filter-section {
+    flex-shrink: 0; /* Los filtros no se achican */
+    padding-bottom: 1rem;
 }
 
-.filter-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
-    transform: translateY(-2px);
-}
-
-.filter-btn.active {
-    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
-    border-color: rgba(124, 58, 237, 0.5);
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
-}
-
-.filter-btn.active:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-}
-
-.filter-btn i {
-    font-size: 1rem;
-}
-
+/* --- CONTENEDOR DE RESEÑAS CON SCROLL --- */
 .reviews-list-section {
-    padding: 2rem 0;
+    flex: 1; /* Ocupa todo el espacio vertical disponible */
+    min-height: 0; /* Truco vital para flexbox - permite que el scroll funcione */
+    position: relative;
+    overflow: hidden; /* Evita que el contenedor se expanda */
+    display: flex;
+    flex-direction: column;
 }
 
 .reviews-list-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
+    flex: 1; /* Ocupa todo el espacio disponible en la sección */
+    min-height: 0; /* Permite que el scroll funcione correctamente */
+    overflow-y: auto !important; /* ACTIVA EL SCROLL INTERNO */
+    overflow-x: hidden;
+    padding-right: 10px;
+    padding-bottom: 50px; /* Espacio extra al final */
 }
 
+/* Scrollbar personalizada dentro del contenedor */
+.reviews-list-container::-webkit-scrollbar { width: 8px; }
+.reviews-list-container::-webkit-scrollbar-track { 
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+.reviews-list-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #7C3AED, #EC4899);
+    border-radius: 10px;
+}
+
+/* --- Columna Derecha: Buscador --- */
+.explore-right-column {
+    height: fit-content;
+    padding: 1.5rem;
+    background: rgba(13, 17, 32, 0.4);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* =========================================
+   3. BUSCADOR DE USUARIOS
+   ========================================= */
+.user-search-box { position: relative; width: 100%; }
+.user-search-input {
+    width: 100%;
+    background: rgba(13, 17, 32, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 0 1rem 0 3rem;
+    height: 50px;
+    color: #fff;
+    font-size: 1rem;
+    font-family: 'Arimo', sans-serif;
+}
+.user-search-input:focus {
+    outline: none;
+    background: rgba(13, 17, 32, 1);
+    border-color: var(--magenta, #EC4899);
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.2);
+}
+.user-search-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+.user-search-icon {
+    position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+    color: var(--magenta, #EC4899); font-size: 1.1rem; pointer-events: none;
+}
+.user-search-clear {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: rgba(255, 255, 255, 0.7); cursor: pointer;
+}
+.user-search-clear:hover { color: #fff; }
+
+.user-search-results {
+    margin-top: 1rem;
+    background: #0f121f;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.user-result-item {
+    display: flex; align-items: center; gap: 1rem; padding: 0.8rem;
+    border-radius: 10px; margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; transition: all 0.2s ease;
+}
+.user-result-item:hover {
+    background: rgba(124, 58, 237, 0.15); border-color: rgba(124, 58, 237, 0.3);
+}
+.user-result-avatar {
+    width: 45px; height: 45px; border-radius: 50%; object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+.user-result-info { flex: 1; min-width: 0; }
+.user-result-username {
+    color: #fff; font-weight: 600; font-size: 0.95rem;
+    font-family: 'League Spartan', sans-serif; margin: 0;
+}
+.follow-btn {
+    padding: 0.4rem 0.9rem; border-radius: 15px; font-size: 0.8rem;
+    font-family: 'Arimo', sans-serif; display: flex; align-items: center; gap: 0.3rem;
+    border: none; cursor: pointer; transition: all 0.3s ease;
+}
+.follow-btn.follow { background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%); color: #fff; }
+.follow-btn.following { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); }
+.user-search-empty { text-align: center; padding: 2rem 1rem; color: rgba(255, 255, 255, 0.5); }
+
+/* =========================================
+   4. FILTROS
+   ========================================= */
+.filter-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
+.filter-btn {
+    padding: 0.6rem 1.2rem; border-radius: 20px; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7); font-family: 'Arimo', sans-serif;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.filter-btn:hover, .filter-btn.active {
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+/* =========================================
+   5. FEED DE RESEÑAS (Tarjetas)
+   ========================================= */
+.reviews-list { display: flex; flex-direction: column; }
+
+.feed-card {
+    background: #121212; border-radius: 16px; margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden; position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.feed-card:hover {
+    border-color: rgba(124, 58, 237, 0.3);
+    box-shadow: 0 15px 50px rgba(124, 58, 237, 0.15);
+}
+
+.feed-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.5rem; background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.feed-user-info { display: flex; align-items: center; gap: 1rem; cursor: pointer; }
+.feed-avatar {
+    width: 42px; height: 42px; border-radius: 50%; object-fit: cover;
+    border: 2px solid transparent;
+    background: linear-gradient(#121212, #121212) padding-box,
+                linear-gradient(45deg, #7C3AED, #EC4899) border-box;
+}
+.feed-meta { display: flex; flex-direction: column; }
+.feed-username { color: #fff; font-weight: 700; font-size: 0.95rem; }
+.feed-action { color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; }
+
+.feed-follow-btn {
+    background: transparent; color: var(--magenta, #EC4899);
+    border: 1px solid var(--magenta, #EC4899); padding: 0.3rem 0.8rem;
+    border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.feed-follow-btn:hover { background: var(--magenta, #EC4899); color: white; }
+.feed-follow-btn.following {
+    border-color: rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.6);
+    background: transparent;
+}
+
+.feed-music-content {
+    display: flex; gap: 1.5rem; padding: 1.5rem;
+    background: linear-gradient(to right, rgba(124, 58, 237, 0.05), transparent);
+    cursor: pointer; align-items: center;
+}
+.music-cover-wrapper {
+    position: relative; width: 100px; height: 100px; flex-shrink: 0;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+}
+.music-cover { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.music-badge {
+    position: absolute; bottom: -8px; right: -8px; width: 28px; height: 28px;
+    background: #121212; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center;
+    border: 2px solid #7C3AED; color: #fff; font-size: 0.7rem;
+}
+.music-details { display: flex; flex-direction: column; justify-content: center; }
+.music-title {
+    color: #fff; font-size: 1.4rem; font-weight: 700; margin: 0;
+    line-height: 1.2; font-family: 'League Spartan', sans-serif;
+}
+.music-artist { color: rgba(255, 255, 255, 0.7); font-size: 1rem; margin: 0.2rem 0 0.5rem 0; }
+.feed-rating .star { font-size: 1rem; color: rgba(255, 255, 255, 0.2); }
+.feed-rating .star.full-star { color: #FFD85E; }
+.feed-rating .star.half-star { 
+    background: linear-gradient(90deg, #FFD85E 50%, rgba(255, 255, 255, 0.2) 50%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.feed-review-text { padding: 0 1.5rem 1rem 1.5rem; }
+.feed-review-text p {
+    color: rgba(255, 255, 255, 0.9); font-size: 1.05rem;
+    line-height: 1.6; font-style: italic; margin: 0;
+}
+
+.feed-footer {
+    padding: 1rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center;
+}
+.interaction-group { display: flex; gap: 1.5rem; }
+.feed-btn {
+    background: none; border: none; color: rgba(255, 255, 255, 0.6);
+    font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;
+    cursor: pointer; transition: color 0.2s;
+}
+.feed-btn span { font-size: 0.9rem; font-weight: 600; font-family: 'Arimo', sans-serif; }
+.feed-btn:hover { color: #fff; }
+.feed-btn.btn-like:hover { color: #EC4899; }
+.feed-btn.btn-like.liked { color: #EC4899; animation: pop 0.3s ease; }
+.feed-btn.comment-btn:hover { color: #60A5FA; }
+.feed-btn.share-btn:hover { color: #34D399; }
+
+@keyframes pop {
+    0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); }
+}
+.reviews-empty {
+    text-align: center; padding: 4rem 1rem; color: rgba(255, 255, 255, 0.5);
+}
+.reviews-empty i { font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.5; }
+
+/* =========================================
+   6. TITULOS Y ESTILOS GLOBALES
+   ========================================= */
+.section-title {
+    color: #fff; font-size: 1.5rem; font-weight: 700;
+    margin-bottom: 1.5rem; display: flex; align-items: center;
+    gap: 0.75rem; font-family: 'League Spartan', sans-serif;
+}
+.section-title i { color: var(--magenta, #EC4899); font-size: 1.25rem; }
+.section-title.small-title { font-size: 1.1rem; margin-bottom: 1rem; }
+
+/* =========================================
+   7. RESPONSIVE
+   ========================================= */
+@media (max-width: 992px) {
+    .explore-grid { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
+    .explore-right-column { display: none; }
+    
+    /* Liberar scroll en móvil */
+    html, body { height: auto !important; overflow-y: auto !important; }
+    .amigos-container { height: auto !important; overflow: visible !important; }
+    .main-content { height: auto !important; overflow: visible !important; }
+    .reviews-list-section { flex: none; overflow: visible !important; }
+}
+
+/* =========================================
+   3. LAYOUT DE PÁGINA (FEED + SCROLL INTERNO)
+   ========================================= */
+
+.main-content {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    overflow: hidden; 
+    padding-top: 2rem;
+    min-height: 0;
+    width: 100%;
+}
+
+.explore-grid {
+    display: grid;
+    /* CAMBIO CLAVE: Le damos más espacio relativo a la primera columna (Feed) */
+    grid-template-columns: minmax(0, 1fr) 350px; 
+    gap: 40px;
+    width: 100%;
+    max-width: 1400px; /* Aumentamos el ancho máximo total */
+    padding: 0 2rem;
+    height: 100%;
+}
+
+/* COLUMNA IZQUIERDA (FEED) */
+.explore-left-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 500px; /* CAMBIO CLAVE: Forzamos un ancho mínimo decente */
+}
+
+.reviews-filter-section {
+    flex-shrink: 0;
+    margin-bottom: 1.5rem;
+    width: 100%; /* Asegura que ocupe todo el ancho de su columna */
+}
+
+
+/* Scrollbar Premium - aplicado al contenedor interno */
+
+/* Lista interna - Sin restricciones de altura */
 .reviews-list {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    width: 100%; /* Ocupa el 100% del contenedor */
+    align-items: stretch; /* Estira las tarjetas al ancho total */
+    /* Sin max-height - permite que se expanda según el contenido */
+    max-height: none !important;
+    overflow: visible !important;
 }
 
-.reviews-empty {
-    text-align: center;
-    padding: 4rem 1rem;
-    color: rgba(255, 255, 255, 0.5);
+/* CAMBIO EN TARJETAS: Asegurar que llenen el espacio */
+.feed-card {
+    width: 100%; /* Ocupa todo el ancho disponible en la lista */
+    max-width: 100%; /* No te limites */
 }
 
-.reviews-empty i {
-    font-size: 4rem;
-    margin-bottom: 1.5rem;
-    opacity: 0.5;
+/* COLUMNA DERECHA (BUSCADOR) */
+.explore-right-column {
+    height: fit-content;
+    width: 350px; /* Ancho fijo y respetable */
+    flex-shrink: 0; /* No te encojas */
+
+
+    
 }
 
-.reviews-empty p {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 500;
-}
+/* =========================================
+   ESTILO DE TARJETAS PREMIUM V2
+   ========================================= */
 
-.review-item {
-    background: rgba(13, 17, 32, 0.6);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
+.feed-card {
+    /* Fondo: Más distintivo para separar del fondo de la página */
+    background: linear-gradient(145deg, rgba(30, 30, 45, 0.7) 0%, rgba(15, 15, 25, 0.8) 100%);
+    
+    /* Glassmorphism fuerte */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    
+    /* Borde más brillante para definir los límites */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.25); /* Luz superior */
+    border-radius: 24px;
+    
+    /* Sombra profunda para dar efecto de "flotar" */
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+    
+    padding: 1.8rem;
+    margin-bottom: 2.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     position: relative;
+    overflow: hidden;
 }
 
-.review-item:hover {
-    background: rgba(13, 17, 32, 0.8);
-    border-color: rgba(124, 58, 237, 0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+.feed-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
+    border-color: rgba(167, 139, 250, 0.4); /* Borde violeta al pasar mouse */
 }
 
-.review-user {
+/* --- HEADER DEL USUARIO --- */
+.feed-header {
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    position: relative;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.review-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    flex-shrink: 0;
-}
-
-.review-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.review-header {
+.feed-user-info {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.feed-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid rgba(167, 139, 250, 0.5);
+    object-fit: cover;
+}
+
+.feed-username {
+    font-family: 'League Spartan', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.feed-action {
+    font-family: 'Arimo', sans-serif;
+    font-size: 0.9rem;
+    color: #9ca3af;
+    font-weight: 400;
+    display: block; /* Forzar salto de línea en móviles si es necesario */
+}
+
+/* --- CONTENEDOR DE MÚSICA (Más Grande) --- */
+.feed-music-content {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+    border-radius: 20px;
+    padding: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.feed-music-content:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(167, 139, 250, 0.3);
+}
+
+/* PORTADA GRANDE */
+.music-cover-wrapper {
+    position: relative;
+    width: 110px;  /* AUMENTADO de 70px */
+    height: 110px; /* AUMENTADO de 70px */
+    flex-shrink: 0;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+    border-radius: 12px;
+}
+
+.music-cover {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.music-badge {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    background: var(--gradient-main, linear-gradient(135deg, #a855f7, #ec4899));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    border: 3px solid #1e1b4b;
+    z-index: 2;
+}
+
+/* INFO DE LA CANCIÓN (Texto más grande) */
+.music-details {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.music-title {
+    font-family: 'League Spartan', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem; /* AUMENTADO */
+    color: #ffffff;
+    margin-bottom: 0.3rem;
+    line-height: 1.1;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.music-artist {
+    font-family: 'Arimo', sans-serif;
+    font-size: 1.1rem; /* AUMENTADO */
+    color: #cbd5e1; /* Gris claro */
     margin-bottom: 0.5rem;
 }
 
-.review-username {
-    color: #fff;
-    font-weight: 700;
+.feed-rating {
+    color: #fbbf24; /* Color estrellas */
     font-size: 1rem;
+}
+
+/* --- TEXTO DE LA RESEÑA (Más destacado) --- */
+.feed-review-text {
+    padding: 0 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Título de la reseña GRANDE y LLAMATIVO */
+.feed-review-text h4 {
     font-family: 'League Spartan', sans-serif;
-    cursor: pointer;
-    transition: color 0.3s ease;
+    font-weight: 700;
+    font-size: 1.6rem; /* AUMENTADO */
+    color: #e0e7ff; /* Blanco azulado */
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.5px;
 }
 
-.review-username:hover {
-    color: var(--magenta, #EC4899);
-}
-
-.review-separator {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.875rem;
-}
-
-.review-content-type {
-    color: var(--amarillo, #FFD85E);
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-}
-
-.review-song {
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-
-.review-artist {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
-}
-
-.review-title {
-    color: #fff;
-    font-weight: 600;
-    font-size: 1.1rem;
-    margin: 0.75rem 0 0.5rem;
-    font-family: 'League Spartan', sans-serif;
-}
-
-.review-comment {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.95rem;
-    line-height: 1.6;
-    margin: 0.5rem 0;
-    word-wrap: break-word;
-}
-
-.review-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.review-rating {
-    display: flex;
-    align-items: center;
-}
-
-.review-stars {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.star {
-    font-size: 1.25rem;
-    color: rgba(255, 255, 255, 0.3);
-}
-
-.star.full-star {
-    color: var(--amarillo, #FFD85E);
-}
-
-.star.half-star {
-    background: linear-gradient(90deg, var(--amarillo, #FFD85E) 50%, rgba(255, 255, 255, 0.3) 50%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.review-interactions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.review-follow-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
+.feed-review-text p {
     font-family: 'Arimo', sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #d1d5db; /* Gris legible */
+    font-style: normal; /* Quitamos itálica para mejor lectura */
+}
+
+/* --- FOOTER --- */
+.feed-footer {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(124, 58, 237, 0.2);
-    color: #fff;
-    border: 1px solid rgba(124, 58, 237, 0.4);
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.review-follow-btn:hover {
-    background: rgba(124, 58, 237, 0.3);
-    border-color: rgba(124, 58, 237, 0.6);
-    transform: translateY(-1px);
-}
-
-.review-follow-btn.following {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.review-follow-btn.following:hover {
-    background: rgba(255, 77, 106, 0.2);
-    border-color: rgba(255, 77, 106, 0.4);
-    color: #FF4D6A;
-}
-
-.review-btn {
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.6);
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 8px;
+.feed-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 600;
     transition: all 0.2s ease;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
-.review-btn:hover {
+.feed-btn:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    color: white;
+    transform: translateY(-2px);
 }
 
-.review-btn.btn-like.liked {
-    color: var(--magenta, #EC4899);
+.feed-btn.liked {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: rgba(236, 72, 153, 0.3);
+    color: #fce7f3;
 }
 
-.review-btn.btn-like.liked i {
-    color: var(--magenta, #EC4899);
+.feed-btn.liked i {
+    color: #ec4899;
 }
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .user-search-container,
-    .reviews-filter-container,
-    .reviews-list-container {
-        padding: 0 1rem;
-    }
-
-    .section-title {
-        font-size: 1.25rem;
-    }
-
-    .filter-buttons {
-        flex-direction: column;
-    }
-
-    .filter-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .user-result-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .user-result-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
-    .review-item {
-        padding: 1rem;
-    }
-
-    .review-header {
-        font-size: 0.85rem;
-    }
-
-    .review-actions {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .review-interactions {
-        width: 100%;
-        justify-content: space-between;
-    }
-}
-

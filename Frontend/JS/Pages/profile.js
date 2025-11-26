@@ -1,3 +1,14 @@
+async function reloadProfileReviews() {
+    await loadAllFeaturedLists();
+    if (typeof loadRecentReviews === 'function' && window.currentProfileUserId) {
+        await loadRecentReviews(window.currentProfileUserId);
+    } else {
+        console.warn("loadRecentReviews no está definida. Solo se recargaron las destacadas.");
+    }
+}
+
+
+
 async function loadAllFeaturedLists() {
     const containerBestId = "featured-reviews-list-best";
 
@@ -10,7 +21,21 @@ async function loadAllFeaturedLists() {
 
     try {
         containerBest.innerHTML = "<p class='text-muted p-4 text-center'>Cargando...</p>";
-        const bestReviews = await window.reviewApi.getBestReviews();
+        const allReviews = await window.reviewApi.getBestReviews();
+        
+        // Ordenar por likes (más populares primero)
+        const bestReviews = [...allReviews].sort((a, b) => {
+            const likesA = Number(a.likes) || Number(a.Likes) || 0;
+            const likesB = Number(b.likes) || Number(b.Likes) || 0;
+            // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
+            if (likesB === likesA) {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : (a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0);
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : (b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0);
+                return dateB - dateA;
+            }
+            return likesB - likesA; // Más likes primero
+        });
+        
         renderReviewList(containerBestId, bestReviews);
 
     } catch (error) {
@@ -34,6 +59,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
+
+    window.currentProfileUserId = userIdToLoad;
+    if (window.modalsState) {
+        window.modalsState.loadReviews = reloadProfileReviews;
+    }
+
+
     if (typeof loadUserProfile === 'function') {
         loadUserProfile(userIdToLoad);
     }
@@ -43,14 +75,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     loadAllFeaturedLists();
-
-    const btnBest = document.getElementById("btnShowBest");
-
-    if (btnBest) {
-        btnBest.addEventListener("click", () => {
-            btnBest.classList.add("active");
-            if (btnLessRated) btnLessRated.classList.remove("active");
-        });
-    }
-    
 });

@@ -1,6 +1,6 @@
-
 const API_BASE_URL = "http://localhost:5000"; 
 
+// Helper de Autenticación
 const getAuthHeaders = () => {
     const token = localStorage.getItem('authToken');
     return {
@@ -42,13 +42,16 @@ export async function searchUsers(query) {
     }
 }
 
-//  OBTENER LISTA DE SEGUIDORES
+// 2. OBTENER LISTA DE SEGUIDORES (GENTE QUE ME SIGUE)
 export async function getFollowers() {
     try {
-        const currentUserId = localStorage.getItem('userId');
-        if (!currentUserId) return []; 
+        // CORRECCIÓN: Obtenemos el ID del localStorage
+        const userId = localStorage.getItem('userId');
+        if (!userId) return [];
 
-        const url = `${API_BASE_URL}/api/gateway/users/${currentUserId}/followers`;
+        // CORRECCIÓN DE RUTA: Agregamos /users/{userId}/...
+        const url = `${API_BASE_URL}/api/gateway/users/${userId}/followers`; 
+        
         const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
         
         if (!response.ok) return [];
@@ -67,13 +70,16 @@ export async function getFollowers() {
     }
 }
 
-//  OBTENER LISTA DE SEGUIDOS 
+// 3. OBTENER LISTA DE SEGUIDOS (GENTE A LA QUE SIGO)
 export async function getFollowing() {
     try {
-        const currentUserId = localStorage.getItem('userId');
-        if (!currentUserId) return []; 
+        // CORRECCIÓN: Obtenemos el ID del localStorage
+        const userId = localStorage.getItem('userId');
+        if (!userId) return [];
 
-        const url = `${API_BASE_URL}/api/gateway/users/${currentUserId}/follow`; 
+        // CORRECCIÓN DE RUTA: Agregamos /users/{userId}/...
+        // Nota: Tu controller usa "follow" para "following", así que la ruta es /users/{id}/follow
+        const url = `${API_BASE_URL}/api/gateway/users/${userId}/follow`; 
         
         const response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
 
@@ -81,8 +87,6 @@ export async function getFollowing() {
         const data = await response.json();
         const results = data.Items || data.items || [];
         
-        console.log("📈 [API] Datos Raw Seguidos:", results); 
-
         return results.map(f => {
             const id = f.FollowingId || f.followingId || f.UserId || f.userId || f.id;
             return normalizeId(id);

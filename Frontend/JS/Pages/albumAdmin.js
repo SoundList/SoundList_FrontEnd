@@ -2,14 +2,18 @@ import {
     getAlbumByApiId,
     getAlbumSongsByApiId,
     getOrCreateAlbum,
-    updateAlbumRating 
+    updateAlbumRating,
+    generateSongSummary 
 } from './../APIs/contentApi.js';
+
 import { 
     createSongListItem, 
     createStarRating, 
     createReviewCard 
 } from './../Components/renderContent.js';
+
 import { initializeTabNavigation } from './../Handlers/albumHandler.js';
+
 import {
     getReviews,     
     createReview,   
@@ -24,8 +28,11 @@ import {
     deleteReviewReaction,
     getUser
 } from './../APIs/socialApi.js';
-import { showAlert, showLoginRequiredModal } from '../Handlers/headerHandler.js';
-import { formatNotificationTime } from '../Handlers/headerHandler.js'; 
+
+// --- CORRECCIÓN AQUÍ: Importaciones limpias y sin duplicados ---
+import { showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
+import { showAlert } from '../Utils/reviewHelpers.js'; 
+// (Se eliminó la línea duplicada de formatNotificationTime que causaba el error)
 
 let currentRating = 0;
 let currentAlbumData = null;  
@@ -40,7 +47,7 @@ export function initializeAlbumPage() {
     console.log("Inicializando lógica de Album...");
     initializeTabNavigation();
     initializeCreateReviewModal();
-    loadPageData(); // Función principal modificada
+    loadPageData(); 
     
     // Inicializar modals de esta página
     initializeCommentsModalLogic();
@@ -204,6 +211,39 @@ function renderAlbumDetails(album, trackCount) {
     document.getElementById('detailGenre').textContent = album.genre || "Urbano"; 
 }
 
+async function loadAiSummaryLogic(albumId, reviews) {
+    const summaryBox = document.getElementById('aiSummary');
+    const summaryText = document.getElementById('aiSummaryText');
+    
+    // Regla de negocio: Solo resumir si hay más de 2 reseñas (para que valga la pena)
+    if (!reviews || reviews.length <= 2) {
+        if(summaryBox) summaryBox.style.display = 'none';
+        return;
+    }
+
+    // 1. Mostrar estado de carga
+    if(summaryBox) {
+        summaryBox.style.display = 'flex';
+        if(summaryText) summaryText.innerHTML = '<em><i class="fas fa-spinner fa-spin"></i> Analizando opiniones con IA...</em>';
+    }
+
+    try {
+        // 2. Llamar al backend (Gateway -> Content -> Social + AI -> Vertex)
+        const data = await generateSongSummary(albumId);
+        
+        // 3. Mostrar el resultado
+        if (data && data.resumen && summaryText) {
+            summaryText.textContent = data.resumen;
+        } else if (summaryBox) {
+            summaryBox.style.display = 'none';
+        }
+    } catch (error) {
+        console.warn("No se pudo generar el resumen:", error);
+        if(summaryText) summaryText.textContent = "No se pudo generar el resumen en este momento.";
+        if(summaryBox) setTimeout(() => { summaryBox.style.display = 'none'; }, 5000);
+    }
+}
+
 function renderReviews(reviews) {
     const reviewsListEl = document.getElementById('reviewsList');
     if (!reviews || reviews.length === 0) {
@@ -215,9 +255,9 @@ function renderReviews(reviews) {
     // Llama a la función para agregar los listeners
     attachReviewActionListeners(reviewsListEl);
 
-    if (reviews.length > 2) {
-        document.getElementById('aiSummary').style.display = 'flex';
-        document.getElementById('aiSummaryText').textContent = "El álbum muestra una clara evolución del artista...";
+    // --- CORRECCIÓN AQUÍ: Usamos currentAlbumData ---
+    if (currentAlbumData && currentAlbumData.albumId) {
+        loadAiSummaryLogic(currentAlbumData.albumId, reviews);
     }
 }
 
@@ -966,7 +1006,7 @@ return;
         const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
         if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
             await loadReviewDetailComments(reviewId);
-Read   }
+        }
         
         showAlert('Comentario editado exitosamente', 'success');
     } catch (error) {
@@ -1169,5 +1209,3 @@ function updateHeaderStatistics(reviews) {
     ratingStarsEl.innerHTML = createStarRating(roundedAverage, true); 
     ratingCountEl.textContent = `(${reviews.length} reviews)`;
 }
-
-

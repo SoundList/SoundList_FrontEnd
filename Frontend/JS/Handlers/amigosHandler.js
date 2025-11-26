@@ -66,7 +66,6 @@ export async function toggleFollow(userId, username, buttonElement, state) {
     
     if (!userApi) {
         console.error('Error: API de usuario no disponible.');
-        if (window.showAlert) window.showAlert('Error interno: No se pudo conectar con el servicio.', 'danger');
         return;
     }
 
@@ -92,10 +91,6 @@ export async function toggleFollow(userId, username, buttonElement, state) {
                 buttonElement.innerHTML = `<i class="fas fa-user-plus"></i> Seguir`;
             }
             buttonElement.title = "Seguir";
-
-            if (window.showAlert) {
-                window.showAlert(`Dejaste de seguir a ${targetUser}`, 'warning'); 
-            }
             
         } else {
             // SEGUIR
@@ -112,9 +107,6 @@ export async function toggleFollow(userId, username, buttonElement, state) {
             }
             buttonElement.title = "Dejar de seguir";
 
-            if (window.showAlert) {
-                window.showAlert(`Ahora sigues a ${targetUser}`, 'success'); 
-            }
         }
 
         if (state && typeof state.loadReviews === 'function') {
@@ -131,16 +123,12 @@ export async function toggleFollow(userId, username, buttonElement, state) {
                  buttonElement.innerHTML = `<i class="fas fa-user-check"></i> Siguiendo`;
             }
 
-            if (window.showAlert) window.showAlert(`Ya seguías a ${targetUser}`, 'info');
 
         } else {
             console.error(`Error en toggleFollow:`, error);
             buttonElement.innerHTML = originalHTML; 
             buttonElement.title = originalTitle;
 
-            if (window.showAlert) {
-                window.showAlert('No se pudo completar la acción. Intenta nuevamente.', 'danger');
-            }
         }
     } finally {
         buttonElement.disabled = false;
@@ -276,10 +264,10 @@ export function initializeReviewFilters(state) {
     });
 }
 
+
 export function addReviewEventListeners(reviewsListElement, state) {
     if (!reviewsListElement) return;
     
-    // Botones pequeños (Reseñas de Amigos)
     reviewsListElement.querySelectorAll('.follow-btn-small').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -290,51 +278,72 @@ export function addReviewEventListeners(reviewsListElement, state) {
         });
     });
 
-    // Botones Grandes (Tarjetas de Usuario)
-    reviewsListElement.querySelectorAll('.review-follow-btn, .follow-btn').forEach(btn => {
+    reviewsListElement.querySelectorAll('.review-follow-btn, .follow-btn, .review-follow-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
-            e.stopPropagation();
+            e.stopPropagation(); 
             const userId = this.getAttribute('data-user-id');
             const username = this.getAttribute('data-username');
+
             toggleFollow(userId, username, this, state);
         });
     });
 
+    // 2. Botón LIKE
     reviewsListElement.querySelectorAll('.btn-like').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (window.handleLikeToggle) window.handleLikeToggle(e);
+            if (window.handleLikeToggle) {
+                window.handleLikeToggle(e);
+            } else if (state && state.toggleLike) {
+                const reviewId = this.getAttribute('data-review-id');
+                state.toggleLike(reviewId, this);
+            }
         });
     });
 
     reviewsListElement.querySelectorAll('.comment-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                if (typeof window.showLoginRequiredModal === 'function') {
+                    window.showLoginRequiredModal();
+                } else if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal();
+                }
+                return;
+            }
+            
             const id = this.getAttribute('data-review-id');
-            if (window.showCommentsModal) window.showCommentsModal(id);
+            if (!id) {
+                console.warn('Botón de comentarios sin data-review-id');
+                return;
+            }
+            if (typeof window.showCommentsModal === 'function') {
+                window.showCommentsModal(id);
+            } else if (typeof showCommentsModal === 'function') {
+                showCommentsModal(id);
+            } else {
+                console.warn('showCommentsModal no está disponible');
+            }
         });
     });
-    
+
     reviewsListElement.querySelectorAll('.review-clickable').forEach(div => {
         div.addEventListener('click', function(e) {
-            if (e.target.closest('button') || e.target.closest('.follow-btn-small')) return;
+            if (e.target.closest('button') || e.target.closest('.feed-follow-btn')) return;
+            
             const id = this.getAttribute('data-review-id');
-            if (window.showReviewDetailModal) window.showReviewDetailModal(id);
-        });
-    });
 
-    reviewsListElement.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-review-id');
-            if (typeof window.toggleReviewEditMode === 'function') window.toggleReviewEditMode(id);
-        });
-    });
-
-    reviewsListElement.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const id = this.getAttribute('data-review-id');
-            if (window.showDeleteReviewModal) window.showDeleteReviewModal(id, "esta reseña");
+            if (this.classList.contains('feed-user-info')) {
+                const followBtn = this.parentElement.querySelector('.feed-follow-btn');
+                const userId = followBtn ? followBtn.getAttribute('data-user-id') : null;
+                if (userId) window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
+                
+            } else {
+                if (window.showReviewDetailModal) window.showReviewDetailModal(id);
+            }
         });
     });
 }

@@ -1,3 +1,14 @@
+async function reloadProfileReviews() {
+    await loadAllFeaturedLists();
+    if (typeof loadRecentReviews === 'function' && window.currentProfileUserId) {
+        await loadRecentReviews(window.currentProfileUserId);
+    } else {
+        console.warn("loadRecentReviews no está definida. Solo se recargaron las destacadas.");
+    }
+}
+
+
+
 async function loadAllFeaturedLists() {
     const containerBestId = "featured-reviews-list-best";
 
@@ -47,6 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = '../login.html'; 
         return;
     }
+
+
+    window.currentProfileUserId = userIdToLoad;
+    if (window.modalsState) {
+        window.modalsState.loadReviews = reloadProfileReviews;
+    }
+
 
     if (typeof loadUserProfile === 'function') {
         loadUserProfile(userIdToLoad);

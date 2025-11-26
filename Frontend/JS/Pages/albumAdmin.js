@@ -3,14 +3,17 @@ import {
     getAlbumSongsByApiId,
     getOrCreateAlbum,
     updateAlbumRating,
-    generateSongSummary // <--- AGREGADO: Faltaba importar esto
+    generateSongSummary 
 } from './../APIs/contentApi.js';
+
 import { 
     createSongListItem, 
     createStarRating, 
     createReviewCard 
 } from './../Components/renderContent.js';
+
 import { initializeTabNavigation } from './../Handlers/albumHandler.js';
+
 import {
     getReviews,     
     createReview,   
@@ -25,9 +28,11 @@ import {
     deleteReviewReaction,
     getUser
 } from './../APIs/socialApi.js';
+
+// --- CORRECCIÓN AQUÍ: Importaciones limpias y sin duplicados ---
 import { showLoginRequiredModal, formatNotificationTime } from '../Handlers/headerHandler.js';
-import { showAlert } from '../Utils/reviewHelpers.js';
-import { formatNotificationTime } from '../Handlers/headerHandler.js'; 
+import { showAlert } from '../Utils/reviewHelpers.js'; 
+// (Se eliminó la línea duplicada de formatNotificationTime que causaba el error)
 
 let currentRating = 0;
 let currentAlbumData = null;  
@@ -42,7 +47,7 @@ export function initializeAlbumPage() {
     console.log("Inicializando lógica de Album...");
     initializeTabNavigation();
     initializeCreateReviewModal();
-    loadPageData(); // Función principal modificada
+    loadPageData(); 
     
     // Inicializar modals de esta página
     initializeCommentsModalLogic();

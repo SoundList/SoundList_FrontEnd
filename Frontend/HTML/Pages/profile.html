@@ -439,9 +439,26 @@
                         commentsData: {},
                         deletingCommentId: null,
                         deletingReviewId: null,
-                        currentReviewId: null
+                        currentReviewId: null,
+                        // En el perfil, recargar reseñas = volver a cargar el perfil actual
+                        loadReviews: async () => {
+                            try {
+                                const currentProfileUserId =
+                                    window.profileUserId ||
+                                    new URLSearchParams(window.location.search).get('userId') ||
+                                    localStorage.getItem('userId');
+
+                                if (currentProfileUserId && typeof loadUserProfile === 'function') {
+                                    await loadUserProfile(currentProfileUserId);
+                                }
+                            } catch (e) {
+                                console.warn('No se pudo recargar el perfil después de eliminar la reseña:', e);
+                            }
+                        }
                     };
                     
+
+                    window.modalsState = modalsState;
                     // Inicializar modal de comentarios
                     const commentsModule = await import('../../JS/Components/modals/commentsModal.js');
                     if (commentsModule && commentsModule.initializeCommentsModalLogic) {
@@ -455,6 +472,12 @@
                     if (deleteModalsModule && deleteModalsModule.initializeDeleteModalsLogic) {
                         deleteModalsModule.initializeDeleteModalsLogic(modalsState);
                         window.initializeDeleteModalsLogic = deleteModalsModule.initializeDeleteModalsLogic;
+
+                        // Exponer funciones del módulo de forma similar al home
+                        window.showDeleteReviewModalFromModule = (reviewId, reviewTitle) =>
+                            deleteModalsModule.showDeleteReviewModal(reviewId, reviewTitle, modalsState);
+                        window.showDeleteCommentModalFromModule = (commentId) =>
+                            deleteModalsModule.showDeleteCommentModal(commentId, modalsState);
                     }
                 } catch (err) {
                     console.warn('No se pudo cargar los módulos de modales:', err);

@@ -4352,14 +4352,55 @@ button.nav-btn.active:hover {
 }
 
 
+/* --- Extra Small Mobile (max-width: 575.98px) --- */
 @media (max-width: 575.98px) {
-    /* --- AJUSTES GLOBALES Y DE CONTENIDO --- */
+    
+    /* =======================================================
+       CORRECCIÓN CRÍTICA DE ALTURA Y SCROLL CON FLEXBOX
+       ======================================================= */
+    
+    /* 1. Forzar la raíz a ocupar 100% y usar Flexbox (para asegurar que el contenedor hijo se estire) */
+    html {
+        height: 100% !important;
+    }
+    
+    body {
+        height: 100% !important;
+        /* Hacemos que el body sea un contenedor Flex para estirar a .home-container */
+        display: flex !important;
+        flex-direction: column !important;
+        
+        /* Aseguramos que no haya scrollbar duplicado */
+        overflow-y: visible !important;
+    }
+    
+    /* 2. Neutralizar las restricciones de altura y forzar scroll en el contenedor principal */
+    .home-container {
+        /* Permitimos que el contenedor crezca y maneje el scroll */
+        height: auto !important; 
+        max-height: none !important; 
+        min-height: 100% !important; /* Ahora el 100% se refiere al 100% del body (100% del viewport) */
+        flex-grow: 1 !important; /* CRÍTICO: Asegura que el contenedor ocupe todo el espacio disponible */
+        overflow-y: auto !important;
+        
+        /* Agregamos un padding generoso para que la última reseña suba al hacer scroll */
+        padding-bottom: 5rem !important; 
+    }
+
+    /* 3. Permitir que la lista de reseñas se extienda */
+    .reviews-list {
+        max-height: none !important; 
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* --- AJUSTES GLOBALES Y DE CONTENIDO (Mantener el resto de tus ajustes) --- */
     .top-header {
-        padding: 0.3rem 0.3rem !important; /* Mínimo padding para el header */
+        padding: 0.3rem 0.3rem !important; 
     }
 
     .main-content {
-        padding: 0.4rem !important; /* Padding mínimo exterior */
+        padding: 0.4rem !important; 
     }
 
     .section-title {
@@ -4368,15 +4409,15 @@ button.nav-btn.active:hover {
     }
     
     .reviews-section {
-        margin-top: 1rem !important; /* Espacio mínimo para reseñas */
+        margin-top: 1rem !important; 
         margin-bottom: 1rem !important;
     }
 
     /* --- 1. HEADER (Visibilidad y Buscador) --- */
     .header-content {
-        gap: 0.15rem !important; 
+        justify-content: space-between !important; 
+        gap: 0.15rem !important;
         flex-wrap: nowrap !important;
-        justify-content: flex-start !important;
     }
     
     .header-left {
@@ -4390,26 +4431,28 @@ button.nav-btn.active:hover {
     }
     
     .search-container {
-        /* Reducir la prioridad del buscador para que los íconos quepan */
-        flex: 0 1 auto !important; 
-        min-width: 100px !important; /* Mínimo viable */
+        min-width: 70px !important; 
+        flex: 1 1 auto !important; 
     }
 
-    /* ICONOS DERECHA: Reducción de tamaño para que quepa el '+' */
+    /* ICONOS DERECHA: Reducción de tamaño a 24px */
     .header-right {
-        /* Espacio mínimo entre los 3 íconos */
         gap: 0.1rem !important; 
-        padding-right: 0 !important; /* Eliminar padding derecho */
+        padding-right: 0 !important; 
     }
     
     .icon-btn,
     .icon-btn.profile-btn {
-        /* Reducir a 28px de ancho y alto */
-        width: 28px !important; 
-        height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
-        font-size: 0.9rem !important;
+        width: 24px !important; 
+        height: 24px !important;
+        min-width: 24px !important;
+        min-height: 24px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .profile-icon {
+        width: 24px !important; 
+        height: 24px !important;
     }
     
     .search-input {
@@ -4436,7 +4479,7 @@ button.nav-btn.active:hover {
     
     /* --- 2. CARRUSEL Y CÍRCULOS (Eliminación Definitiva) --- */
     .carousel-wrapper {
-        height: 200px !important; /* Altura más grande (vertical) */
+        height: 200px !important; 
     }
     
     .carousel-card {
@@ -4449,37 +4492,17 @@ button.nav-btn.active:hover {
         height: 80px !important;
     }
 
-    /* SOLUCIÓN FINAL: OCULTAR LOS CÍRCULOS INDICADORES DEL CARRUSEL */
+    /* OCULTAR LOS CÍRCULOS INDICADORES DEL CARRUSEL */
     .carousel-indicators {
         display: none !important; 
     }
 
-
-    .reviews-list {
-        /* Aumentamos la altura dinámica del scroll para que ocupe más pantalla */
-        max-height: 75vh !important; 
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-    }
+    /* --- 3. RESEÑAS: SCROLL Y BOTONES DE ACCIÓN --- */
     
-    /* 2. AGREGAR UN GRAN ESPACIO INFERIOR A LA PÁGINA */
-    /* Esto asegura que haya espacio para que la última reseña suba al hacer scroll */
-    .home-container {
-        padding-bottom: 5rem !important; 
-        /* Es necesario sobreescribir la restricción de altura que ya tienes en .home-container, 
-           así que la incluiremos aquí para que tenga un scroll funcional: */
-        max-height: none !important; 
-        min-height: auto !important;
-        overflow: auto !important;
-    }
-
-    /* 3. PEQUEÑO AJUSTE AL AVATAR DE LA RESEÑA (Para que no se corte) */
     .review-avatar {
-        /* Aseguramos que los avatares sean de un tamaño que encaje con el padding */
         width: 30px !important;
         height: 30px !important;
     } 
-    /* --- 3. RESEÑAS: SCROLL Y BOTONES DE ACCIÓN --- */
     
     .reviews-list::-webkit-scrollbar {
         width: 6px !important; 
@@ -4515,7 +4538,7 @@ button.nav-btn.active:hover {
         font-size: 0.75rem !important;
     }
 
-    /* FIX BOTONES DENTRO DE RESEÑAS (Tachito, Lápiz, etc.) */
+    /* FIX BOTONES DENTRO DE RESEÑAS */
     .review-actions {
         flex-wrap: nowrap !important;
         justify-content: flex-end !important;
@@ -4542,13 +4565,11 @@ button.nav-btn.active:hover {
         margin-right: auto !important;
     }
 
-    
-    
     .review-stars {
         font-size: 0.8rem !important;
     }
 
-    /* --- 4. MODALES (Notificaciones) --- */
+    /* --- 4. MODALES (Notificaciones y Comentarios) --- */
     .notifications-dropdown {
         max-width: 240px !important;
         min-width: 240px !important;
@@ -4585,34 +4606,4 @@ button.nav-btn.active:hover {
     .login-required-modal { max-width: 90%; }
     .delete-comment-modal { max-width: 90%; }
     .comments-modal-header { padding: 0.6rem 0.7rem; }
-
-
-    .header-content {
-        /* CRUCIAL: Usamos space-between para distribuir los 3 bloques equitativamente */
-        justify-content: space-between !important; 
-        gap: 0.15rem !important;
-        flex-wrap: nowrap !important;
-    }
-    
-    .search-container {
-        /* Reducir el min-width AÚN MÁS (de 80px a 70px) para dejar espacio */
-        min-width: 70px !important; 
-        flex: 1 1 auto !important; 
-    }
-
-    /* Reducir los íconos de la derecha a 24px (Campana, Perfil, +) */
-    .icon-btn,
-    .icon-btn.profile-btn {
-        width: 24px !important; 
-        height: 24px !important;
-        min-width: 24px !important;
-        min-height: 24px !important;
-        font-size: 0.8rem !important;
-    }
-    
-    /* Si la imagen de perfil tiene una clase diferente, también la ajustamos */
-    .profile-icon {
-        width: 24px !important; 
-        height: 24px !important;
-    }
 }

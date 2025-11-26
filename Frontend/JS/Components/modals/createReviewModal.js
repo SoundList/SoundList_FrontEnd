@@ -526,6 +526,7 @@ async function submitCreateReview(state) {
     if (hasError) {
         return;
     }
+    showAlert('Subiendo...', 'success');
 
     if (!contentData || !contentData.id) {
         console.error('❌ currentReviewData inválido (Contenido no seleccionado):', state.currentReviewData);

@@ -4325,45 +4325,99 @@ body #alertContainer .custom-alert {
 @media (max-width: 575.98px) {
     
     /* =======================================================
-       CORRECCIÓN CRÍTICA DE ALTURA Y SCROLL CON FLEXBOX
+       4. CORRECCIÓN CRÍTICA: VISIBILIDAD Y POSICIÓN DEL DESPLEGABLE
        ======================================================= */
     
-    /* 1. Forzar la raíz a ocupar 100% y usar Flexbox (para asegurar que el contenedor hijo se estire) */
+    /* CRÍTICO 1: Asegurar que el contenedor padre no corte el desplegable */
+    .header-left {
+        overflow: visible !important; /* Permite que el desplegable se extienda */
+        position: relative !important; /* Por si las moscas */
+        z-index: 1000 !important; /* Necesario para que el header-left esté sobre el contenido */
+    }
+    
+    /* CRÍTICO 2: Asegurar la base de posicionamiento del desplegable */
+    .search-container {
+        position: relative !important; /* Necesario para que el desplegable ABSOLUTO se base en esto */
+        /* Eliminamos flex: 0 1 auto !important; temporalmente, para que no fuerce el ancho si es un problema de espacio */
+        flex: 1 1 auto !important; /* Revertimos al flex: 1 1 auto para que use el espacio disponible */
+    }
+
+    /* CRÍTICO 3: Asegurar que el desplegable está encima de todo */
+    .search-dropdown {
+        z-index: 10005 !important; 
+        /* La altura será automática por el contenido */
+        max-height: 200px !important; 
+    }
+    
+    /* =======================================================
+       CORRECCIÓN CRÍTICA DE ALTURA Y SCROLL CON FLEXBOX
+       ======================================================= */
     html {
         height: 100% !important;
     }
     
     body {
         height: 100% !important;
-        /* Hacemos que el body sea un contenedor Flex para estirar a .home-container */
         display: flex !important;
         flex-direction: column !important;
-        
-        /* Aseguramos que no haya scrollbar duplicado */
         overflow-y: visible !important;
     }
     
-    /* 2. Neutralizar las restricciones de altura y forzar scroll en el contenedor principal */
     .home-container {
-        /* Permitimos que el contenedor crezca y maneje el scroll */
         height: auto !important; 
         max-height: none !important; 
-        min-height: 100% !important; /* Ahora el 100% se refiere al 100% del body (100% del viewport) */
-        flex-grow: 1 !important; /* CRÍTICO: Asegura que el contenedor ocupe todo el espacio disponible */
+        min-height: 100% !important; 
+        flex-grow: 1 !important; 
         overflow-y: auto !important;
-        
-        /* Agregamos un padding generoso para que la última reseña suba al hacer scroll */
         padding-bottom: 5rem !important; 
     }
 
-    /* 3. Permitir que la lista de reseñas se extienda */
     .reviews-list {
         max-height: none !important; 
         overflow-y: visible !important;
         overflow-x: hidden !important;
     }
     
-    /* --- AJUSTES GLOBALES Y DE CONTENIDO (Mantener el resto de tus ajustes) --- */
+    /* =======================================================
+       1. CORRECCIÓN: AUMENTO DEL TAMAÑO DE ICONOS
+       ======================================================= */
+    
+    /* AUMENTO: Ajustamos los botones de notificaciones, perfil y añadir reseña a 36px */
+    .icon-btn,
+    .icon-btn.profile-btn,
+    .add-review-btn {
+        width: 36px !important; 
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        font-size: 1rem !important;
+    }
+    
+    .header-right {
+        gap: 0.5rem !important; 
+    }
+    
+    .profile-icon {
+        width: 36px !important; 
+        height: 36px !important;
+    }
+
+    /* =======================================================
+       3. CORRECCIÓN: TAMAÑO DEL BADGE DE NOTIFICACIONES (1)
+       ======================================================= */
+    .notification-badge {
+        font-size: 0.55rem !important; 
+        width: 14px !important; 
+        height: 14px !important;
+        top: 2px !important;
+        right: 2px !important;
+    }
+
+    .notification-badge span {
+        font-size: 0.55rem !important; 
+    }
+    
+    /* --- AJUSTES GLOBALES Y DE CONTENIDO --- */
     .top-header {
         padding: 0.3rem 0.3rem !important; 
     }
@@ -4381,8 +4435,58 @@ body #alertContainer .custom-alert {
         margin-top: 1rem !important; 
         margin-bottom: 1rem !important;
     }
+    
+    /* =======================================================
+       2. CORRECCIÓN: CONSISTENCIA EN EL TAMAÑO DE RESEÑAS
+       (SIN LINE-CLAMP)
+       ======================================================= */
+    
+    .review-item {
+        min-height: 120px !important; 
+        padding: 0.6rem !important;
+        gap: 0.6rem !important;
+        flex-direction: column !important; 
+        align-items: flex-start !important;
+        overflow: hidden !important; 
+    }
 
-    /* --- 1. HEADER (Visibilidad y Buscador) --- */
+    .review-user {
+        width: 100% !important;
+        order: 1 !important;
+    }
+
+    .review-info {
+        width: 100% !important;
+        order: 2 !important; 
+        max-height: 70px; 
+        overflow: hidden !important;
+    }
+    
+    .review-title {
+        white-space: normal !important;
+        word-break: break-word; 
+        display: block !important; 
+        overflow: visible !important;
+    }
+
+    .review-comment {
+        max-height: 3.8em !important; 
+        overflow: hidden !important;
+        text-overflow: ellipsis; 
+        white-space: normal !important;
+        font-size: 0.75rem !important;
+        line-height: 1.25em !important; 
+    }
+
+    .review-actions {
+        width: 100% !important;
+        order: 3 !important; 
+        justify-content: space-between !important; 
+        padding-top: 0.5rem !important;
+    }
+
+    
+    /* --- RESTO DE AJUSTES DE CONFORMIDAD Y COMPRESIÓN --- */
     .header-content {
         justify-content: space-between !important; 
         gap: 0.15rem !important;
@@ -4399,31 +4503,6 @@ body #alertContainer .custom-alert {
         height: 28px !important;
     }
     
-    .search-container {
-        min-width: 70px !important; 
-        flex: 1 1 auto !important; 
-    }
-
-    /* ICONOS DERECHA: Reducción de tamaño a 24px */
-    .header-right {
-        gap: 0.1rem !important; 
-        padding-right: 0 !important; 
-    }
-    
-    .icon-btn,
-    .icon-btn.profile-btn {
-        width: 24px !important; 
-        height: 24px !important;
-        min-width: 24px !important;
-        min-height: 24px !important;
-        font-size: 0.8rem !important;
-    }
-    
-    .profile-icon {
-        width: 24px !important; 
-        height: 24px !important;
-    }
-    
     .search-input {
         padding: 0.3rem 0.5rem 0.3rem 1.6rem !important;
         font-size: 0.7rem !important;
@@ -4435,7 +4514,6 @@ body #alertContainer .custom-alert {
     }
     
 
-    /* NAV BUTTONS: Compresión extrema si aparecen en la segunda fila */
     .header-center {
         gap: 0.3rem !important;
         margin-top: 0.3rem !important;
@@ -4446,7 +4524,6 @@ body #alertContainer .custom-alert {
         border-radius: 15px !important; 
     }
     
-    /* --- 2. CARRUSEL Y CÍRCULOS (Eliminación Definitiva) --- */
     .carousel-wrapper {
         height: 200px !important; 
     }
@@ -4461,18 +4538,10 @@ body #alertContainer .custom-alert {
         height: 80px !important;
     }
 
-    /* OCULTAR LOS CÍRCULOS INDICADORES DEL CARRUSEL */
     .carousel-indicators {
         display: none !important; 
     }
 
-    /* --- 3. RESEÑAS: SCROLL Y BOTONES DE ACCIÓN --- */
-    
-    .review-avatar {
-        width: 30px !important;
-        height: 30px !important;
-    } 
-    
     .reviews-list::-webkit-scrollbar {
         width: 6px !important; 
     }
@@ -4481,7 +4550,6 @@ body #alertContainer .custom-alert {
         border-radius: 3px !important;
     }
     
-    /* FIX FILTROS (Populares/Recientes) */
     .reviews-header .reviews-filter {
         margin-left: 0 !important; 
         flex-wrap: nowrap !important;
@@ -4493,21 +4561,15 @@ body #alertContainer .custom-alert {
         font-size: 0.75rem !important;
     }
 
-    .review-item {
-        padding: 0.6rem !important;
-        gap: 0.6rem !important;
-    }
-    
     .review-avatar {
-        width: 32px !important;
-        height: 32px !important;
-    }
+        width: 30px !important;
+        height: 30px !important;
+    } 
     
     .review-comment {
         font-size: 0.75rem !important;
     }
 
-    /* FIX BOTONES DENTRO DE RESEÑAS */
     .review-actions {
         flex-wrap: nowrap !important;
         justify-content: flex-end !important;
@@ -4538,7 +4600,6 @@ body #alertContainer .custom-alert {
         font-size: 0.8rem !important;
     }
 
-    /* --- 4. MODALES (Notificaciones y Comentarios) --- */
     .notifications-dropdown {
         max-width: 240px !important;
         min-width: 240px !important;
@@ -4554,7 +4615,6 @@ body #alertContainer .custom-alert {
         font-size: 0.75rem !important;
     }
     
-    /* MODALES GRANDES (Comentarios) */
     .comments-modal {
         width: 100% !important;
         max-width: 100% !important;
@@ -4563,7 +4623,6 @@ body #alertContainer .custom-alert {
         margin: 0 !important;
     }
 
-    /* --- REGLAS DE TUS OTROS COMPONENTES --- */
     .mobile-menu-toggle {
         width: 32px; height: 32px; padding: 0.35rem; font-size: 1rem;
     }
@@ -4575,4 +4634,205 @@ body #alertContainer .custom-alert {
     .login-required-modal { max-width: 90%; }
     .delete-comment-modal { max-width: 90%; }
     .comments-modal-header { padding: 0.6rem 0.7rem; }
+}
+
+
+/* --- Extra Small Mobile EXTREMO (max-width: 390px) --- */
+@media (max-width: 390px) {
+    .review-item {
+    /* Fijamos una altura para que todas las tarjetas sean uniformes */
+    height: 160px !important; /* Altura fija (ajusta si 160px es mucho o poco) */
+    min-height: 160px !important;
+    overflow: hidden !important; /* El scroll lo maneja el hijo */
+}
+
+.review-info {
+    /* Definimos una altura MÁXIMA fija para la sección de texto (titulo + comentario) */
+    max-height: 90px !important; /* Altura fija para el texto */
+    overflow-y: auto !important; /* CRÍTICO: Agrega la barra de scroll */
+    overflow-x: hidden !important;
+}
+
+.review-comment {
+    /* Deshacemos cualquier truncamiento de texto */
+    max-height: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+    /* =======================================================
+       6. COMPRESIÓN MÁXIMA EN EL HEADER
+       ======================================================= */
+       
+    /* Reducimos el padding lateral del header al mínimo absoluto */
+    .top-header {
+        padding: 0.1rem 0.1rem !important; 
+    }
+    
+    /* Reducimos el espacio entre los bloques (logo+search y iconos) */
+    .header-content {
+        gap: 0.05rem !important; 
+    }
+    
+    /* Reducimos el tamaño de los iconos de la derecha (Campana, Perfil, +) */
+    .icon-btn,
+    .icon-btn.profile-btn,
+    .add-review-btn {
+        width: 32px !important; /* Reducido de 36px a 32px */
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        font-size: 0.9rem !important; /* Icono más pequeño */
+    }
+    
+    .profile-icon {
+        width: 32px !important; 
+        height: 32px !important;
+    }
+    
+    .header-right {
+        gap: 0.1rem !important; /* Espacio mínimo entre los iconos */
+    }
+    
+    /* Forzamos el logo a ser muy pequeño */
+    .logo-icon {
+        width: 24px !important;
+        height: 24px !important;
+    }
+    
+    /* Ajustamos el tamaño del texto del input para ganar espacio */
+    .search-input {
+        padding: 0.3rem 0.5rem 0.3rem 1.4rem !important;
+        font-size: 0.65rem !important;
+    }
+    
+    .search-icon {
+        left: 0.35rem !important;
+        font-size: 0.7rem !important;
+    }
+
+    /* --- Contenido principal (Opcional, si se desborda) --- */
+    .main-content {
+        padding: 0.2rem !important; 
+    }
+    
+    .section-title {
+        font-size: 0.9rem !important;
+    }
+
+    /* Reducimos el tamaño de las estrellas de reseña */
+    .review-stars {
+        font-size: 0.7rem !important;
+    }
+    
+    /* Reducimos el tamaño de la fuente de los botones de reseña */
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        font-size: 0.7rem !important;
+        min-height: 20px !important;
+        min-width: 20px !important;
+    }
+}
+
+
+
+/* --- Extra Small Mobile ULTRAPRIME (max-width: 344px) --- */
+@media (max-width: 344px) {
+
+    .review-item {
+    height: 150px !important; /* Un poco más pequeña para ahorrar espacio */
+    min-height: 150px !important;
+    overflow: hidden !important;
+}
+
+.review-info {
+    max-height: 80px !important; /* Ajustamos la altura del texto a 80px */
+    overflow-y: auto !important; /* CRÍTICO: Agrega la barra de scroll */
+    overflow-x: hidden !important;
+}
+
+.review-comment {
+    max-height: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+    /* Reducción al límite del padding lateral del header */
+    .top-header {
+        padding: 0.05rem 0.05rem !important; 
+    }
+    
+    /* Reducción al límite del espacio entre bloques y elementos */
+    .header-content {
+        gap: 0.05rem !important; 
+    }
+    
+    /* Iconos de la derecha: Reducción final a 30px */
+    .icon-btn,
+    .icon-btn.profile-btn,
+    .add-review-btn {
+        width: 30px !important; /* De 32px a 30px */
+        height: 30px !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
+        font-size: 0.85rem !important; 
+    }
+    
+    .profile-icon {
+        width: 30px !important; 
+        height: 30px !important;
+    }
+    
+    .header-right {
+        gap: 0 !important; /* Eliminar el espacio entre los iconos de la derecha */
+    }
+    
+    /* Forzar el buscador a un tamaño aún más pequeño */
+    .search-container {
+        min-width: 60px !important; /* Min-width absoluto más bajo */
+    }
+    
+    /* Ajustamos el tamaño del texto del input y padding para liberar espacio */
+    .search-input {
+        padding: 0.2rem 0.4rem 0.2rem 1.3rem !important;
+        font-size: 0.6rem !important;
+        margin-left: 4px;
+    }
+    
+    .search-icon {
+        left: 0.3rem !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Ajuste para que el desplegable fijo se alinee con el nuevo padding del header */
+    .search-dropdown {
+        top: 50px !important; /* Ajuste para el nuevo padding */
+        left: 0.05rem !important;
+        right: 0.05rem !important;
+    }
+    
+    /* --- Contenido principal --- */
+    .main-content {
+        padding: 0.1rem !important; 
+    }
+    
+    .section-title {
+        font-size: 0.85rem !important;
+    }
+
+    /* Reducción extrema de la fuente de la reseña para que quepa */
+    .review-comment {
+        font-size: 0.7rem !important;
+        line-height: 1.2em !important; 
+    }
+
+    /* Reducción de la fuente de los botones de acción */
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        font-size: 0.65rem !important;
+        min-height: 18px !important;
+        min-width: 18px !important;
+    }
 }

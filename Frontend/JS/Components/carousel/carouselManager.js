@@ -23,16 +23,10 @@ export function initializeCarousel() {
             description: 'Basado en promedio de estrellas ponderado',
             text: 'Canciones u álbumes con mejores calificaciones',
             getDescription: (data) => {
-                if (data && data.topSong) {
-                    if (data.topSong.totalReviews > 0) {
-                        const reviewsText = data.topSong.totalReviews === 1 ? 'reseña' : 'reseñas';
-                        const avgRating = data.topSong.avgRating ? data.topSong.avgRating.toFixed(1) : '0.0';
-                        return `${data.topSong.totalReviews} ${reviewsText} • Promedio ${avgRating} estrellas`;
-                    } else {
-                        return 'Crea reseñas para ver resultados';
-                    }
+                if (data && data.topSong && data.topSong.totalReviews > 0) {
+                    return 'Contenido con las mejores calificaciones promedio de la comunidad';
                 }
-                return 'Basado en promedio de estrellas';
+                return 'Contenido con las mejores calificaciones promedio de la comunidad';
             }
         },
         {
@@ -51,10 +45,13 @@ export function initializeCarousel() {
             id: 'top-10-semana',
             title: 'TOP 10 DE LA SEMANA',
             description: 'Ranking semanal combinado',
-            text: 'Top 10 basado en calificaciones, comentarios y actividad reciente',
+            text: 'Top 10 basado en calificaciones, comentarios y likes',
             getDescription: (data) => {
-                if (data && data.topSong) {
-                    return `Score: ${data.topSong.score.toFixed(1)} • Período: Esta semana`;
+                if (data && data.topSong && data.topSong.avgRating !== undefined) {
+                    const avgRating = data.topSong.avgRating ? data.topSong.avgRating.toFixed(1) : '0.0';
+                    const comments = data.topSong.totalComments || 0;
+                    const likes = data.topSong.totalLikes || 0;
+                    return `${avgRating} ⭐ • ${comments} comentario${comments !== 1 ? 's' : ''} • ${likes} like${likes !== 1 ? 's' : ''} • Esta semana`;
                 }
                 return 'Ranking semanal combinado';
             }
@@ -63,10 +60,13 @@ export function initializeCarousel() {
             id: 'top-50-mes',
             title: 'TOP 50 DEL MES',
             description: 'Ranking mensual combinado',
-            text: 'Top 50 basado en calificaciones, comentarios y actividad del mes',
+            text: 'Top 50 basado en calificaciones, comentarios y likes',
             getDescription: (data) => {
-                if (data && data.topSong) {
-                    return `Score: ${data.topSong.score.toFixed(1)} • Período: Este mes`;
+                if (data && data.topSong && data.topSong.avgRating !== undefined) {
+                    const avgRating = data.topSong.avgRating ? data.topSong.avgRating.toFixed(1) : '0.0';
+                    const comments = data.topSong.totalComments || 0;
+                    const likes = data.topSong.totalLikes || 0;
+                    return `${avgRating} ⭐ • ${comments} comentario${comments !== 1 ? 's' : ''} • ${likes} like${likes !== 1 ? 's' : ''} • Este mes`;
                 }
                 return 'Ranking mensual combinado';
             }
@@ -77,8 +77,8 @@ export function initializeCarousel() {
             description: 'Mayor crecimiento reciente',
             text: 'Canciones u álbumes con mayor crecimiento de actividad en las últimas 24-48 horas',
             getDescription: (data) => {
-                if (data && data.topSong) {
-                    return `+${data.topSong.growthRate}% crecimiento • Últimas ${data.timeWindow}`;
+                if (data && data.topSong && data.topSong.growthRate !== undefined) {
+                    return `+${data.topSong.growthRate}% más reseñas • Últimas ${data.timeWindow}`;
                 }
                 return 'Mayor crecimiento reciente';
             }

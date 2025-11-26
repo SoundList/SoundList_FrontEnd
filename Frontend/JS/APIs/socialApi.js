@@ -240,8 +240,13 @@ export async function deleteComment(commentId) {
 export async function getReviewReactionCount(reviewId) {
     try {
         const response = await axios.get(`${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions/count`);
-        return response.data?.count || 0;
+        console.log(`🔍 getReviewReactionCount(${reviewId}): Response:`, response.data);
+        const count = response.data?.count ?? response.data ?? 0;
+        console.log(`🔍 getReviewReactionCount(${reviewId}): Count extracted:`, count);
+        return count;
     } catch (error) {
+        console.error(`❌ getReviewReactionCount(${reviewId}): Error:`, error);
+        console.error(`❌ getReviewReactionCount(${reviewId}): Error response:`, error.response?.data);
         return 0;
     }
 }

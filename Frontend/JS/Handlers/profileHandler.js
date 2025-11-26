@@ -288,20 +288,25 @@ function attachProfileReviewListeners(container, isOwnProfile) {
         });
     });
 
-    // Editar (solo si es tu propio perfil)
     if (isOwnProfile) {
-        container.querySelectorAll('.btn-edit').forEach(btn => {
+container.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
+                const item = this.closest('.review-item');
+                const likesCountEl = item.querySelector('.review-likes-count');
+                const currentLikes = parseInt(likesCountEl?.textContent || '0');
+
+                if (currentLikes > 0) {
+                    if (window.showAlert) window.showAlert('No se puede editar esta reseña porque ya tiene reacciones (likes).', 'warning');
+                    else alert('No se puede editar esta reseña porque ya tiene reacciones (likes).');
+                    return;
+                }
+
                 const reviewId = this.getAttribute('data-review-id');
-                const title = this.getAttribute('data-review-title') || '';
-                const content = this.getAttribute('data-review-content') || '';
-                const rating = parseInt(this.getAttribute('data-review-rating')) || 0;
-                
-                if (typeof showEditReviewModal === 'function') {
-                    showEditReviewModal(reviewId, title, content, rating);
-                } else {
-                    console.warn('showEditReviewModal no está disponible');
+                if (window.showEditReviewModal) {
+                    const title = item.querySelector('.review-title')?.textContent || '';
+                    const content = item.querySelector('.review-comment')?.textContent || '';
+                    window.showEditReviewModal(reviewId, title, content, 0);
                 }
             });
         });

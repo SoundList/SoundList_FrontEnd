@@ -75,10 +75,11 @@ export function initializeCarousel() {
             id: 'trending',
             title: 'TRENDING',
             description: 'Mayor crecimiento reciente',
-            text: 'Canciones u álbumes con mayor crecimiento de actividad en las últimas 24-48 horas',
+            text: 'Canciones u álbumes con mayor crecimiento de actividad del día',
             getDescription: (data) => {
                 if (data && data.topSong && data.topSong.growthRate !== undefined) {
-                    return `+${data.topSong.growthRate}% más reseñas • Últimas ${data.timeWindow}`;
+                    const recentReviews = data.topSong.recentReviews || 0;
+                    return `+${recentReviews} reseña${recentReviews !== 1 ? 's' : ''} en las últimas 24h • +${data.topSong.growthRate}% crecimiento`;
                 }
                 return 'Mayor crecimiento reciente';
             }

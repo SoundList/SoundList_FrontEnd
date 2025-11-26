@@ -722,14 +722,14 @@ export async function getTop50Mes() {
 
 /**
  * TRENDING
- * Lógica: Canciones con mayor crecimiento de actividad en las últimas 24-48 horas
+ * Lógica: Canciones/álbumes con mayor crecimiento de actividad en las últimas 24 horas (del día)
  */
 export async function getTrending() {
     try {
         const reviews = await getReviews();
         if (!reviews || reviews.length === 0) {
             return {
-                timeWindow: '48 horas',
+                timeWindow: '24 horas',
                 topSong: {
                     name: 'No hay datos aún',
                     artist: 'Crea reseñas para ver tendencias',
@@ -741,44 +741,112 @@ export async function getTrending() {
         }
 
         const now = new Date();
+        const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-        const last96h = new Date(now.getTime() - 96 * 60 * 60 * 1000);
 
-        // Filtrar reseñas de los dos períodos
-        const recentReviews = reviews.filter(r => {
-            const date = new Date(r.CreatedAt || r.Created || r.createdAt);
-            return date >= last48h;
+        // Filtrar reseñas de los dos períodos con validación de fechas
+        let recentReviews = reviews.filter(r => {
+            const dateStr = r.CreatedAt || r.Created || r.createdAt || r.date || r.Date;
+            if (!dateStr) return false;
+            const date = new Date(dateStr);
+            const timestamp = date.getTime();
+            
+            // Validar que la fecha sea válida y no sea una fecha inválida como 0001-01-01
+            const isValid = !isNaN(timestamp) && timestamp > 0 && 
+                           date.getFullYear() > 1 &&
+                           !dateStr.toString().includes('0001-01-01');
+            
+            return isValid && date >= last24h;
         });
-        const previousReviews = reviews.filter(r => {
-            const date = new Date(r.CreatedAt || r.Created || r.createdAt);
-            return date >= last96h && date < last48h;
+        let previousReviews = reviews.filter(r => {
+            const dateStr = r.CreatedAt || r.Created || r.createdAt || r.date || r.Date;
+            if (!dateStr) return false;
+            const date = new Date(dateStr);
+            const timestamp = date.getTime();
+            
+            // Validar que la fecha sea válida y no sea una fecha inválida como 0001-01-01
+            const isValid = !isNaN(timestamp) && timestamp > 0 && 
+                           date.getFullYear() > 1 &&
+                           !dateStr.toString().includes('0001-01-01');
+            
+            return isValid && date >= last48h && date < last24h;
         });
 
+        // Si no hay reseñas recientes, usar las más recientes disponibles como fallback
         if (recentReviews.length === 0) {
-            return {
-                timeWindow: '48 horas',
-                topSong: {
-                    name: 'No hay actividad reciente',
-                    artist: 'Últimas 48 horas',
-                    growthRate: 0,
-                    albumImage: null,
-                    artistImage: null
+            console.log(`⚠️ getTrending: No hay reseñas en las últimas 24h, usando las más recientes disponibles`);
+            
+            // Procesar todas las reseñas con fallback a timestamps de localStorage o índice
+            const processedReviews = reviews.map((r, index) => {
+                const dateStr = r.CreatedAt || r.Created || r.createdAt || r.date || r.Date;
+                let timestamp = null;
+                
+                if (dateStr) {
+                    const date = new Date(dateStr);
+                    const ts = date.getTime();
+                    const isValid = !isNaN(ts) && ts > 0 && 
+                                   date.getFullYear() > 1 &&
+                                   !dateStr.toString().includes('0001-01-01');
+                    
+                    if (isValid) {
+                        timestamp = ts;
+                    }
                 }
-            };
+                
+                // Si no tiene fecha válida, intentar usar timestamp de localStorage
+                if (!timestamp) {
+                    const reviewId = r.ReviewId || r.reviewId || r.id;
+                    const storageTimestamp = localStorage.getItem(`review_created_at_${reviewId}`);
+                    if (storageTimestamp) {
+                        const ts = parseInt(storageTimestamp, 10);
+                        if (!isNaN(ts) && ts > 0) {
+                            timestamp = ts;
+                        }
+                    }
+                }
+                
+                // Fallback final: usar índice (las primeras en el array son más recientes)
+                if (!timestamp) {
+                    timestamp = (reviews.length - index) * 1000000;
+                }
+                
+                return { review: r, timestamp };
+            }).sort((a, b) => b.timestamp - a.timestamp).map(item => item.review);
+            
+            // Usar las 10 más recientes como "recentReviews" y las siguientes 10 como "previousReviews"
+            recentReviews = processedReviews.slice(0, 10);
+            previousReviews = processedReviews.slice(10, 20);
+            
+            if (recentReviews.length === 0) {
+                return {
+                    timeWindow: '24 horas',
+                    topSong: {
+                        name: 'No hay actividad reciente',
+                        artist: 'Últimas 24 horas',
+                        growthRate: 0,
+                        albumImage: null,
+                        artistImage: null
+                    }
+                };
+            }
+            
+            console.log(`📊 getTrending: Usando ${recentReviews.length} reseñas más recientes como fallback`);
         }
 
-        // Calcular actividad por canción en ambos períodos
+        // Calcular actividad por canción/álbum en ambos períodos
         const recentActivity = {};
         const previousActivity = {};
 
         const processPeriod = (reviewList, activityMap) => {
             reviewList.forEach(review => {
                 const songId = review.SongId || review.songId;
-                if (!songId) return;
-                if (!activityMap[songId]) {
-                    activityMap[songId] = { reviews: 0, comments: 0, likes: 0 };
+                const albumId = review.AlbumId || review.albumId;
+                const contentId = songId || albumId;
+                if (!contentId) return;
+                if (!activityMap[contentId]) {
+                    activityMap[contentId] = { reviews: 0, comments: 0, likes: 0 };
                 }
-                activityMap[songId].reviews += 1;
+                activityMap[contentId].reviews += 1;
             });
         };
 
@@ -787,29 +855,36 @@ export async function getTrending() {
 
         // Calcular crecimiento específicamente de reseñas (no combinado)
         const growthRates = {};
-        Object.keys(recentActivity).forEach(songId => {
-            const recent = recentActivity[songId];
-            const previous = previousActivity[songId] || { reviews: 0, comments: 0, likes: 0 };
-            const recentReviews = recent.reviews;
-            const previousReviews = previous.reviews;
+        Object.keys(recentActivity).forEach(contentId => {
+            const recent = recentActivity[contentId];
+            const previous = previousActivity[contentId] || { reviews: 0, comments: 0, likes: 0 };
+            const recentReviewsCount = recent.reviews;
+            const previousReviewsCount = previous.reviews;
             
-            if (previousReviews === 0) {
-                growthRates[songId] = recentReviews > 0 ? 100 : 0; // 100% si no había reseñas antes
+            let growth = 0;
+            if (previousReviewsCount === 0) {
+                growth = recentReviewsCount > 0 ? 100 : 0; // 100% si no había reseñas antes
             } else {
-                growthRates[songId] = ((recentReviews - previousReviews) / previousReviews) * 100;
+                growth = ((recentReviewsCount - previousReviewsCount) / previousReviewsCount) * 100;
             }
+            
+            growthRates[contentId] = {
+                growthRate: growth,
+                recentReviews: recentReviewsCount,
+                previousReviews: previousReviewsCount
+            };
         });
 
         // Ordenar por crecimiento
         const sorted = Object.entries(growthRates)
-            .sort((a, b) => b[1] - a[1]);
+            .sort((a, b) => b[1].growthRate - a[1].growthRate);
 
         if (sorted.length === 0) {
             return {
-                timeWindow: '48 horas',
+                timeWindow: '24 horas',
                 topSong: {
                     name: 'No hay tendencias',
-                    artist: 'Últimas 48 horas',
+                    artist: 'Últimas 24 horas',
                     growthRate: 0,
                     albumImage: null,
                     artistImage: null
@@ -817,24 +892,38 @@ export async function getTrending() {
             };
         }
 
-        const [topSongId, growthRate] = sorted[0];
-        // Obtener datos de la canción usando la función auxiliar
-        const songData = await getSongData(topSongId);
+        const [topContentId, growthData] = sorted[0];
+        // Determinar si es canción o álbum y obtener datos
+        const matchingReview = recentReviews.find(r => (r.SongId || r.songId) === topContentId || (r.AlbumId || r.albumId) === topContentId);
+        const contentType = (matchingReview?.SongId || matchingReview?.songId) ? 'song' : 'album';
+        
+        let contentData = null;
+        try {
+            if (contentType === 'song') {
+                contentData = await getSongData(topContentId);
+            } else {
+                contentData = await getAlbumData(topContentId);
+            }
+        } catch (e) {
+            console.debug('No se pudo obtener datos del contenido:', topContentId, e);
+        }
 
         return {
-            timeWindow: '48 horas',
+            timeWindow: '24 horas',
             topSong: {
-                name: songData?.Title || songData?.title || songData?.Name || 'Canción',
-                artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
-                growthRate: Math.round(growthRate),
-                albumImage: songData?.Image || songData?.image || null,
+                name: contentData?.Title || contentData?.title || contentData?.Name || (contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: contentData?.ArtistName || contentData?.artistName || contentData?.Artist || 'Artista',
+                growthRate: Math.round(growthData.growthRate),
+                recentReviews: growthData.recentReviews || 0,
+                previousReviews: growthData.previousReviews || 0,
+                albumImage: contentData?.Image || contentData?.image || null,
                 artistImage: null
             }
         };
     } catch (error) {
         console.error('Error obteniendo trending:', error);
         return {
-            timeWindow: '48 horas',
+            timeWindow: '24 horas',
             topSong: {
                 name: 'Error cargando datos',
                 artist: 'Intenta más tarde',

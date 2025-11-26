@@ -41,6 +41,40 @@ async function getSongData(songId) {
 }
 
 /**
+ * Función auxiliar para obtener datos de álbum usando GUID interno o apiAlbumId
+ * @param {string} albumId - Puede ser GUID interno o apiAlbumId
+ * @returns {Promise<Object|null>} Datos del álbum
+ */
+async function getAlbumData(albumId) {
+    if (!albumId) return null;
+    
+    try {
+        // Primero intentar con getAlbumById (GUID interno)
+        const albumData = await getAlbumById(albumId);
+        if (albumData && (albumData.Title || albumData.title)) {
+            // Si getAlbumById devuelve datos completos, usarlos
+            return albumData;
+        }
+        
+        // Si getAlbumById devolvió datos pero sin título, obtener el apiAlbumId
+        if (albumData) {
+            const apiAlbumId = albumData.apiAlbumId || albumData.APIAlbumId;
+            if (apiAlbumId) {
+                const fullAlbumData = await getAlbumByApiId(apiAlbumId);
+                return fullAlbumData || albumData;
+            }
+        }
+        
+        // Si getAlbumById falló o no devolvió datos, intentar directamente con getAlbumByApiId
+        // (por si acaso el albumId es un apiAlbumId)
+        return await getAlbumByApiId(albumId);
+    } catch (e) {
+        console.debug('Error obteniendo datos de álbum:', albumId, e);
+        return null;
+    }
+}
+
+/**
  * LO MÁS RECOMENDADO
  * Lógica: Promedio de calificaciones (mínimo 10 reseñas)
  */
@@ -363,43 +397,87 @@ export async function getTop10Semana() {
             };
         }
 
-        // Agrupar por canción y calcular score
-        const songsMap = {};
-        const reviewIds = weekReviews.map(r => r.ReviewId || r.reviewId || r.id).filter(Boolean);
+        // Agrupar por canción/álbum y calcular score
+        const contentMap = {};
+        
+        // Filtrar reseñas que tienen ID válido y obtener sus IDs
+        const validReviews = weekReviews.filter(r => {
+            const reviewId = r.ReviewId || r.reviewId || r.id;
+            return reviewId && (r.SongId || r.songId || r.AlbumId || r.albumId);
+        });
+        const reviewIds = validReviews.map(r => r.ReviewId || r.reviewId || r.id);
 
-        // Obtener comentarios y likes en paralelo
+        console.log(`📊 TOP 10 SEMANA: Reseñas válidas: ${validReviews.length}, ReviewIds: ${reviewIds.length}`);
+        console.log(`📊 TOP 10 SEMANA: ReviewIds:`, reviewIds);
+        
+        // Obtener comentarios y likes en paralelo solo para reseñas válidas
         const [commentsArrays, likesArrays] = await Promise.all([
-            Promise.all(reviewIds.map(id => getCommentsByReview(id).catch(() => []))),
-            Promise.all(reviewIds.map(id => getReviewReactionCount(id).catch(() => 0)))
+            Promise.all(reviewIds.map(id => getCommentsByReview(id).catch((err) => {
+                console.warn(`⚠️ TOP 10 SEMANA: Error obteniendo comentarios para review ${id}:`, err);
+                return [];
+            }))),
+            Promise.all(reviewIds.map((id, idx) => {
+                return getReviewReactionCount(id)
+                    .then((count) => {
+                        console.log(`✅ TOP 10 SEMANA: Review ${id} -> ${count} likes`);
+                        return count;
+                    })
+                    .catch((err) => {
+                        console.error(`❌ TOP 10 SEMANA: Error obteniendo likes para review ${id}:`, err);
+                        console.error(`❌ TOP 10 SEMANA: Error details:`, err.response?.data || err.message);
+                        return 0;
+                    });
+            }))
         ]);
+        
+        console.log(`📊 TOP 10 SEMANA: Likes obtenidos:`, likesArrays);
 
-        weekReviews.forEach((review, index) => {
+        validReviews.forEach((review, index) => {
             const songId = review.SongId || review.songId;
-            if (!songId) return;
+            const albumId = review.AlbumId || review.albumId;
+            const contentId = songId || albumId;
+            const contentType = songId ? 'song' : 'album';
+            
+            if (!contentId) return;
 
-            if (!songsMap[songId]) {
-                songsMap[songId] = {
+            if (!contentMap[contentId]) {
+                contentMap[contentId] = {
+                    contentId: contentId,
+                    contentType: contentType,
                     songId: songId,
+                    albumId: albumId,
                     totalRating: 0,
                     reviewCount: 0,
                     totalComments: 0,
                     totalLikes: 0
                 };
             }
-            songsMap[songId].totalRating += (review.Rating || review.rating || 0);
-            songsMap[songId].reviewCount += 1;
-            songsMap[songId].totalComments += (commentsArrays[index]?.length || 0);
-            songsMap[songId].totalLikes += (likesArrays[index] || 0);
+            
+            const commentsCount = commentsArrays[index]?.length || 0;
+            const likesCount = likesArrays[index] || 0;
+            
+            contentMap[contentId].totalRating += (review.Rating || review.rating || 0);
+            contentMap[contentId].reviewCount += 1;
+            contentMap[contentId].totalComments += commentsCount;
+            contentMap[contentId].totalLikes += likesCount;
+            
+            const reviewId = review.ReviewId || review.reviewId || review.id;
+            console.log(`📊 TOP 10 SEMANA: Review ${reviewId} -> Content ${contentId} (${contentType}): ${likesCount} likes, ${commentsCount} comentarios`);
+        });
+        
+        // Log del contenido agrupado
+        Object.values(contentMap).forEach(content => {
+            console.log(`📊 TOP 10 SEMANA: Content ${content.contentId} (${content.contentType}): ${content.totalLikes} likes totales, ${content.totalComments} comentarios totales`);
         });
 
         // Calcular score: (avgRating * 2) + (comments * 0.5) + (likes * 0.3)
-        const songsWithScore = Object.values(songsMap).map(song => ({
-            ...song,
-            avgRating: song.totalRating / song.reviewCount,
-            score: (song.totalRating / song.reviewCount) * 2 + song.totalComments * 0.5 + song.totalLikes * 0.3
+        const contentWithScore = Object.values(contentMap).map(content => ({
+            ...content,
+            avgRating: content.totalRating / content.reviewCount,
+            score: (content.totalRating / content.reviewCount) * 2 + content.totalComments * 0.5 + content.totalLikes * 0.3
         })).sort((a, b) => b.score - a.score).slice(0, 10);
 
-        if (songsWithScore.length === 0) {
+        if (contentWithScore.length === 0) {
             return {
                 period: 'semana',
                 limit: 10,
@@ -407,28 +485,40 @@ export async function getTop10Semana() {
                     name: 'No hay datos suficientes',
                     artist: 'Esta semana',
                     score: 0,
+                    avgRating: 0,
+                    reviewCount: 0,
+                    totalComments: 0,
+                    totalLikes: 0,
                     albumImage: null,
                     artistImage: null
                 }
             };
         }
 
-        const topSong = songsWithScore[0];
-        let songData = null;
+        const topContent = contentWithScore[0];
+        let contentData = null;
         try {
-            songData = await getSongByApiId(topSong.songId);
+            if (topContent.contentType === 'song') {
+                contentData = await getSongData(topContent.contentId);
+            } else {
+                contentData = await getAlbumData(topContent.contentId);
+            }
         } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+            console.debug('No se pudo obtener datos del contenido:', topContent.contentId, e);
         }
 
         return {
             period: 'semana',
             limit: 10,
             topSong: {
-                name: songData?.Title || songData?.title || songData?.Name || 'Canción',
-                artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
-                score: topSong.score,
-                albumImage: songData?.Image || songData?.image || null,
+                name: contentData?.Title || contentData?.title || contentData?.Name || (topContent.contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: contentData?.ArtistName || contentData?.artistName || contentData?.Artist || 'Artista',
+                score: topContent.score,
+                avgRating: topContent.avgRating,
+                reviewCount: topContent.reviewCount,
+                totalComments: topContent.totalComments,
+                totalLikes: topContent.totalLikes,
+                albumImage: contentData?.Image || contentData?.image || null,
                 artistImage: null
             }
         };
@@ -491,41 +581,85 @@ export async function getTop50Mes() {
             };
         }
 
-        // Agrupar por canción y calcular score
-        const songsMap = {};
-        const reviewIds = monthReviews.map(r => r.ReviewId || r.reviewId || r.id).filter(Boolean);
+        // Agrupar por canción/álbum y calcular score
+        const contentMap = {};
+        
+        // Filtrar reseñas que tienen ID válido y obtener sus IDs
+        const validReviews = monthReviews.filter(r => {
+            const reviewId = r.ReviewId || r.reviewId || r.id;
+            return reviewId && (r.SongId || r.songId || r.AlbumId || r.albumId);
+        });
+        const reviewIds = validReviews.map(r => r.ReviewId || r.reviewId || r.id);
 
+        console.log(`📊 TOP 50 MES: Reseñas válidas: ${validReviews.length}, ReviewIds: ${reviewIds.length}`);
+        console.log(`📊 TOP 50 MES: ReviewIds:`, reviewIds);
+        
         const [commentsArrays, likesArrays] = await Promise.all([
-            Promise.all(reviewIds.map(id => getCommentsByReview(id).catch(() => []))),
-            Promise.all(reviewIds.map(id => getReviewReactionCount(id).catch(() => 0)))
+            Promise.all(reviewIds.map(id => getCommentsByReview(id).catch((err) => {
+                console.warn(`⚠️ TOP 50 MES: Error obteniendo comentarios para review ${id}:`, err);
+                return [];
+            }))),
+            Promise.all(reviewIds.map((id, idx) => {
+                return getReviewReactionCount(id)
+                    .then((count) => {
+                        console.log(`✅ TOP 50 MES: Review ${id} -> ${count} likes`);
+                        return count;
+                    })
+                    .catch((err) => {
+                        console.error(`❌ TOP 50 MES: Error obteniendo likes para review ${id}:`, err);
+                        console.error(`❌ TOP 50 MES: Error details:`, err.response?.data || err.message);
+                        return 0;
+                    });
+            }))
         ]);
+        
+        console.log(`📊 TOP 50 MES: Likes obtenidos:`, likesArrays);
 
-        monthReviews.forEach((review, index) => {
+        validReviews.forEach((review, index) => {
             const songId = review.SongId || review.songId;
-            if (!songId) return;
+            const albumId = review.AlbumId || review.albumId;
+            const contentId = songId || albumId;
+            const contentType = songId ? 'song' : 'album';
+            
+            if (!contentId) return;
 
-            if (!songsMap[songId]) {
-                songsMap[songId] = {
+            if (!contentMap[contentId]) {
+                contentMap[contentId] = {
+                    contentId: contentId,
+                    contentType: contentType,
                     songId: songId,
+                    albumId: albumId,
                     totalRating: 0,
                     reviewCount: 0,
                     totalComments: 0,
                     totalLikes: 0
                 };
             }
-            songsMap[songId].totalRating += (review.Rating || review.rating || 0);
-            songsMap[songId].reviewCount += 1;
-            songsMap[songId].totalComments += (commentsArrays[index]?.length || 0);
-            songsMap[songId].totalLikes += (likesArrays[index] || 0);
+            
+            const commentsCount = commentsArrays[index]?.length || 0;
+            const likesCount = likesArrays[index] || 0;
+            
+            contentMap[contentId].totalRating += (review.Rating || review.rating || 0);
+            contentMap[contentId].reviewCount += 1;
+            contentMap[contentId].totalComments += commentsCount;
+            contentMap[contentId].totalLikes += likesCount;
+            
+            const reviewId = review.ReviewId || review.reviewId || review.id;
+            console.log(`📊 TOP 50 MES: Review ${reviewId} -> Content ${contentId} (${contentType}): ${likesCount} likes, ${commentsCount} comentarios`);
+        });
+        
+        // Log del contenido agrupado
+        Object.values(contentMap).forEach(content => {
+            console.log(`📊 TOP 50 MES: Content ${content.contentId} (${content.contentType}): ${content.totalLikes} likes totales, ${content.totalComments} comentarios totales`);
         });
 
-        const songsWithScore = Object.values(songsMap).map(song => ({
-            ...song,
-            avgRating: song.totalRating / song.reviewCount,
-            score: (song.totalRating / song.reviewCount) * 2 + song.totalComments * 0.5 + song.totalLikes * 0.3
+        const contentWithScore = Object.values(contentMap).map(content => ({
+            ...content,
+            avgRating: content.totalRating / content.reviewCount,
+            score: (content.totalRating / content.reviewCount) * 2 + content.totalComments * 0.5 + content.totalLikes * 0.3
         })).sort((a, b) => b.score - a.score).slice(0, 50);
 
-        if (songsWithScore.length === 0) {
+        if (contentWithScore.length === 0) {
             return {
                 period: 'mes',
                 limit: 50,
@@ -533,28 +667,40 @@ export async function getTop50Mes() {
                     name: 'No hay datos suficientes',
                     artist: 'Este mes',
                     score: 0,
+                    avgRating: 0,
+                    reviewCount: 0,
+                    totalComments: 0,
+                    totalLikes: 0,
                     albumImage: null,
                     artistImage: null
                 }
             };
         }
 
-        const topSong = songsWithScore[0];
-        let songData = null;
+        const topContent = contentWithScore[0];
+        let contentData = null;
         try {
-            songData = await getSongByApiId(topSong.songId);
+            if (topContent.contentType === 'song') {
+                contentData = await getSongData(topContent.contentId);
+            } else {
+                contentData = await getAlbumData(topContent.contentId);
+            }
         } catch (e) {
-            console.debug('No se pudo obtener datos de la canción:', topSong.songId);
+            console.debug('No se pudo obtener datos del contenido:', topContent.contentId, e);
         }
 
         return {
             period: 'mes',
             limit: 50,
             topSong: {
-                name: songData?.Title || songData?.title || songData?.Name || 'Canción',
-                artist: songData?.ArtistName || songData?.artistName || songData?.Artist || 'Artista',
-                score: topSong.score,
-                albumImage: songData?.Image || songData?.image || null,
+                name: contentData?.Title || contentData?.title || contentData?.Name || (topContent.contentType === 'song' ? 'Canción' : 'Álbum'),
+                artist: contentData?.ArtistName || contentData?.artistName || contentData?.Artist || 'Artista',
+                score: topContent.score,
+                avgRating: topContent.avgRating,
+                reviewCount: topContent.reviewCount,
+                totalComments: topContent.totalComments,
+                totalLikes: topContent.totalLikes,
+                albumImage: contentData?.Image || contentData?.image || null,
                 artistImage: null
             }
         };
@@ -639,18 +785,18 @@ export async function getTrending() {
         processPeriod(recentReviews, recentActivity);
         processPeriod(previousReviews, previousActivity);
 
-        // Calcular crecimiento
+        // Calcular crecimiento específicamente de reseñas (no combinado)
         const growthRates = {};
         Object.keys(recentActivity).forEach(songId => {
             const recent = recentActivity[songId];
             const previous = previousActivity[songId] || { reviews: 0, comments: 0, likes: 0 };
-            const recentTotal = recent.reviews + recent.comments + recent.likes;
-            const previousTotal = previous.reviews + previous.comments + previous.likes;
+            const recentReviews = recent.reviews;
+            const previousReviews = previous.reviews;
             
-            if (previousTotal === 0) {
-                growthRates[songId] = recentTotal > 0 ? 100 : 0; // 100% si no había actividad antes
+            if (previousReviews === 0) {
+                growthRates[songId] = recentReviews > 0 ? 100 : 0; // 100% si no había reseñas antes
             } else {
-                growthRates[songId] = ((recentTotal - previousTotal) / previousTotal) * 100;
+                growthRates[songId] = ((recentReviews - previousReviews) / previousReviews) * 100;
             }
         });
 

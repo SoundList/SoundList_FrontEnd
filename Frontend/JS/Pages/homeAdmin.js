@@ -62,6 +62,9 @@ export async function initializeHomePage() {
         window.showCommentsModal = (reviewId) => showCommentsModal(reviewId, modalsState);
         window.showReviewDetailModal = (reviewId) => showReviewDetailModal(reviewId, modalsState);
         window.showDeleteReviewModal = (reviewId, reviewTitle) => showDeleteReviewModal(reviewId, reviewTitle, modalsState);
+        // Exponer funciones de filtro para que el modal pueda cambiar el filtro después de crear una reseña
+        window.setCurrentReviewFilter = (filter) => { currentReviewFilter = filter; };
+        window.getCurrentReviewFilter = () => currentReviewFilter;
     }
 }
 

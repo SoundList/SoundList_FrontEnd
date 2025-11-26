@@ -312,7 +312,7 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 e.stopPropagation();
                 const reviewId = this.getAttribute('data-review-id');
                 const reviewTitle = this.closest('.review-item')?.querySelector('.review-title')?.textContent || 'esta reseña';
-
+                
                 // Usar siempre la versión del módulo deleteModals (igual que en home)
                 if (window.modalsState && typeof window.showDeleteReviewModalFromModule === 'function') {
                     window.showDeleteReviewModalFromModule(reviewId, reviewTitle);
@@ -322,8 +322,8 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 } else {
                     console.warn('showDeleteReviewModal no está disponible');
                 }
-            });
         });
+    });
 
         // Click en la reseña para ver detalles (también en propio perfil)
         container.querySelectorAll('.review-clickable').forEach(element => {

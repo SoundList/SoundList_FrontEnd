@@ -439,9 +439,12 @@
                         commentsData: {},
                         deletingCommentId: null,
                         deletingReviewId: null,
-                        currentReviewId: null
+                        currentReviewId: null,
+                        loadReviews: null
                     };
                     
+
+                    window.modalsState = modalsState;
                     // Inicializar modal de comentarios
                     const commentsModule = await import('../../JS/Components/modals/commentsModal.js');
                     if (commentsModule && commentsModule.initializeCommentsModalLogic) {
@@ -455,6 +458,12 @@
                     if (deleteModalsModule && deleteModalsModule.initializeDeleteModalsLogic) {
                         deleteModalsModule.initializeDeleteModalsLogic(modalsState);
                         window.initializeDeleteModalsLogic = deleteModalsModule.initializeDeleteModalsLogic;
+
+
+                        // 🔑 NUEVO: Exponer la función para mostrar el modal de eliminación de reseña
+                    window.showDeleteReviewModal = (reviewId, reviewTitle) => deleteModalsModule.showDeleteReviewModal(reviewId, reviewTitle, modalsState);
+                    // 🔑 NUEVO: Exponer la función para el comentario (si la usas)
+                    window.showDeleteCommentModal = (commentId) => deleteModalsModule.showDeleteCommentModal(commentId, modalsState);
                     }
                 } catch (err) {
                     console.warn('No se pudo cargar los módulos de modales:', err);

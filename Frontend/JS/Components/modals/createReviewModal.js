@@ -318,7 +318,13 @@ export function showCreateReviewModal(contentData = null, state) {
     const contentSearchDropdown = document.getElementById('contentSearchDropdown');
     
     if (!modal) return;
-    
+    const changeContentBtn = document.getElementById('changeContentBtn');
+    if (changeContentBtn) changeContentBtn.style.display = 'flex';
+
+    const modalTitle = modal.querySelector('.create-review-title');
+    const submitBtn = document.getElementById('submitCreateReviewBtn');
+    if (modalTitle) modalTitle.textContent = 'CREA UNA RESEÑA';
+    if (submitBtn) submitBtn.textContent = 'SUBIR';
 
     clearReviewFormErrors();
 
@@ -756,8 +762,9 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
     clearReviewFormErrors();
     modal.setAttribute('data-edit-review-id', reviewId);
     
-    const normalizedReviewId = String(reviewId).trim();
-    const storageKey = `review_content_${normalizedReviewId}`;
+const changeContentBtn = document.getElementById('changeContentBtn');
+    if (changeContentBtn) changeContentBtn.style.display = 'none';
+    const storageKey = `review_content_${String(reviewId).trim()}`;
     const storedContentData = localStorage.getItem(storageKey);
     
     console.log(`🔍 Cargando datos del contenido para edición (reviewId: ${reviewId})`);

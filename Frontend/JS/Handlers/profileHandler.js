@@ -197,28 +197,22 @@ function attachProfileReviewListeners(container, isOwnProfile) {
             const likesSpan = this.parentElement.querySelector('.review-likes-count');
             const reviewId = this.getAttribute('data-review-id');
             const currentUserId = localStorage.getItem('userId');
-
             const isLiked = this.classList.contains('liked');
             const currentLikes = parseInt(likesSpan.textContent) || 0;
-
-            // Cache key
             const likesCacheKey = `review_likes_${reviewId}`;
             const likeUserKey = `like_${reviewId}_${currentUserId}`;
             const reactionKey = `reaction_${reviewId}_${currentUserId}`;
 
-            // NUEVO VALOR
             const newLikes = isLiked
                 ? Math.max(0, currentLikes - 1)
                 : currentLikes + 1;
 
-            // 1) UI instantánea
             likesSpan.textContent = newLikes;
             this.classList.toggle('liked');
             icon.style.color = this.classList.contains('liked')
                 ? 'var(--magenta, #EC4899)'
                 : 'rgba(255,255,255,0.7)';
 
-            // 2) Mostrar/ocultar pencil automáticamente
             const reviewInteractions = this.closest('.review-interactions');
             if (reviewInteractions) {
                 const editBtn = reviewInteractions.querySelector('.btn-edit');
@@ -231,18 +225,12 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 }
             }
 
-            // 3) Guardar el cache local de likes SIEMPRE
             try { localStorage.setItem(likesCacheKey, String(newLikes)); } catch (e) {}
 
-            // ==============================
-            //      LIKE → AGREGAR
-            // ==============================
+
             if (!isLiked) {
 
-                // Guardar que este usuario dio like
                 localStorage.setItem(likeUserKey, 'true');
-
-                // Llamar al backend
                 addReviewReaction(reviewId, currentUserId, authToken)
                     .then(data => {
                         const reactionId =
@@ -250,20 +238,15 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                             data?.ReactionId ||
                             data?.id;
 
-                        // Guardar el ID real de la reacción
                         if (reactionId) {
                             localStorage.setItem(reactionKey, String(reactionId));
                         }
                     })
                     .catch(err => {
                         console.warn("Error dando like:", err);
-
-                        // revertir cambios si backend falla
                         this.classList.remove('liked');
                         icon.style.color = 'rgba(255,255,255,0.7)';
                         likesSpan.textContent = currentLikes;
-
-                        // revertir localStorage
                         localStorage.removeItem(likeUserKey);
                         localStorage.setItem(likesCacheKey, String(currentLikes));
                     });
@@ -293,6 +276,7 @@ function attachProfileReviewListeners(container, isOwnProfile) {
         });
     });
 
+
     if (isOwnProfile) {
 container.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', function(e) {
@@ -316,18 +300,14 @@ container.querySelectorAll('.btn-edit').forEach(btn => {
                 e.stopPropagation();
                 const reviewId = this.getAttribute('data-review-id');
                 const reviewTitle = this.closest('.review-item')?.querySelector('.review-title')?.textContent || 'esta reseña';
-
-                // Usar siempre la versión del módulo deleteModals (igual que en home)
-                if (window.modalsState && typeof window.showDeleteReviewModalFromModule === 'function') {
-                    window.showDeleteReviewModalFromModule(reviewId, reviewTitle);
-                } else if (typeof showDeleteReviewModal === 'function') {
-                    // Fallback a la función local si por alguna razón no está el módulo
+                
+                if (typeof showDeleteReviewModal === 'function') {
                     showDeleteReviewModal(reviewId, reviewTitle);
                 } else {
                     console.warn('showDeleteReviewModal no está disponible');
                 }
-            });
         });
+    });
 
         // Click en la reseña para ver detalles (también en propio perfil)
         container.querySelectorAll('.review-clickable').forEach(element => {
@@ -599,27 +579,8 @@ async function loadUserReviews(userIdToLoad) {
                     }
 
                     const contentName = contentType === 'song' ? songName : albumName;
-
-                    // Normalizar fecha de creación (misma lógica robusta que en reviewFeed.js)
-                    const createdAtRaw =
-                        review.CreatedAt ||
-                        review.Created ||
-                        review.createdAt ||
-                        review.DateCreated ||
-                        review.dateCreated ||
-                        review.CreatedDate ||
-                        review.createdDate;
-
-                    let createdAtDate;
-                    if (createdAtRaw instanceof Date) {
-                        createdAtDate = createdAtRaw;
-                    } else if (createdAtRaw) {
-                        const parsedDate = new Date(createdAtRaw);
-                        createdAtDate = isNaN(parsedDate.getTime()) ? new Date(0) : parsedDate;
-                    } else {
-                        // Si no viene fecha del backend, usar una fecha muy antigua
-                        createdAtDate = new Date(0);
-                    }
+                    const createdAt = review.CreatedAt || review.Created || review.Date || new Date();
+                    const createdAtDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
 
                     return {
                         id: reviewId,
@@ -785,27 +746,7 @@ async function loadUserProfile(userIdToLoad) {
         
         if (recentContainer) {
             if (userReviews && userReviews.length > 0) {
-                // Ordenar por fecha de creación: más recientes primero
-                const sortedByRecent = [...userReviews].sort((a, b) => {
-                    const getTimestamp = (date) => {
-                        if (date instanceof Date) {
-                            const ts = date.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (date) {
-                            const parsed = new Date(date);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        return 0;
-                    };
-
-                    const dateA = getTimestamp(a.createdAt);
-                    const dateB = getTimestamp(b.createdAt);
-                    return dateB - dateA; // Más recientes primero
-                });
-
-                renderProfileReviews(sortedByRecent, recentContainerId, isOwnProfile);
+                renderProfileReviews(userReviews, recentContainerId, isOwnProfile);
             } else {
                 recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas recientes de este usuario.</p>";
             }
@@ -821,26 +762,8 @@ async function loadUserProfile(userIdToLoad) {
                 const likesB = Number(b.likes) || Number(b.Likes) || 0;
                 // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
                 if (likesB === likesA) {
-                    const getTimestamp = (date, fallback) => {
-                        if (date instanceof Date) {
-                            const ts = date.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (date) {
-                            const parsed = new Date(date);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (fallback) {
-                            const parsed = new Date(fallback);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        return 0;
-                    };
-
-                    const dateA = getTimestamp(a.createdAt, a.CreatedAt);
-                    const dateB = getTimestamp(b.createdAt, b.CreatedAt);
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : (a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0);
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : (b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0);
                     return dateB - dateA;
                 }
                 return likesB - likesA; // Más likes primero
@@ -2536,43 +2459,31 @@ function initializeCreateReviewModal() {
         });
     }
     
-    // Estrellas (igual que en createReviewModal.js del home)
+    // Estrellas
     if (createReviewStars) {
         let currentRating = 0;
         const stars = createReviewStars.querySelectorAll('.star-input');
         
-        if (stars.length === 0) {
-            console.warn('⚠️ No se encontraron estrellas con la clase .star-input');
-            return;
-        }
-        
-        function highlightStars(rating) {
-            stars.forEach((star, index) => {
-                star.classList.toggle('active', (index + 1) <= rating);
-            });
-        }
-        
-        function updateStarRating(rating) {
-            currentRating = rating;
-            highlightStars(rating);
-        }
-        
-        stars.forEach((star) => {
-            star.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const rating = parseInt(this.getAttribute('data-rating')) || 0;
-                updateStarRating(rating);
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                currentRating = parseInt(star.getAttribute('data-rating'));
+                stars.forEach((s, i) => {
+                    s.classList.toggle('active', i < currentRating);
+                });
             });
             
-            star.addEventListener('mouseenter', function() {
-                const rating = parseInt(this.getAttribute('data-rating')) || 0;
-                highlightStars(rating);
+            star.addEventListener('mouseenter', () => {
+                const hoverRating = parseInt(star.getAttribute('data-rating'));
+                stars.forEach((s, i) => {
+                    s.style.opacity = i < hoverRating ? '1' : '0.5';
+                });
             });
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
-            highlightStars(currentRating);
+            stars.forEach((s, i) => {
+                s.style.opacity = i < currentRating ? '1' : '0.5';
+            });
         });
     }
 }

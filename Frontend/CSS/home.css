@@ -4807,12 +4807,11 @@ body #alertContainer .custom-alert {
 
     /* Ajuste para que el desplegable fijo se alinee con el nuevo padding del header */
     .search-dropdown {
-        top: 50px !important; /* Ajuste para el nuevo padding */
+        top: 50px !important; 
         left: 0.05rem !important;
         right: 0.05rem !important;
     }
     
-    /* --- Contenido principal --- */
     .main-content {
         padding: 0.1rem !important; 
     }
@@ -4821,13 +4820,11 @@ body #alertContainer .custom-alert {
         font-size: 0.85rem !important;
     }
 
-    /* Reducción extrema de la fuente de la reseña para que quepa */
     .review-comment {
         font-size: 0.7rem !important;
         line-height: 1.2em !important; 
     }
 
-    /* Reducción de la fuente de los botones de acción */
     .review-btn,
     .review-btn.btn-like,
     .review-btn.comment-btn {
@@ -4837,39 +4834,43 @@ body #alertContainer .custom-alert {
     }
 }
 .custom-loader-container {
-    position: fixed;         
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999;          
-    display: flex;
-    align-items: center;      
-    justify-content: center;  
-    pointer-events: all;      
+
+    position: fixed !important;
+    top: 85px !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: calc(100% - 85px) !important;
+    z-index: 900 !important;
+    background: rgba(13, 17, 32, 0.95) !important;
+
 }
 
 .music-waves {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
-    align-items: flex-end; 
-    height: 100px;      
-    gap: 12px;       
+    align-items: flex-end;
+    gap: 10px;
+    height: 80px;
 }
 
 .wave-bar {
-    width: 16px;              
-    background: linear-gradient(to top, #7C3AED, #EC4899); 
+    width: 14px;
+    background: linear-gradient(to top, #7C3AED, #EC4899);
     border-radius: 8px;
     animation: wave-animation 1s ease-in-out infinite;
 }
 
-.wave-bar:nth-child(1) { height: 20px; animation-delay: 0.0s; }
-.wave-bar:nth-child(2) { height: 40px; animation-delay: 0.1s; }
-.wave-bar:nth-child(3) { height: 50px; animation-delay: 0.2s; }
-.wave-bar:nth-child(4) { height: 30px; animation-delay: 0.3s; }
-.wave-bar:nth-child(5) { height: 40px; animation-delay: 0.4s; }
+
+.wave-bar:nth-child(1) { height: 55px; animation-delay: 0s; }
+.wave-bar:nth-child(2) { height: 75px; animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { height: 110px; animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { height: 70px; animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { height: 90px; animation-delay: 0.4s; }
 
 @keyframes wave-animation {
     0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.5); } 
+    50% { transform: scaleY(0.4); }
 }

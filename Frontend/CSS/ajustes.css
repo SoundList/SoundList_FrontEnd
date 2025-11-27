@@ -242,3 +242,141 @@ small.password-hint,
         display: none; 
     }
 }
+
+/* ==================================== */
+/* 2. ESTILOS MODERNOS (Overlay y Caja) */
+/* ==================================== */
+
+/* Contenedor principal (Overlay) */
+.custom-confirm-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* Estilos de overlay (fondo oscuro, blur) */
+    background: rgba(0, 0, 0, 0.75);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    
+    /* Configuración para centrar el modal interno */
+    display: flex; /* La función JS cambiará 'none' por 'flex' */
+    align-items: center;
+    justify-content: center;
+    z-index: 10005; 
+}
+
+/* Contenido interno del modal (la caja que flota) */
+.custom-confirm-modal {
+    /* Estilos de caja: degradado, borde, sombra */
+    background: linear-gradient(135deg, rgba(26, 43, 107, 0.95) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3);
+    
+    max-width: 450px;
+    width: 90%;
+}
+
+.custom-confirm-modal-content {
+    /* El padding se aplica al contenido */
+    padding: 2.5rem;
+    text-align: center;
+    color: #f0f0f0; /* Texto claro */
+}
+
+/* Título de Advertencia */
+.modal-title-danger {
+    color: #dc3545; 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+/* Mensaje */
+.modal-message {
+    margin: 20px 0;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.modal-buttons-container {
+    /* 1. Usar Flexbox para poner los botones uno al lado del otro */
+    display: flex;
+    
+    /* 2. Empujar los botones hacia la derecha */
+    justify-content: flex-end; 
+    
+    /* 3. Asegurar un poco de espacio si es necesario */
+    gap: 10px; /* Añade un pequeño espacio entre los botones */
+    
+    margin-top: 30px;
+}
+
+/* ==================================== */
+/* 3. ESTILOS DE BOTONES */
+/* ==================================== */
+.btn-danger-custom {
+    /* Color de fondo: El color rosa de la imagen */
+    background-color: #ff5e7b; /* Un rosa brillante */
+    
+    /* Degradado y sombra originales eliminados para un look más plano/brillante */
+    background: linear-gradient(135deg, #ff5e7b 0%, #ff3b68 100%); /* Degradado sutil */
+    
+    color: white;
+    font-weight: 600;
+    
+    /* Forma: Bordes muy redondeados (como el modal de reseña) */
+    border-radius: 50px; /* Bordes redondeados */
+    padding: 12px 25px; /* Ajuste de padding */
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    /* Sombra opcional para darle profundidad */
+    box-shadow: 0 4px 10px rgba(255, 60, 100, 0.4);
+}
+
+.btn-danger-custom:hover {
+    background: linear-gradient(135deg, #ff3b68 0%, #ff5e7b 100%);
+    box-shadow: 0 6px 15px rgba(255, 60, 100, 0.6);
+}
+
+.btn-secondary-custom {
+    background-color: #3b3f5e; 
+    
+    color: white;
+    font-weight: 600;
+    
+    /* Forma: Bordes muy redondeados */
+    border-radius: 50px; 
+    padding: 12px 25px; /* Ajuste de padding */
+    border: none;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary-custom:hover {
+    background-color: #555977; /* Un poco más claro al pasar el mouse */
+}
+
+#custom-confirm-modal {
+    display: none;
+}
+
+.custom-confirm-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    background: rgba(0, 0, 0, 0.75);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    align-items: center;
+    justify-content: center;
+    z-index: 10005; 
+}

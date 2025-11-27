@@ -117,7 +117,7 @@ export function createAlbumListItem(album, index) {
 
         <div class="song-info">
             <span class="song-title text-white">${title}</span>
-            <span class="song-artist">${year} • Álbum</span>
+            <span class="song-artist">${year}</span>
         </div>
         
         <div class="song-actions">

@@ -1,3 +1,4 @@
+import {API_BASE_URL} from './../APIs/configApi.js';
 // Forgot Password Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const forgotPasswordForm = document.getElementById('forgotPasswordForm');
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showAlert('Enviando enlace de recuperación...', 'info');
         
         // Usar el gateway directamente
-        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const GATEWAY_BASE_URL = API_BASE_URL;
         const forgotPasswordEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/forgot-password`;
         
         axios.post(forgotPasswordEndpoint, {

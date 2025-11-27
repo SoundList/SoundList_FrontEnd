@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../APIs/configApi.js";
 document.addEventListener('DOMContentLoaded', function() {
     const verifyForm = document.getElementById('verifyForm');
     const tokenInput = document.getElementById('token');
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Usar el gateway directamente
-        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const GATEWAY_BASE_URL = API_BASE_URL;
         const verifyEmailEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/verify-email`;
         
         axios.get(verifyEmailEndpoint, { params: { token: code } })

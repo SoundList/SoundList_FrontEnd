@@ -172,6 +172,7 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
                         <div class="review-info">
                             <div class="review-header">
                                     <span class="review-username">${review.username}</span>
+                                    ${review.isUserDeleted ? '<span class="deleted-account-badge">Cuenta eliminada</span>' : ''}
                                     <span class="review-separator">-</span>
                                     <span class="review-content-type">${review.contentType === 'song' ? 'Canción' : 'Álbum'}</span>
                                     <span class="review-separator">-</span>
@@ -481,10 +482,11 @@ async function loadUserReviews(userIdToLoad) {
 
                     const currentUserId = localStorage.getItem('userId');
                     const userIdStr = review.UserId ? (review.UserId.toString ? review.UserId.toString() : String(review.UserId)) : 'unknown';
-                    let username = `Usuario ${userIdStr.substring(0, 8)}`;
+                    let username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará si está eliminado
                     let avatar = '../../Assets/default-avatar.png';
                     
                     // Obtener datos del usuario
+                    let isUserDeleted = false;
                     try {
                         const userId = review.UserId || review.userId;
                         if (typeof getUser === 'function') {
@@ -494,14 +496,30 @@ async function loadUserReviews(userIdToLoad) {
                                 avatar = userData.imgProfile || userData.ImgProfile || avatar;
                             }
                         } else if (typeof window.userApi !== 'undefined' && window.userApi.getUserProfile) {
-                            const userData = await window.userApi.getUserProfile(userId);
-                            if (userData) {
-                                username = userData.Username || userData.username || username;
-                                avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                            try {
+                                const userData = await window.userApi.getUserProfile(userId);
+                                if (userData) {
+                                    username = userData.Username || userData.username || username;
+                                    avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                                }
+                            } catch (userError) {
+                                // Detectar si el usuario fue eliminado (404)
+                                if (userError.response && userError.response.status === 404) {
+                                    isUserDeleted = true;
+                                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                                } else {
+                                    throw userError;
+                                }
                             }
                         }
                     } catch (e) {
-                        console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                        // Si es un 404, marcar como eliminado
+                        if (e.response && e.response.status === 404) {
+                            isUserDeleted = true;
+                            username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                        } else {
+                            console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                        }
                     }
 
                     // Obtener likes y comentarios
@@ -655,7 +673,8 @@ async function loadUserReviews(userIdToLoad) {
                         userLiked: userLiked,
                         avatar: avatar,
                         userId: review.UserId || review.userId,
-                        createdAt: createdAtDate
+                        createdAt: createdAtDate,
+                        isUserDeleted: isUserDeleted // Flag para indicar si el usuario fue eliminado
                     };
                 } catch (error) {
                     console.error(`Error procesando review ${review.ReviewId || review.reviewId}:`, error);
@@ -701,11 +720,66 @@ async function loadUserApi() {
     throw new Error("userApi no está disponible");
 }
 
+// --- FUNCIÓN PARA MOSTRAR MENSAJE DE USUARIO ELIMINADO ---
+function showDeletedUserMessage(userIdToLoad) {
+    console.log("⚠️ Mostrando mensaje de usuario eliminado para:", userIdToLoad);
+    
+    // Obtener elementos del DOM
+    const mainContent = document.querySelector('.main-content');
+    const profileHeader = document.querySelector('.profile-header');
+    const profileMainContent = document.querySelector('.profile-main-content');
+    
+    // Ocultar el contenido normal del perfil
+    if (profileHeader) profileHeader.style.display = 'none';
+    if (profileMainContent) profileMainContent.style.display = 'none';
+    
+    // Ocultar también las secciones de reseñas recientes y destacadas
+    const recentReviewsSection = document.querySelector('.recent-reviews-section');
+    const featuredReviewsSection = document.querySelector('.featured-reviews-section');
+    if (recentReviewsSection) recentReviewsSection.style.display = 'none';
+    if (featuredReviewsSection) featuredReviewsSection.style.display = 'none';
+    
+    // Crear contenedor para el mensaje
+    let messageContainer = document.getElementById('deleted-user-message-container');
+    if (!messageContainer) {
+        messageContainer = document.createElement('div');
+        messageContainer.id = 'deleted-user-message-container';
+        messageContainer.className = 'deleted-user-message-container';
+        
+        if (mainContent) {
+            // Insertar antes del profile-header si existe, o al inicio del main-content
+            const firstChild = mainContent.firstElementChild;
+            if (firstChild) {
+                mainContent.insertBefore(messageContainer, firstChild);
+            } else {
+                mainContent.appendChild(messageContainer);
+            }
+        }
+    }
+    
+    // Contenido del mensaje
+    messageContainer.innerHTML = `
+        <div class="deleted-user-message-wrapper">
+            <div class="deleted-user-icon">
+                <i class="fas fa-user-slash"></i>
+            </div>
+            <h2 class="deleted-user-title">Usuario no disponible</h2>
+            <p class="deleted-user-text">Este usuario eliminó su cuenta</p>
+            <p class="deleted-user-subtext">Esta cuenta ya no está disponible en SoundList</p>
+            <button class="deleted-user-back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+        </div>
+    `;
+    
+    messageContainer.style.display = 'block';
+}
+
 // --- FUNCIÓN PRINCIPAL DE CARGA DE PERFIL ---
 
 async function loadUserProfile(userIdToLoad) {
 
-    const loggedInUserId = localStorage.getItem("userId"); 
+    const loggedInUserId = localStorage.getItem("userId");
     
     console.log(`👤 Cargando perfil para ID: ${userIdToLoad}...`);
 
@@ -747,11 +821,136 @@ async function loadUserProfile(userIdToLoad) {
     if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>Cargando reseñas...</p>";
 
     let user = null; 
+    let isUserDeleted = false;
 
     try {
         // Asegurar que userApi esté disponible antes de usarlo
         const userApi = await loadUserApi();
-        user = await userApi.getUserProfile(userIdToLoad); 
+        
+        // Llamar directamente a axios para poder verificar el status de la respuesta
+        // ya que el interceptor puede convertir el 404 en una respuesta resuelta
+        try {
+            // Verificar que axios esté disponible
+            if (typeof axios === 'undefined') {
+                console.error("❌ axios no está disponible");
+                throw new Error("axios no está disponible");
+            }
+            
+            // Importar API_BASE_URL desde configApi si está disponible
+            let API_BASE_URL = 'http://localhost:5000';
+            try {
+                const configApi = await import('../APIs/configApi.js');
+                API_BASE_URL = configApi.API_BASE_URL || API_BASE_URL;
+            } catch (e) {
+                console.warn("No se pudo importar configApi, usando URL por defecto");
+            }
+            
+            const token = localStorage.getItem('authToken');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token && token !== 'null' && token !== 'undefined' && token.length >= 20) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            console.log("🔍 Llamando a:", `${API_BASE_URL}/api/gateway/users/${userIdToLoad}`);
+            const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userIdToLoad}`, { headers });
+            
+            console.log("📋 Respuesta completa:", response);
+            console.log("📋 response.status:", response.status);
+            console.log("📋 response.data:", response.data);
+            
+            // Verificar si la respuesta tiene status 404 o data es null
+            // El interceptor puede convertir el 404 en una respuesta resuelta con status 404 y data null
+            if (response.status === 404 || !response.data || response.data === null || response.data === undefined) {
+                console.log("⚠️ Usuario no encontrado (404 o data null)");
+                isUserDeleted = true;
+                showDeletedUserMessage(userIdToLoad);
+                return;
+            }
+            
+            user = response.data;
+        } catch (error) {
+            console.log("🔍 Error al obtener perfil:", error);
+            console.log("🔍 Error.response:", error.response);
+            console.log("🔍 Error.response?.status:", error.response?.status);
+            console.log("🔍 Error completo:", JSON.stringify(error, null, 2));
+            
+            // Detectar si el usuario fue eliminado (404 o usuario no encontrado)
+            const is404 = error.response && error.response.status === 404;
+            const isNotFound = error.message && (error.message.includes('404') || error.message.includes('not found') || error.message.includes('No encontrado') || error.message.includes('Usuario no encontrado'));
+            const is404InConfig = error.config && error.config.url && error.config.url.includes('/users/');
+            
+            if (is404 || isNotFound || is404InConfig) {
+                isUserDeleted = true;
+                console.log("⚠️ Usuario eliminado detectado (404):", userIdToLoad);
+                
+                // Mostrar mensaje destacado y salir
+                showDeletedUserMessage(userIdToLoad);
+                return;
+            } else {
+                // Si es otro error, relanzarlo
+                console.log("❌ Error no es 404, relanzando:", error);
+                throw error;
+            }
+        }
+        
+        // Si el usuario fue eliminado, mostrar mensaje y salir
+        if (isUserDeleted) {
+            console.log("✅ Usuario eliminado detectado - mostrando mensaje");
+            showDeletedUserMessage(userIdToLoad);
+            return;
+        }
+
+        // Verificar que user no sea null antes de usarlo
+        // Si user es null, probablemente es un 404 que el interceptor convirtió en null
+        if (!user && !isUserDeleted) {
+            console.log("⚠️ Usuario es null - verificando si es 404...");
+            // Intentar detectar si fue un 404
+            isUserDeleted = true;
+            
+            // Mostrar mensaje de usuario eliminado
+            if (userAvatarEl) userAvatarEl.src = defaultAvatar;
+            if (userNameEl) {
+                userNameEl.textContent = "Este usuario eliminó su cuenta";
+                userNameEl.style.color = "rgba(255, 255, 255, 0.7)";
+                userNameEl.style.fontStyle = "italic";
+            }
+            if (userQuoteEl) {
+                userQuoteEl.textContent = "Esta cuenta ya no está disponible";
+                userQuoteEl.style.display = "block";
+                userQuoteEl.style.visibility = "visible";
+                userQuoteEl.style.color = "rgba(255, 255, 255, 0.5)";
+            }
+            
+            // Ocultar botones
+            if (editBtn) editBtn.style.display = 'none';
+            if (btnContainer) {
+                const existingFollowBtn = document.getElementById("profile-follow-btn");
+                if (existingFollowBtn) existingFollowBtn.remove();
+            }
+            
+            // NO mostrar mensaje en secciones - las reseñas se cargarán normalmente
+            console.log("✅ Las reseñas se cargarán normalmente para usuario eliminado (null check)");
+            
+            // Estadísticas a 0
+            if (reviewCountEl) reviewCountEl.textContent = "0";
+            if (followerCountEl) followerCountEl.textContent = "0";
+            if (followingCountEl) followingCountEl.textContent = "0";
+            
+            console.log("✅ Usuario null tratado como eliminado - mostrando mensaje");
+            showDeletedUserMessage(userIdToLoad);
+            return;
+        }
+
+        console.log("✅ Usuario válido encontrado, continuando con carga de datos...");
+        console.log("✅ user:", user);
+
+        // Verificación adicional: si user es null o undefined, no continuar
+        if (!user || isUserDeleted) {
+            console.error("❌ Intento de usar user cuando es null o eliminado. user:", user, "isUserDeleted:", isUserDeleted);
+            return;
+        }
 
         // Cargar datos del usuario desde el backend (como Spotify)
         if (userAvatarEl) {
@@ -808,7 +1007,27 @@ async function loadUserProfile(userIdToLoad) {
         }
     } catch (error) {
         console.error("❌ Error al cargar el perfil principal:", error);
+        console.error("❌ Detalles del error:", {
+            message: error.message,
+            response: error.response,
+            status: error.response?.status,
+            data: error.response?.data
+        });
 
+        // Verificar si es un 404 que no se capturó antes
+        const is404 = error.response && error.response.status === 404;
+        const isNotFound = error.message && (error.message.includes('404') || error.message.includes('not found') || error.message.includes('No encontrado'));
+        
+        if (is404 || isNotFound) {
+            console.log("⚠️ Usuario eliminado detectado en catch general (404):", userIdToLoad);
+            isUserDeleted = true;
+            
+            // Mostrar mensaje destacado y salir
+            showDeletedUserMessage(userIdToLoad);
+            return;
+        }
+
+        // Si no es 404, mostrar error genérico
         if (userAvatarEl) userAvatarEl.src = defaultAvatar;
         if (userNameEl) userNameEl.textContent = "Error al cargar";
         if (userQuoteEl) userQuoteEl.textContent = "No disponible";
@@ -1472,8 +1691,9 @@ async function showReviewDetailModal(reviewId) {
         const likes = cachedReviewLikes !== null ? cachedReviewLikes : likesFromBackend;
         
         // Obtener datos del usuario
-        let username = `Usuario ${String(review.UserId || review.userId || '').substring(0, 8)}`;
+        let username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará si está eliminado
         let avatar = '../../Assets/default-avatar.png';
+        let isUserDeleted = false;
         
         if (review.UserId || review.userId) {
             try {
@@ -1484,7 +1704,14 @@ async function showReviewDetailModal(reviewId) {
                     avatar = userData.imgProfile || userData.ImgProfile || userData.image || avatar;
                 }
             } catch (userError) {
-                console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                    // Detectar si el usuario fue eliminado (404)
+                    if (userError.response && userError.response.status === 404) {
+                        isUserDeleted = true;
+                        username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                        console.debug(`Usuario eliminado detectado en review detail: ${review.UserId || review.userId}`);
+                    } else {
+                        console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                    }
             }
         }
         
@@ -1532,9 +1759,10 @@ async function showReviewDetailModal(reviewId) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar ${isUserDeleted ? '' : 'profile-navigation-trigger'}" ${isUserDeleted ? '' : `data-user-id="${reviewUserId}" style="cursor: pointer;"`} onerror="this.src='../../Assets/default-avatar.png'">
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
+                            <span class="review-detail-username ${isUserDeleted ? '' : 'profile-navigation-trigger'}" ${isUserDeleted ? '' : `data-user-id="${reviewUserId}" style="cursor: pointer;"`}>${username}</span>
+                            ${isUserDeleted ? '<span class="deleted-account-badge" style="margin-left: 0.5rem;">Cuenta eliminada</span>' : ''}
                             <span class="review-detail-time">${timeAgo}</span>
                         </div>
                     </div>
@@ -1658,6 +1886,16 @@ async function loadReviewDetailComments(reviewId, comments) {
                         };
                     }
                 } catch (error) {
+                    // Detectar si el usuario fue eliminado (404)
+                    if (error.response && error.response.status === 404) {
+                        return {
+                            ...comment,
+                            UserName: 'Usuario', // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                            username: 'Usuario',
+                            isUserDeleted: true,
+                            UserProfilePicUrl: comment.UserProfilePicUrl || '../../Assets/default-avatar.png'
+                        };
+                    }
                     console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
                 }
             }
@@ -1706,6 +1944,7 @@ async function loadReviewDetailComments(reviewId, comments) {
                     commentId = String(commentId).trim();
                 }
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
+                const isCommentUserDeleted = comment.isUserDeleted || false;
                 
                 // Verificar likes desde cache primero (igual que en reviewDetailModal.js)
                 const commentLikesCacheKey = `comment_likes_${commentId}`;
@@ -1754,10 +1993,11 @@ async function loadReviewDetailComments(reviewId, comments) {
                 
                 return `
                     <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
+                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar ${isCommentUserDeleted ? '' : 'profile-navigation-trigger'}" ${isCommentUserDeleted ? '' : `data-user-id="${commentUserId}" style="cursor: pointer;"`} onerror="this.src='../../Assets/default-avatar.png'">
                         <div class="review-detail-comment-content">
                             <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
+                                <span class="review-detail-comment-username ${isCommentUserDeleted ? '' : 'profile-navigation-trigger'}" ${isCommentUserDeleted ? '' : `data-user-id="${commentUserId}" style="cursor: pointer;"`}>${username}</span>
+                                ${isCommentUserDeleted ? '<span class="deleted-account-badge" style="margin-left: 0.5rem; font-size: 0.7rem;">Cuenta eliminada</span>' : ''}
                                 <span class="review-detail-comment-time">${timeAgo}</span>
                             </div>
                             <p class="review-detail-comment-text">${text}</p>

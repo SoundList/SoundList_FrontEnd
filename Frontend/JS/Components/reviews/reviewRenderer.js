@@ -83,7 +83,7 @@ export function renderReviews(reviews) {
                                 <span class="review-username profile-navigation-trigger" 
                                       data-user-id="${reviewUserId}"
                                       style="cursor: pointer;">${review.username}</span>
-                                
+                                ${review.isUserDeleted ? '<span class="deleted-account-badge">Cuenta eliminada</span>' : ''}
                                 ${followButtonHTML}
 
                                 <span class="review-separator">-</span>

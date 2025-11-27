@@ -218,11 +218,17 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
 
                     // Datos de Usuario y Social
                     // IMPORTANTE: Usar cache como valor inicial, luego sincronizar con backend
+                    let isUserDeleted = false;
                     const [userData, likesFromBackend, comments] = await Promise.all([
                         getUser(userId).catch((err) => {
-                            // Manejar errores silenciosamente (404, 500, etc.)
-                            if (err.response && (err.response.status === 404 || err.response.status === 500)) {
-                                // Usuario no encontrado o error del servidor - usar valores por defecto
+                            // Detectar si el usuario fue eliminado (404)
+                            if (err.response && err.response.status === 404) {
+                                isUserDeleted = true;
+                                // Usuario eliminado - usar valores por defecto
+                                return null;
+                            }
+                            // Otros errores (500, etc.) se manejan silenciosamente
+                            if (err.response && err.response.status === 500) {
                                 return null;
                             }
                             // Otros errores también se manejan silenciosamente
@@ -406,7 +412,7 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                     // Retornar objeto final en formato esperado por renderReviews
                     return {
                         id: reviewId,
-                        username: userData?.username || userData?.Username || 'Usuario',
+                        username: userData?.username || userData?.Username || 'Usuario', // Mantener "Usuario" genérico, el badge indicará si está eliminado
                         avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
                         contentType: contentTypeNormalized,
                         song: itemTitle,  // renderReviews espera 'song' no 'itemTitle'
@@ -421,7 +427,8 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                         userId: userId,
                         userLiked: userLiked,  // Necesario para renderReviews
                         createdAt: createdAtDate,  // Aseguramos que sea Date o string parseable
-                        originalIndex: originalIndex  // Índice original del backend (las más recientes suelen estar al final)
+                        originalIndex: originalIndex,  // Índice original del backend (las más recientes suelen estar al final)
+                        isUserDeleted: isUserDeleted // Flag para indicar si el usuario fue eliminado
                     };
 
                 } catch (err) {

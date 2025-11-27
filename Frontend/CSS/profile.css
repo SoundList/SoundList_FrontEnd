@@ -1,4 +1,130 @@
 /* =========================================
+   MENSAJE DE USUARIO ELIMINADO (DESTACADO)
+   ========================================= */
+.deleted-user-message-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 4rem 2rem;
+    animation: fadeIn 0.5s ease-out;
+    width: 100%;
+    max-width: 100%;
+}
+
+.deleted-user-message-wrapper {
+    text-align: center;
+    max-width: 700px;
+    width: 90%;
+    min-width: 500px;
+    padding: 4rem 3rem;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    margin: 0 auto;
+}
+
+.deleted-user-icon {
+    margin-bottom: 1.5rem;
+}
+
+.deleted-user-icon i {
+    font-size: 5rem;
+    color: rgba(255, 255, 255, 0.4);
+    opacity: 0.8;
+    margin-bottom: 1.5rem;
+}
+
+.deleted-user-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    margin: 0 0 1.5rem 0;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.deleted-user-text {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0 0 0.75rem 0;
+    font-weight: 500;
+}
+
+.deleted-user-subtext {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 2.5rem 0;
+    line-height: 1.6;
+}
+
+.deleted-user-back-btn {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.8) 0%, rgba(236, 72, 153, 0.8) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 1rem 2.5rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'League Spartan', sans-serif;
+}
+
+.deleted-user-back-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 1) 0%, rgba(236, 72, 153, 1) 100%);
+}
+
+.deleted-user-back-btn:active {
+    transform: translateY(0);
+}
+
+.deleted-user-back-btn i {
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .deleted-user-message-container {
+        padding: 2rem 1rem;
+        min-height: 70vh;
+    }
+    
+    .deleted-user-message-wrapper {
+        padding: 3rem 2rem;
+        min-width: auto;
+        width: 95%;
+    }
+    
+    .deleted-user-icon i {
+        font-size: 4rem;
+    }
+    
+    .deleted-user-title {
+        font-size: 1.8rem;
+    }
+    
+    .deleted-user-text {
+        font-size: 1.2rem;
+    }
+    
+    .deleted-user-subtext {
+        font-size: 1rem;
+    }
+    
+    .deleted-user-back-btn {
+        padding: 0.875rem 2rem;
+        font-size: 1rem;
+    }
+}
+
+/* =========================================
    ANIMACIONES
    ========================================= */
 @keyframes fadeInUp {
@@ -430,6 +556,18 @@
     color: #fff;
     flex-shrink: 0;
     white-space: nowrap;
+}
+
+.deleted-account-badge {
+    display: inline-block;
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    margin-left: 0.5rem;
+    font-weight: 500;
+    border: 1px solid rgba(220, 38, 38, 0.3);
 }
 
 .review-separator {

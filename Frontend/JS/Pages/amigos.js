@@ -273,19 +273,46 @@ function enrichReviewsData(reviews) {
 
     // Usuarios
     const userIds = [...new Set(reviews.map(r => r.userId))];
-    promises.push(Promise.all(userIds.map(id => socialApi.getUser(id))).then(users => {
+    promises.push(Promise.all(userIds.map(async id => {
+        try {
+            return await socialApi.getUser(id);
+        } catch (error) {
+            // Si es 404, el usuario fue eliminado
+            if (error.response && error.response.status === 404) {
+                return { userId: id, isDeleted: true };
+            }
+            return null;
+        }
+    })).then(users => {
         reviews.forEach(r => {
             const u = users.find(user => user && normalizeId(user.userId || user.id) === normalizeId(r.userId));
             if (u) {
-                r.username = u.username || u.Username;
-                r.avatar = u.imgProfile || u.image || r.avatar;
+                if (u.isDeleted) {
+                    r.username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                    r.isUserDeleted = true;
+                } else {
+                    r.username = u.username || u.Username;
+                    r.avatar = u.imgProfile || u.image || r.avatar;
+                }
                 
                 const card = document.querySelector(`.feed-card[data-review-id="${r.id}"]`);
                 if(card) {
                     const nameEl = card.querySelector('.feed-username');
                     const imgEl = card.querySelector('.feed-avatar');
-                    if(nameEl) nameEl.textContent = r.username;
-                    if(imgEl) imgEl.src = r.avatar;
+                    if(nameEl) {
+                        nameEl.textContent = r.username;
+                        // Agregar badge si el usuario está eliminado
+                        if (r.isUserDeleted) {
+                            const existingBadge = card.querySelector('.deleted-account-badge');
+                            if (!existingBadge && nameEl.nextSibling) {
+                                const badge = document.createElement('span');
+                                badge.className = 'deleted-account-badge';
+                                badge.textContent = 'Cuenta eliminada';
+                                nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+                            }
+                        }
+                    }
+                    if(imgEl && !r.isUserDeleted) imgEl.src = r.avatar;
                 }
             }
         });
@@ -464,7 +491,11 @@ function renderReviews(reviews) {
             <div class="feed-header">
                 <div class="feed-user-info review-clickable" data-target="profile" data-user-id="${r.userId}">
                     <img src="${r.avatar}" class="feed-avatar" onerror="this.src='${FALLBACK_IMAGE}'">
-                    <div class="feed-meta"><span class="feed-username">${r.username}</span><span class="feed-action">reseñó ${r.contentType === 'song' ? 'una canción' : 'un álbum'}</span></div>
+                    <div class="feed-meta">
+                        <span class="feed-username">${r.username}</span>
+                        ${r.isUserDeleted ? '<span class="deleted-account-badge">Cuenta eliminada</span>' : ''}
+                        <span class="feed-action">reseñó ${r.contentType === 'song' ? 'una canción' : 'un álbum'}</span>
+                    </div>
                 </div>
                 ${followBtn}
             </div>

@@ -14,8 +14,11 @@ import {
     getReviews, 
     getReviewReactionCount, 
     getCommentsByReview,
-    getUser
+    getUser,
+    getReviewDetails,
+    getCommentById
 } from '../APIs/socialApi.js'; 
+import { getOrCreateSong } from '../APIs/contentApi.js';
 
 // --- 2. VARIABLES GLOBALES DEL HEADER ---
 let notificationConnection = null;
@@ -982,27 +985,33 @@ function initializeNotificationsDropdown() {
 }
 
 function renderNotifications() {
-    const notificationsList = document.getElementById('notificationsList');
-    if (!notificationsList) return;
-    
-    if (notifications.length === 0) {
-        notificationsList.innerHTML = `
-            <div class="notification-empty">
-                <i class="fas fa-bell-slash"></i>
-                <p>No tienes notificaciones</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const sortedNotifications = [...notifications].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    notificationsList.innerHTML = sortedNotifications.map(notification => {
+    const notificationsList = document.getElementById('notificationsList');
+    if (!notificationsList) return;
+    
+    if (notifications.length === 0) {
+        notificationsList.innerHTML = `
+            <div class="notification-empty">
+                <i class="fas fa-bell-slash"></i>
+                <p>No tienes notificaciones</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const sortedNotifications = [...notifications].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Generamos el HTML
+    notificationsList.innerHTML = sortedNotifications.map((notification, index) => {
         const icon = getNotificationIcon(notification.type);
         const text = getNotificationText(notification);
         const time = formatNotificationTime(notification.date);
+        
+        // Guardamos los datos en atributos data- para usarlos en el click
         return `
-            <div class="notification-item">
+            <div class="notification-item js-notification-item" 
+                 data-type="${notification.type}" 
+                 data-ref="${notification.reviewId || notification.userId}"
+                 style="cursor: pointer;">
                 <div class="notification-icon">
                     <i class="${icon}"></i>
                 </div>
@@ -1013,6 +1022,23 @@ function renderNotifications() {
             </div>
         `;
     }).join('');
+
+    // AGREGAMOS LOS LISTENERS DESPUÉS DE RENDERIZAR
+    // Esto es mejor que usar onclick="" inline para mantener el contexto de los módulos
+    const items = notificationsList.querySelectorAll('.js-notification-item');
+    items.forEach(item => {
+        item.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            // Para seguidores usamos userId como ref, para reviews usamos reviewId
+            const ref = this.getAttribute('data-ref');
+            
+            // Cerramos el dropdown visualmente
+            const dropdown = document.getElementById('notificationsDropdown');
+            if(dropdown) dropdown.style.display = 'none';
+
+            handleNotificationClick(type, ref);
+        });
+    });
 }
 
 function addNotification(notification) {
@@ -1089,8 +1115,7 @@ function getNotificationText(notification) {
 
         case 'NewComment':
             const songName = notification.songName || 'tu reseña';
-            return `<span class="notification-username">${username}</span> comentó en tu review de <strong>${songName}</strong>`;
-            
+            return `<span class="notification-username">${username}</span> comentó tu reseña`;            
         case 'NewFollower':
             return `<span class="notification-username">${username}</span> comenzó a seguirte`;
             
@@ -1190,12 +1215,15 @@ async function loadNotifications() {
 }
 
 function initializeSignalR() {
+    // Validaciones iniciales
     if (typeof signalR === 'undefined' || !signalR) return;
-    
     const userId = localStorage.getItem('userId');
     if (!userId) return;
 
-    // Ajusta el puerto si es necesario
+    // Ajusta el puerto (Asegúrate que apunte al Gateway puerto 5000 o SocialService 8002 expuesto)
+    // Si usas Gateway: http://localhost:5000/notificationHub
+    // Si usas Directo: http://localhost:8002/notificationHub
+    // Por tu log anterior, el 8002 funciona.
     const hubUrl = 'http://localhost:8002/notificationHub'; 
 
     if (!notificationConnection) {
@@ -1219,19 +1247,29 @@ function initializeSignalR() {
     notificationConnection.on('ReceiveNotification', async function(notificationData) {
         console.log('🔔 Notificación recibida en Tiempo Real:', notificationData);
         
-        // 1. Reproducir sonido
-        playNotificationSound();
-
-        // 2. OBTENER EL NOMBRE REAL (HIDRATACIÓN PREVIA)
-        // Antes de agregar a la lista, buscamos quién es para quitar los "..."
-        let realUsername = "Usuario"; 
+        // -----------------------------------------------------------
+        // 1. NORMALIZACIÓN DE DATOS (BLINDAJE)
+        // -----------------------------------------------------------
+        // Leemos ReferenceId o referenceId. Gracias al arreglo del backend,
+        // esto AHORA contiene el ID DE LA RESEÑA.
+        const refId = notificationData.ReferenceId || notificationData.referenceId;
+        const type = notificationData.Type || notificationData.type;
         const senderId = notificationData.SenderId || notificationData.senderId;
+        const date = notificationData.Date || notificationData.date;
 
+        // 2. Reproducir sonido
+        if (typeof playNotificationSound === 'function') {
+            playNotificationSound();
+        }
+
+        // 3. OBTENER EL NOMBRE REAL (HIDRATACIÓN)
+        let realUsername = "Usuario"; 
+        
         if (senderId && senderId !== '00000000-0000-0000-0000-000000000000') {
             try {
+                // Si tienes cache de usuarios, úsalo, sino llama a la API
                 const userData = await getUser(senderId);
                 if (userData) {
-                    // Usamos la misma lógica que confirmamos que funciona
                     const userObj = userData.result || userData.data || userData;
                     realUsername = userObj.username || userObj.Username || userObj.Name || "Usuario";
                 }
@@ -1240,23 +1278,40 @@ function initializeSignalR() {
             }
         }
         
-        // 3. Mostrar alerta flotante (Toast)
-        // (Esta función ya tiene su propia lógica, no tocamos nada)
-        await showNotificationAlert(notificationData);
-        
-        // 4. AGREGAR A LA LISTA DE LA CAMPANITA (CORREGIDO)
-        // Ahora pasamos 'realUsername' en lugar de '...'
-        addNotification({
-             type: notificationData.Type || notificationData.type,
-             date: notificationData.Date || notificationData.date,
-             username: realUsername, // <--- ¡AQUÍ ESTÁ EL CAMBIO!
-             userId: senderId,
-             reviewId: notificationData.ReferenceId,
-             commentId: notificationData.CommentId || notificationData.commentId || null
-        });
+        // 4. PREPARAR OBJETO PARA EL TOAST
+        // Inyectamos las propiedades en minúscula para asegurar compatibilidad
+        const toastData = {
+            ...notificationData,
+            referenceId: refId, // Forzamos minúscula para el click del Toast
+            type: type,
+            username: realUsername // Pasamos el nombre ya resuelto
+        };
 
-        // 5. Actualizar el badge rojo
-        updateNotificationCount(1); 
+        // 5. Mostrar alerta flotante (Toast)
+        await showNotificationAlert(toastData);
+        
+        // 6. AGREGAR A LA LISTA DE LA CAMPANITA (Dropdown)
+        if (typeof addNotification === 'function') {
+            addNotification({
+                 type: type,
+                 date: date,
+                 username: realUsername,
+                 userId: senderId,
+                 
+                 // ¡ESTO ES VITAL!
+                 // Mapeamos 'reviewId' al 'refId' (que es el ID de la Reseña).
+                 // Esto hace que el enlace en el dropdown funcione.
+                 reviewId: refId, 
+                 referenceId: refId, 
+                 
+                 commentId: notificationData.CommentId || null
+            });
+        }
+
+        // 7. Actualizar el badge rojo
+        if (typeof updateNotificationCount === 'function') {
+            updateNotificationCount(1); 
+        }
     });
 }
 
@@ -1314,10 +1369,8 @@ async function showNotificationAlert(notification) {
     const commentId = notification.CommentId || notification.commentId;
     // Es comentario si trae ID O si el tipo lo dice explícitamente
     const isComment = (commentId && commentId !== '00000000-0000-0000-0000-000000000000') || 
-                      rawType === 'NewCommentReaction';
-
+                    rawType === 'NewCommentReaction';
     const userHtml = `<strong style="color: #fff;">${username}</strong>`;
-
     if (rawType.includes('Reaction') || rawType.includes('Like')) {
         if (isComment) {
             messageHtml = `${userHtml} le dio me gusta a tu comentario`;
@@ -1328,9 +1381,9 @@ async function showNotificationAlert(notification) {
     else if (rawType.includes('Comment')) {
         // Diferenciar si es like a comentario o comentario nuevo
         if (rawType.includes('Reaction')) {
-             messageHtml = `${userHtml} le dio me gusta a tu comentario`;
+            messageHtml = `${userHtml} le dio me gusta a tu comentario`;
         } else {
-             messageHtml = `${userHtml} comentó tu reseña`;
+            messageHtml = `${userHtml} comentó tu reseña`;
         }
     } 
     else if (rawType.includes('Follow')) {
@@ -1340,8 +1393,11 @@ async function showNotificationAlert(notification) {
         messageHtml = `Nueva notificación de ${userHtml}`;
     }
 
-    // 4. MOSTRAR LA ALERTA VISUAL (TOAST)
-    createToastNotification(messageHtml, userImage, rawType);
+    const refId = rawType.includes('Follow') 
+            ? actorUserId 
+            : (notification.ReferenceId || notification.referenceId);
+
+    createToastNotification(messageHtml, userImage, rawType, refId);
 }
 // --- 7. POLLING DE NOTIFICACIONES ---
 
@@ -1491,10 +1547,11 @@ function hideLoginRequiredModal() {
     }
 }
 
-function createToastNotification(messageHtml, image, type) {
+function createToastNotification(messageHtml, image, type, referenceId) {
     const alertDiv = document.createElement('div');
     alertDiv.className = 'custom-alert notification-toast';
-    // Estilos inline o asegúrate de tenerlos en CSS
+    
+    // Agregamos cursor pointer
     alertDiv.style.cssText = `
         position: fixed; top: 20px; right: 20px; z-index: 9999;
         background: #1e1e1e; border: 1px solid #333; border-left: 4px solid #EC4899;
@@ -1503,6 +1560,7 @@ function createToastNotification(messageHtml, image, type) {
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         animation: slideIn 0.3s ease-out;
         min-width: 300px;
+        cursor: pointer; 
     `;
 
     const iconClass = type === 'NewFollower' ? 'fa-user-plus' : (type.includes('Reaction') ? 'fa-heart' : 'fa-bell');
@@ -1514,13 +1572,22 @@ function createToastNotification(messageHtml, image, type) {
         <i class="fas ${iconClass}" style="color: ${iconColor};"></i>
     `;
 
+    // AGREGAMOS EL CLICK AL TOAST
+    alertDiv.addEventListener('click', () => {
+        // Si no pasamos referenceId directo, intentamos inferirlo del contexto global o pasarlo como argumento extra
+        // NOTA: Necesitamos actualizar 'showNotificationAlert' para pasar el referenceId aquí.
+        handleNotificationClick(type, referenceId);
+        alertDiv.remove();
+    });
+
     document.body.appendChild(alertDiv);
 
-    // Auto eliminar a los 4 segundos
     setTimeout(() => {
-        alertDiv.style.opacity = '0';
-        setTimeout(() => alertDiv.remove(), 500);
-    }, 4000);
+        if (alertDiv.parentNode) {
+            alertDiv.style.opacity = '0';
+            setTimeout(() => alertDiv.remove(), 500);
+        }
+    }, 5000); // 5 segundos
 }
 function updateNotificationCount(amount) {
     const btn = document.getElementById('notificationsBtn');
@@ -1537,6 +1604,270 @@ function updateNotificationCount(amount) {
     let current = parseInt(badge.textContent) || 0;
     badge.textContent = current + amount;
     badge.style.display = 'block';
+}
+
+async function handleNotificationClick(type, referenceId) {
+    console.log(`🔔 Click en notificación. Tipo: ${type}, Ref: ${referenceId}`);
+
+    if (!referenceId) return;
+
+    // CASO A: PERFIL (Nuevo Seguidor) -> Redirección obligatoria
+    if (type === 'NewFollower') {
+        const currentPath = window.location.pathname;
+        let profileUrl = currentPath.includes('/Pages/') 
+            ? `profile.html?userId=${referenceId}` 
+            : `Pages/profile.html?userId=${referenceId}`;
+        window.location.href = profileUrl;
+        return;
+    }
+
+    // CASO B: INTERACCIONES (Reseñas, Likes, Comentarios) -> ABRIR MODAL
+    if (['NewReaction', 'ReviewLike', 'NewComment', 'NewCommentReaction', 'CommentLike'].includes(type)) {
+        try {
+            // 1. Obtener la data de la reseña
+            const responseData = await getReviewDetails(referenceId);
+
+            if (!responseData) {
+                console.error("❌ No se encontró la reseña para mostrar en el modal.");
+                return;
+            }
+
+            // 2. Normalizar la data (Agregador vs Directo)
+            const reviewObj = responseData.review || responseData;
+            const userObj = responseData.user || null; // Si viene del agregador, tenemos el usuario
+            const songObj = responseData.song || null;
+            const albumObj = responseData.album || null;
+
+            // 3. ABRIR EL MODAL (En lugar de redirigir)
+            console.log("✨ Abriendo Modal de Reseña...", reviewObj);
+            openReviewModal(reviewObj, userObj, songObj || albumObj);
+
+        } catch (error) {
+            console.error("Error al intentar abrir el modal de notificación:", error);
+        }
+    }
+}
+
+// =========================================================================
+// 2. FUNCIÓN AUXILIAR: POBLAR Y MOSTRAR EL MODAL
+// =========================================================================
+async function openReviewModal(review, user, content) {
+    // A. Referencias al DOM
+    const modalOverlay = document.getElementById('reviewDetailModalOverlay');
+    const closeBtn = document.getElementById('closeReviewDetailModal');
+
+    if (!modalOverlay) {
+        console.error("⚠️ No se encontró el modal.");
+        return;
+    }
+
+    // --- B. NORMALIZACIÓN DE DATOS ---
+    const reviewId = review.reviewId || review.Id_Review || review.id; // IMPORTANTE: Obtener ID
+    const ratingVal = review.rating || review.Rating || 0;
+    const reviewBody = review.content || review.Content || review.text || review.Text || "Sin contenido";
+    const reviewTitle = review.title || review.Title || "Reseña";
+    const userId = review.userId || review.UserId || (user ? (user.userId || user.UserId) : null);
+    
+    // IDs de contenido
+    const songId = review.songId || review.SongId;
+    const albumId = review.albumId || review.AlbumId;
+
+    // --- C. LLENADO INICIAL (Síncrono) ---
+    const titleEl = document.getElementById('modalReviewTitle');
+    if (titleEl) titleEl.textContent = reviewTitle;
+
+    const contentEl = document.getElementById('reviewDetailContent');
+    if (contentEl) contentEl.textContent = reviewBody;
+
+    const ratingEl = document.getElementById('modalReviewRating');
+    if (ratingEl) ratingEl.textContent = `⭐ ${ratingVal}/5`;
+
+    const userEl = document.getElementById('modalReviewUser');
+    if (userEl) userEl.textContent = user ? (user.username || user.Username) : "Cargando usuario...";
+
+    const imgEl = document.getElementById('modalReviewImage');
+    if (imgEl) { imgEl.style.display = 'none'; imgEl.src = ''; }
+
+    // --- D. CARGA ASÍNCRONA DE DATOS FALTANTES ---
+
+    // D1. Usuario
+    if (!user && userId && userEl) {
+        getUser(userId).then(uData => {
+            const uObj = uData.result || uData.data || uData;
+            if (uObj) userEl.textContent = uObj.username || uObj.Username || uObj.Name;
+        }).catch(() => userEl.textContent = "Usuario");
+    }
+
+    // D2. Canción/Álbum (Usando getOrCreateSong importado o fallback)
+    if (!content && (songId || albumId)) {
+        // Usamos la función que tengas disponible (getOrCreateSong o getSongDataFallback)
+        // Asegúrate de que esta función exista en tu archivo o esté importada
+        const fetchPromise = (typeof getOrCreateSong !== 'undefined') 
+            ? getOrCreateSong(songId) 
+            : (typeof getSongDataFallback !== 'undefined' ? getSongDataFallback(songId) : null);
+        
+        if (fetchPromise) {
+            fetchPromise.then(cData => {
+                if (cData) {
+                    if (titleEl) titleEl.textContent = cData.Title || cData.name || reviewTitle;
+                    if (imgEl && (cData.CoverImage || cData.image)) {
+                        imgEl.src = cData.CoverImage || cData.image;
+                        imgEl.style.display = 'block';
+                    }
+                }
+            });
+        }
+    }
+
+    // --- E. MOSTRAR EL MODAL ---
+    modalOverlay.style.display = 'flex';
+
+    // F. Configurar eventos de cierre
+    if (closeBtn) closeBtn.onclick = () => modalOverlay.style.display = 'none';
+    modalOverlay.onclick = (e) => {
+        if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+    };
+
+    // =========================================================
+    // 🚨 G. CARGAR COMENTARIOS Y LIKES (NUEVO) 🚨
+    // =========================================================
+    if (reviewId) {
+        console.log(`📥 Cargando comentarios para la reseña ${reviewId}...`);
+        
+        // 1. Limpiar lista anterior
+        const commentsList = document.getElementById('reviewDetailCommentsList');
+        const commentsCount = document.getElementById('reviewDetailCommentsCount');
+        if (commentsList) commentsList.innerHTML = '<p style="text-align:center; color:#888;">Cargando comentarios...</p>';
+        
+        // 2. Llamar a la API de Comentarios (getCommentsByReview)
+        // Asegúrate de importar o tener esta función disponible desde socialApi.js
+        try {
+            // Si no tienes getCommentsByReview importado, usa una llamada directa fetch como fallback
+            const comments = await fetchCommentsFallback(reviewId); 
+            
+            if (comments && comments.length > 0) {
+                renderCommentsInModal(comments); // Función auxiliar para renderizar HTML
+                if (commentsCount) commentsCount.textContent = comments.length;
+            } else {
+                if (commentsList) commentsList.innerHTML = '<p style="text-align:center; color:#888;">No hay comentarios aún. ¡Sé el primero!</p>';
+                if (commentsCount) commentsCount.textContent = '0';
+            }
+        } catch (error) {
+            console.error("Error cargando comentarios:", error);
+            if (commentsList) commentsList.innerHTML = '<p style="text-align:center; color:red;">Error al cargar comentarios.</p>';
+        }
+    }
+
+    if (reviewId) {
+        const likesCountEl = document.getElementById('modalReviewLikesCount');
+        if (likesCountEl) likesCountEl.textContent = "..."; // Loading state
+
+        try {
+            // Llamada al endpoint de conteo (ajusta puerto si es necesario)
+            const response = await fetch(`http://localhost:5000/api/gateway/reviews/${reviewId}/reactions/count`);
+            
+            if (response.ok) {
+                const count = await response.json();
+                if (likesCountEl) likesCountEl.textContent = count;
+            } else {
+                if (likesCountEl) likesCountEl.textContent = "0";
+            }
+        } catch (e) {
+            console.warn("Error cargando likes:", e);
+            if (likesCountEl) likesCountEl.textContent = "-";
+        }
+    }
+
+}
+
+// =========================================================
+// 3. FUNCIONES AUXILIARES (Pégalas debajo de openReviewModal)
+// =========================================================
+
+// Fallback para obtener comentarios si no tienes el import
+async function fetchCommentsFallback(reviewId) {
+    try {
+        const response = await fetch(`http://localhost:5000/api/gateway/comments/review/${reviewId}`);
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (e) {
+        console.warn("Fallo fetch comentarios:", e);
+        return [];
+    }
+}
+
+// Función para pintar los comentarios en el HTML del modal
+function renderCommentsInModal(comments) {
+    const list = document.getElementById('reviewDetailCommentsList');
+    if (!list) return;
+    list.innerHTML = ''; // Limpiar lista anterior
+
+    comments.forEach(comment => {
+        // 1. Normalizar propiedades (C# devuelve PascalCase, JS prefiere camelCase)
+        const text = comment.text || comment.Text || comment.content || comment.Content || "";
+        
+        // Buscamos el ID del usuario en todas las variantes posibles
+        const userId = comment.userId || comment.UserId || comment.idUser || comment.IdUser;
+        
+        // Verificamos si ya trajo el nombre, sino ponemos "Usuario"
+        let displayName = comment.username || comment.Username || "Usuario";
+
+        // 2. Crear el contenedor del comentario
+        const item = document.createElement('div');
+        item.style.padding = "10px";
+        item.style.borderBottom = "1px solid #444";
+        item.style.marginBottom = "5px";
+
+        // 3. Generar un ID único para el elemento del nombre 
+        // (Esto nos permite buscarlo y cambiarle el texto después)
+        const uniqueNameId = `comment-author-${Math.random().toString(36).substr(2, 9)}`;
+
+        item.innerHTML = `
+            <div id="${uniqueNameId}" style="font-weight: bold; color: #fff; font-size: 0.9rem;">
+                ${displayName} <span style="font-weight:normal; color:#666; font-size:0.8rem;">(Cargando...)</span>
+            </div>
+            <div style="color: #ddd; font-size: 0.95rem;">${text}</div>
+        `;
+        list.appendChild(item);
+
+        // 4. HIDRATACIÓN: Si no tenemos el nombre pero sí el ID, lo buscamos ahora
+        if ((displayName === "Usuario") && userId) {
+            
+            // Función interna para actualizar el DOM cuando llegue el dato
+            const updateNameInDom = (userData) => {
+                const uObj = userData.result || userData.data || userData;
+                const realName = uObj.username || uObj.Username || uObj.Name;
+                
+                if (realName) {
+                    const nameEl = document.getElementById(uniqueNameId);
+                    if (nameEl) {
+                        // Quitamos el "(Cargando...)" y ponemos el nombre real
+                        nameEl.textContent = realName;
+                        // Opcional: Hacer que brille o cambie de color para mostrar que se actualizó
+                        
+                        setTimeout(() => nameEl.style.color = "#fff", 1000);
+                    }
+                }
+            };
+
+            // Intentamos usar getUser (si está importado) o fetch directo
+            if (typeof getUser !== 'undefined') {
+                getUser(userId)
+                    .then(updateNameInDom)
+                    .catch(err => console.warn("Fallo hidratación usuario:", err));
+            } else {
+                // Fallback directo al Gateway si getUser no está disponible en este archivo
+                fetch(`http://localhost:5000/api/gateway/users/${userId}`)
+                    .then(res => res.json())
+                    .then(updateNameInDom)
+                    .catch(err => console.warn("Fallo fetch usuario:", err));
+            }
+        } else {
+            // Si ya teníamos el nombre o no hay ID, limpiamos el "(Cargando...)"
+            const nameEl = document.getElementById(uniqueNameId);
+            if (nameEl) nameEl.textContent = displayName;
+        }
+    });
 }
 // CORREGIDO: Eliminada la duplicación
 function initializeLoginRequiredModal() {

@@ -132,14 +132,16 @@ export async function deleteReview(reviewId) {
 
 export async function getReviewDetails(reviewId) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/review-details/${reviewId}`, {
-            headers: getAuthHeaders(),
+
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/reviews/${reviewId}`, {
             timeout: 5000
         });
+        
         return response.data;
     } catch (error) {
         console.error(`Error en getReviewDetails (ID: ${reviewId}):`, error);
-        throw error;
+
+        return null;
     }
 }
 
@@ -343,7 +345,7 @@ export async function addCommentReaction(commentId) {
 
 export async function deleteCommentReaction(commentId) {
     try {
-        await axios.delete(`${API_BASE_URL}/api/gateway/reactions/comment/${commentId}`, {
+        await axios.delete(`${API_BASE_URL}/api/gateway/reactions/comments/${commentId}`, {
             headers: getAuthHeaders()
         });
     } catch (error) {
@@ -379,6 +381,32 @@ export async function getUser(userId) {
         return response.data;
     } catch (error) {
         console.warn(`Error obteniendo usuario ${userId}`, error);
+        return null;
+    }
+}
+
+
+export async function getCommentById(commentId) {
+    if (!commentId) return null;
+    
+    try {
+        // Intentamos ruta Gateway
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/comments/${commentId}`, {
+            validateStatus: status => status === 200 || status === 404
+        });
+        
+        if (response.status === 200) return response.data;
+        
+        // Si falla, intentamos ruta directa (Fallback)
+        // Ajusta el puerto si tu servicio de comentarios corre en otro (ej: 8002)
+        const responseDirect = await axios.get(`http://localhost:8002/api/comments/${commentId}`, {
+            validateStatus: status => status === 200 || status === 404
+        });
+        
+        return responseDirect.status === 200 ? responseDirect.data : null;
+
+    } catch (error) {
+        console.warn(`No se pudo recuperar el comentario ${commentId}:`, error);
         return null;
     }
 }

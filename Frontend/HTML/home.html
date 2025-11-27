@@ -247,40 +247,49 @@
     <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
         <div class="review-detail-modal">
             <div class="review-detail-modal-content">
-                <!-- Header con botón cerrar -->
-                <div class="review-detail-header">
+                <div class="review-detail-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #333;">
+                    
+                    <div class="review-detail-meta" style="display: flex; gap: 15px; align-items: center;">
+                        <img id="modalReviewImage" src="../Assets/default-avatar.png" style="width: 50px; height: 50px; border-radius: 5px; object-fit: cover; display: none;">
+                        <div style="display: flex; flex-direction: column;">
+                            <h3 id="modalReviewTitle" style="margin: 0; font-size: 1.2rem; color: #fff;">Título</h3>
+                            <div style="display: flex; gap: 10px; font-size: 0.9rem;">
+                                <span id="modalReviewUser" style="color: #bbb;">Usuario</span>
+                                <span id="modalReviewRating" style="color: #ffc107;">⭐ 5/5</span>
+
+                            <span id="modalReviewLikes" style="color: #ff4081; display: flex; align-items: center; gap: 4px;">
+                                <i class="far fa-heart"></i> <span id="modalReviewLikesCount">0</span>
+                            </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <button class="review-detail-close" id="closeReviewDetailModal">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 
-                <!-- Contenedor scrolleable -->
                 <div class="review-detail-scrollable">
-                    <!-- Reseña completa -->
-                    <div class="review-detail-content" id="reviewDetailContent">
-                        <!-- Se llenará dinámicamente -->
-                    </div>
+                    <div class="review-detail-content" id="reviewDetailContent" style="margin-top: 15px; font-size: 1rem; line-height: 1.5;">
+                        </div>
                     
-                    <!-- Comentarios -->
                     <div class="review-detail-comments-section">
                         <div class="review-detail-comments-header">
                             <h3 class="review-detail-comments-title">Comentarios <span id="reviewDetailCommentsCount">0</span></h3>
                         </div>
                         <div class="review-detail-comments-list" id="reviewDetailCommentsList">
-                            <!-- Comentarios se cargarán aquí -->
-                        </div>
+                            </div>
                     </div>
                 </div>
                 
-                <!-- Input de comentarios fijo en la parte inferior -->
                 <div class="review-detail-input-container">
                     <div class="review-detail-input-wrapper">
                         <img src="../Assets/default-avatar.png" alt="Avatar" class="review-detail-input-avatar" id="reviewDetailInputAvatar">
                         <input type="text" 
-                               class="review-detail-input" 
-                               id="reviewDetailCommentInput" 
-                               placeholder="Escribe un comentario..."
-                               maxlength="500">
+                            class="review-detail-input" 
+                            id="reviewDetailCommentInput" 
+                            placeholder="Escribe un comentario..."
+                            maxlength="500">
                         <button class="review-detail-send-btn" id="reviewDetailSubmitCommentBtn">
                             <i class="fas fa-paper-plane"></i>
                         </button>
@@ -393,10 +402,10 @@
                 <div class="create-review-content-selector" id="createReviewContentSelector">
                     <div class="content-search-container">
                         <input type="text" 
-                               class="content-search-input" 
-                               id="contentSearchInput" 
-                               placeholder="Buscar canción o álbum..."
-                               autocomplete="off">
+                            class="content-search-input" 
+                            id="contentSearchInput" 
+                            placeholder="Buscar canción o álbum..."
+                            autocomplete="off">
                         <div class="content-search-dropdown" id="contentSearchDropdown" style="display: none;">
                             </div>
                     </div>

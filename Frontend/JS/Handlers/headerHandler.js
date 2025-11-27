@@ -1101,9 +1101,24 @@ function getNotificationText(notification) {
 
 export function formatNotificationTime(dateString) {
     if (!dateString) return 'Ahora';
-    const date = new Date(dateString);
+    
+    // TRUCO CLAVE: Si la fecha es un string ISO (tiene 'T') pero no tiene 'Z' ni offset,
+    // le agregamos 'Z' para decirle al navegador que es hora UTC (Universal).
+    // Esto arregla el desfase de 3/4/5 horas.
+    let dateToParse = dateString;
+    if (typeof dateString === 'string' && dateString.indexOf('T') > -1 && !dateString.endsWith('Z') && !dateString.includes('+')) {
+        dateToParse += 'Z';
+    }
+
+    const date = new Date(dateToParse);
     const now = new Date();
-    const diffMs = now - date;
+    
+    // Calcular diferencia en milisegundos
+    let diffMs = now - date;
+
+    // Si la diferencia es negativa (la fecha es "del futuro" por error de reloj), asumimos 0
+    if (diffMs < 0) diffMs = 0;
+
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -1112,6 +1127,7 @@ export function formatNotificationTime(dateString) {
     if (diffMins < 60) return `Hace ${diffMins} min`;
     if (diffHours < 24) return `Hace ${diffHours} h`;
     if (diffDays < 7) return `Hace ${diffDays} días`;
+    
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }
 

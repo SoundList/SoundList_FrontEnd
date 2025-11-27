@@ -675,3 +675,116 @@ html, body {
     50% { transform: scale(1.4); }
     100% { transform: scale(1); }
 }
+/* =========================================================
+   MODALES PREMIUM (Estilo unificado con Feed)
+   ========================================================= */
+
+/* Fondo del Modal (Review Detail & Comments) */
+.review-detail-modal,
+.comments-modal {
+    /* Mismo degradado que las tarjetas pero más opaco */
+    background: linear-gradient(180deg, rgba(20, 18, 35, 0.98) 0%, rgba(10, 10, 18, 1) 100%) !important;
+    border: 1px solid rgba(167, 139, 250, 0.2) !important; /* Borde violeta sutil */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+}
+
+/* Header del Modal */
+.review-detail-header,
+.comments-modal-header {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 1rem 1.5rem !important;
+}
+
+.review-detail-close,
+.comments-modal-close {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-detail-close:hover,
+.comments-modal-close:hover {
+    background: rgba(236, 72, 153, 0.2) !important; /* Hover rosa */
+    color: #ec4899 !important;
+    transform: rotate(90deg);
+}
+
+/* --- LA NUEVA "CÁPSULA" DE MÚSICA EN EL MODAL --- */
+.modal-music-pill {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 0.8rem;
+    margin: 1rem 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-music-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(167, 139, 250, 0.3);
+    transform: translateX(5px);
+}
+
+.modal-music-cover {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.modal-music-info {
+    flex: 1;
+}
+
+.modal-music-info h3 {
+    font-family: 'League Spartan', sans-serif;
+    font-size: 1.1rem;
+    color: #fff;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.modal-music-info p {
+    font-family: 'Arimo', sans-serif;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* --- ENLACES DE USUARIO --- */
+.clickable-user {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.clickable-user:hover {
+    color: #a78bfa !important; /* Violeta claro al pasar mouse */
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+/* --- COMENTARIOS --- */
+.review-detail-comment-item, 
+.comment-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 1rem 0;
+}
+
+.review-detail-input-container,
+.comments-input-container {
+    background: rgba(15, 15, 25, 0.95) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}

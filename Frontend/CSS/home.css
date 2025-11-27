@@ -4362,14 +4362,15 @@ body #alertContainer .custom-alert {
         flex-direction: column !important;
         overflow-y: visible !important;
     }
-    
     .home-container {
-        height: auto !important; 
-        max-height: none !important; 
-        min-height: 100% !important; 
-        flex-grow: 1 !important; 
-        overflow-y: auto !important;
-        padding-bottom: 5rem !important; 
+    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
+        background-attachment: fixed;
+        background-size: cover;
+        min-height: 100vh;        
+        height: auto !important;      
+        max-height: none !important;  
+        overflow: visible !important; 
+        padding-bottom: 2rem;
     }
 
     .reviews-list {

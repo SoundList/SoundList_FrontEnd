@@ -484,10 +484,10 @@ function renderReviews(reviews) {
             <div class="feed-footer">
                 <div class="interaction-group">
                     <div class="feed-likes-container">
-                        <span class="like-count">${likesCount}</span>
                         <button class="feed-btn btn-like ${isLiked ? 'liked' : ''}" 
                                 data-review-id="${r.id}">
                             <i class="${heartIcon} fa-heart" ${heartColor}></i>
+                            <span class="like-count">${likesCount}</span>
                         </button>
                     </div>
                     <button class="feed-btn comment-btn" data-review-id="${r.id}"><i class="far fa-comment"></i><span>${commentsCount}</span></button>

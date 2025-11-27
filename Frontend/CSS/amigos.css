@@ -220,6 +220,18 @@ html, body {
 .feed-username { color: #fff; font-weight: 700; font-size: 0.95rem; }
 .feed-action { color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; }
 
+.deleted-account-badge {
+    display: inline-block;
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    font-weight: 500;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
 .feed-follow-btn {
     background: transparent; color: var(--magenta, #EC4899);
     border: 1px solid var(--magenta, #EC4899); padding: 0.3rem 0.8rem;

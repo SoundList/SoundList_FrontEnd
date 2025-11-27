@@ -76,8 +76,7 @@ export async function showReviewDetailModal(reviewId, state = null) {
             return;
         }
         
-        // --- DATOS DE USUARIO ---
-        let username = `Usuario`;
+        let username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará si está eliminado
         let avatar = '../Assets/default-avatar.png';
         const reviewUserId = review.UserId || review.userId;
 
@@ -87,8 +86,23 @@ export async function showReviewDetailModal(reviewId, state = null) {
                 if (userData) {
                     username = userData.Username || userData.username || username;
                     avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                } else {
+                    // Si getUser devuelve null, puede ser un 404 (usuario eliminado)
+                    // Verificar si es un usuario eliminado
+                    isUserDeleted = true;
+                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                    console.debug(`Usuario eliminado detectado (getUser devolvió null): ${review.UserId || review.userId}`);
                 }
-            } catch (e) {}
+            } catch (userError) {
+                // Detectar si el usuario fue eliminado (404)
+                if (userError.response && userError.response.status === 404) {
+                    isUserDeleted = true;
+                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                    console.debug(`Usuario eliminado detectado (404): ${review.UserId || review.userId}`);
+                } else {
+                    console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                }
+            }
         }
         
         const userProfileUrl = `profile.html?userId=${reviewUserId}`;

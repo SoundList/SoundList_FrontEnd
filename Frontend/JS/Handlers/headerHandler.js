@@ -340,6 +340,7 @@ function navigateToContentView(type, id) {
         return;
     }
     
+    
     const currentPath = window.location.pathname;
     const currentFile = currentPath.split('/').pop() || '';
     let destinationUrl = '';

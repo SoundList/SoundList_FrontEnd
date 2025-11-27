@@ -789,20 +789,47 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
         console.error('Modal de crear reseña no encontrado');
         return;
     }
+
     clearReviewFormErrors();
     modal.setAttribute('data-edit-review-id', reviewId);
-    
-const changeContentBtn = document.getElementById('changeContentBtn');
-    if (changeContentBtn) changeContentBtn.style.display = 'none';
+
+    // 🔒 BLOQUEAR CAMBIO DE CONTENIDO (Home y Perfil)
+    const changeContentBtn = document.getElementById('changeContentBtn');
+    const contentSelector = document.getElementById('createReviewContentSelector');
+    const contentSearchInput = document.getElementById('contentSearchInput');
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+
+    // Ocultar botón "Cambiar contenido"
+    if (changeContentBtn) {
+        changeContentBtn.style.display = 'none';
+    }
+
+    // Ocultar selector
+    if (contentSelector) {
+        contentSelector.style.display = 'none';
+    }
+
+    // Deshabilitar input de búsqueda por completo
+    if (contentSearchInput) {
+        contentSearchInput.disabled = true;
+        contentSearchInput.style.pointerEvents = "none";
+    }
+
+    // Ocultar dropdown de búsqueda
+    if (contentSearchDropdown) {
+        contentSearchDropdown.style.display = 'none';
+    }
+
+    // ============================
+    // 🔄 CARGAR INFO DEL CONTENIDO
+    // ============================
     const storageKey = `review_content_${String(reviewId).trim()}`;
     const storedContentData = localStorage.getItem(storageKey);
-    
-    console.log(`🔍 Cargando datos del contenido para edición (reviewId: ${reviewId})`);
-    
+
     if (storedContentData) {
         try {
             const contentData = JSON.parse(storedContentData);
-            
+
             state.currentReviewData = {
                 type: contentData.type,
                 id: contentData.id,
@@ -810,55 +837,47 @@ const changeContentBtn = document.getElementById('changeContentBtn');
                 artist: contentData.artist || '',
                 image: contentData.image || '../Assets/default-avatar.png'
             };
-            
+
+            const contentInfo = document.getElementById('createReviewContentInfo');
             const contentInfoImage = document.getElementById('contentInfoImage');
             const contentInfoName = document.getElementById('contentInfoName');
             const contentInfoType = document.getElementById('contentInfoType');
-            
+
+            if (contentInfo) contentInfo.style.display = 'flex';
             if (contentInfoImage) {
                 contentInfoImage.src = state.currentReviewData.image;
-                contentInfoImage.onerror = function() { this.src = '../Assets/default-avatar.png'; };
+                contentInfoImage.onerror = () => contentInfoImage.src = '../Assets/default-avatar.png';
             }
             if (contentInfoName) contentInfoName.textContent = state.currentReviewData.name;
-            if (contentInfoType) contentInfoType.textContent = state.currentReviewData.type === 'song' ? 'CANCIÓN' : 'ÁLBUM';
-            
-        } catch (e) {
-            console.error('❌ Error parseando datos del contenido guardados:', e);
-            showAlert('No se pudieron cargar los datos del contenido.', 'warning');
+            if (contentInfoType) contentInfoType.textContent =
+                state.currentReviewData.type === 'song' ? 'CANCIÓN' : 'ÁLBUM';
+
+        } catch (err) {
+            console.error("❌ Error al cargar contenido:", err);
         }
-    } else {
-        console.warn(`⚠️ No se encontraron datos del contenido en localStorage para review ${reviewId}`);
-        showAlert('No se encontraron los datos del contenido. La reseña se puede editar pero no se mostrará la info.', 'warning');
     }
-    
-    // Llenar los campos con los datos actuales
+
+    // ============================
+    // ✏️ CARGAR DATOS DE LA RESEÑA
+    // ============================
     const titleInput = document.getElementById('createReviewTitleInput');
     const textInput = document.getElementById('createReviewTextInput');
     const starsContainer = document.getElementById('createReviewStars');
-    
+
     if (titleInput) titleInput.value = title;
     if (textInput) textInput.value = content;
-    
+
     if (starsContainer) {
         const stars = starsContainer.querySelectorAll('.star-input');
-        stars.forEach((star) => {
+        stars.forEach(star => {
             const starRating = parseInt(star.getAttribute('data-rating'));
             star.classList.toggle('active', starRating <= rating);
         });
     }
-    
-    const modalTitle = modal.querySelector('.create-review-title');
-    if (modalTitle) modalTitle.textContent = 'Editar Reseña';
-    
-    const contentSelector = document.getElementById('createReviewContentSelector');
-    const contentInfo = document.getElementById('createReviewContentInfo');
-    
-    if (contentSelector) contentSelector.style.display = 'none';
-    if (contentInfo) contentInfo.style.display = 'block';
-    
-    // Asegurar que el modal se muestre
-    modal.style.display = 'flex';
-    
-    console.log('✅ Modal de edición abierto correctamente');
-}
 
+    const modalTitle = modal.querySelector('.create-review-title');
+    if (modalTitle) modalTitle.textContent = 'EDITAR RESEÑA';
+
+    // Mostrar modal
+    modal.style.display = 'flex';
+}

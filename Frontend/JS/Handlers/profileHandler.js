@@ -107,6 +107,8 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
         const commentCount = review.comments || 0;
 
         const editButtonStyle = (likeCount > 0) ? 'display: none !important;' : '';
+
+
         // Formato EXACTO igual que renderReviews de homeAdmin.js
         return `
             <div class="review-item" data-review-id="${reviewId}">
@@ -142,6 +144,7 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
                                         data-review-title="${review.title || ''}"
                                         data-review-content="${review.comment || ''}"
                                         data-review-rating="${review.rating || 0}"
+                                        style="${editButtonStyle}"
                                         title="Editar reseña">
                                     <i class="fas fa-pencil"></i>
                             </button>
@@ -1029,14 +1032,33 @@ async function showEditReviewModal(reviewId, title, content, rating) {
         const modalTitle = modal.querySelector('.create-review-title');
         if (modalTitle) modalTitle.textContent = 'Editar Reseña';
         
+        
         const contentSelector = document.getElementById('createReviewContentSelector');
+        if (contentSelector) contentSelector.style.display = 'none';
+
+        const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+        if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+
+        const contentSearchInput = document.getElementById('contentSearchInput');
+        if (contentSearchInput) {
+            contentSearchInput.disabled = true;
+            contentSearchInput.style.pointerEvents = "none";
+        }
+
+        const changeContentBtn = document.getElementById('changeContentBtn');
+        if (changeContentBtn) changeContentBtn.style.display = 'none';
         const contentInfo = document.getElementById('createReviewContentInfo');
+        if (contentInfo) {
+            contentInfo.style.pointerEvents = "none"; 
+            contentInfo.style.opacity = "0.7"; 
+        }
+
         if (contentSelector) contentSelector.style.display = 'none';
         if (contentInfo) contentInfo.style.display = 'block';
         
         modal.style.display = 'flex';
     } else {
-        // Si no hay modal, redirigir a home para editar
+    
         if (confirm('Para editar la reseña, serás redirigido a la página principal. ¿Continuar?')) {
             window.location.href = '../home.html';
         }

@@ -4844,33 +4844,30 @@ body #alertContainer .custom-alert {
     flex-direction: column;
     align-items: center;
     justify-content: center; 
-    min-height: calc(500vh - 120px); /* Altura total menos el header */
+    min-height: calc(500vh - 120px);
     width: 100%;
     background: transparent;
-    padding-top: 40px; /* Empuja ligeramente para mejor centrado */
-    margin-top: 250px; /* <<< AQUI LO BAJA */
+    padding-top: 40px; 
+    margin-top: 250px; 
 }
 
 
-/* Contenedor de las barras */
+
 .music-waves {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    height: 110px;      /* Más alto */
-    gap: 10px;          /* Más separación */
+    height: 110px;      
+    gap: 10px;         
     margin-bottom: 2rem;
 }
 
-/* Cada barra individual */
 .wave-bar {
-    width: 12px;                           /* Más ancho */
     background: linear-gradient(to top, #7C3AED, #EC4899);
     border-radius: 6px;
     animation: wave-animation 1s ease-in-out infinite;
 }
 
-/* Alturas más grandes */
 .wave-bar:nth-child(1) { height: 45px; animation-delay: 0.0s; }
 .wave-bar:nth-child(2) { height: 70px; animation-delay: 0.1s; }
 .wave-bar:nth-child(3) { height: 100px; animation-delay: 0.2s; }
@@ -4879,12 +4876,12 @@ body #alertContainer .custom-alert {
 
 @keyframes wave-animation {
     0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.4); } /* Más dramático */
+    50% { transform: scaleY(0.4); } 
 }
 
 .custom-loader-text {
     font-family: 'League Spartan', sans-serif;
-    font-size: 1.6rem;     /* Más grande */
+    font-size: 1.6rem;     
     font-weight: 700;
     letter-spacing: 4px;
     color: rgba(255, 255, 255, 0.9);

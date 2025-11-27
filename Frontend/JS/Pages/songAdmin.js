@@ -53,9 +53,6 @@ export function initializeSongPage() {
     initializeCommentsModalLogic();
     initializeDeleteModalsLogic();
 }
-
-// --- 4. FUNCIONES PRINCIPALES ---
-
 // --- 4. FUNCIONES PRINCIPALES ---
 
 async function loadPageData() {

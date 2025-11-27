@@ -4836,60 +4836,40 @@ body #alertContainer .custom-alert {
         min-width: 18px !important;
     }
 }
-/* =========================================
-   CUSTOM LOADING ANIMATION (MUSIC WAVES)
-   ========================================= */
 .custom-loader-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center; 
-    min-height: calc(500vh - 120px);
+    position: fixed;         
+    top: 0;
+    left: 0;
     width: 100%;
-    background: transparent;
-    padding-top: 40px; 
-    margin-top: 250px; 
+    height: 100%;
+    z-index: 9999;          
+    display: flex;
+    align-items: center;      
+    justify-content: center;  
+    pointer-events: all;      
 }
-
-
 
 .music-waves {
     display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    height: 110px;      
-    gap: 10px;         
-    margin-bottom: 2rem;
+    align-items: flex-end; 
+    height: 100px;      
+    gap: 12px;       
 }
 
 .wave-bar {
-    background: linear-gradient(to top, #7C3AED, #EC4899);
-    border-radius: 6px;
+    width: 16px;              
+    background: linear-gradient(to top, #7C3AED, #EC4899); 
+    border-radius: 8px;
     animation: wave-animation 1s ease-in-out infinite;
 }
 
-.wave-bar:nth-child(1) { height: 45px; animation-delay: 0.0s; }
-.wave-bar:nth-child(2) { height: 70px; animation-delay: 0.1s; }
-.wave-bar:nth-child(3) { height: 100px; animation-delay: 0.2s; }
-.wave-bar:nth-child(4) { height: 60px; animation-delay: 0.3s; }
-.wave-bar:nth-child(5) { height: 85px; animation-delay: 0.4s; }
+.wave-bar:nth-child(1) { height: 20px; animation-delay: 0.0s; }
+.wave-bar:nth-child(2) { height: 40px; animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { height: 50px; animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { height: 30px; animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { height: 40px; animation-delay: 0.4s; }
 
 @keyframes wave-animation {
     0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.4); } 
-}
-
-.custom-loader-text {
-    font-family: 'League Spartan', sans-serif;
-    font-size: 1.6rem;     
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: rgba(255, 255, 255, 0.9);
-    text-transform: uppercase;
-    animation: text-fade 1.5s infinite ease-in-out;
-}
-
-@keyframes text-fade {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+    50% { transform: scaleY(0.5); } 
 }

@@ -712,23 +712,52 @@ async function submitCreateReview(state) {
             const storageKey = `review_content_${reviewId}`;
             localStorage.setItem(storageKey, JSON.stringify(state.currentReviewData));
             console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`);
+            
+            // Guardar el timestamp de creación para que aparezca primero en el filtro "recent"
+            const creationTimestampKey = `review_created_at_${reviewId}`;
+            const now = Date.now();
+            localStorage.setItem(creationTimestampKey, String(now));
+            console.log(`⏰ Timestamp de creación guardado para review ${reviewId}: ${now}`);
         }
         
         showAlert(' Reseña creada y guardada exitosamente', 'success');
         hideCreateReviewModal(state);
         
         // Esperar un momento para que el backend procese la reseña antes de recargar
-        // Esto asegura que la reseña nueva esté disponible cuando se recargue el feed
+        // Aumentamos el timeout a 800ms para dar más tiempo al backend
         setTimeout(() => {
             if (typeof state.loadReviews === 'function') {
-                console.log('[CREATE REVIEW] Recargando reseñas con filtro "recent"...');
-                // Primero cambiar el filtro a 'recent'
-                const filterButtons = document.querySelectorAll('.filter-btn');
-                filterButtons.forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.filter === 'recent');
-                });
-                // Luego recargar las reseñas
-                state.loadReviews();
+                console.log('[CREATE REVIEW] ✅ Recargando reseñas con filtro "recent"...');
+                console.log('[CREATE REVIEW] 📅 ReviewId de la reseña creada:', reviewId);
+                
+                // Obtener las funciones de setCurrentFilter y getCurrentFilter si están disponibles
+                // Estas funciones deberían estar en el scope de homeAdmin.js
+                let setCurrentFilterFn = null;
+                let getCurrentFilterFn = null;
+                
+                // Intentar obtener desde window si están expuestas
+                if (typeof window.setCurrentReviewFilter === 'function') {
+                    setCurrentFilterFn = window.setCurrentReviewFilter;
+                }
+                if (typeof window.getCurrentReviewFilter === 'function') {
+                    getCurrentFilterFn = window.getCurrentReviewFilter;
+                }
+                
+                // Si tenemos setReviewFilter disponible, usarlo (es la forma correcta)
+                if (typeof setReviewFilter === 'function') {
+                    // setReviewFilter actualiza el estado y recarga las reseñas
+                    console.log('[CREATE REVIEW] 🔄 Cambiando filtro a "recent" y recargando...');
+                    setReviewFilter('recent', setCurrentFilterFn || (() => {}), state.loadReviews);
+                } else {
+                    // Fallback: cambiar UI manualmente y recargar
+                    console.log('[CREATE REVIEW] 🔄 Fallback: cambiando UI y recargando...');
+                    const filterButtons = document.querySelectorAll('.filter-btn');
+                    filterButtons.forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.filter === 'recent');
+                    });
+                    // Luego recargar las reseñas
+                    state.loadReviews();
+                }
             } else if (typeof setReviewFilter === 'function') {
                 setReviewFilter('recent', () => {}, state.loadReviews);
             }
@@ -736,7 +765,7 @@ async function submitCreateReview(state) {
             if (typeof window.reloadCarousel === 'function') {
                 window.reloadCarousel();
             }
-        }, 500); // Esperar 500ms para que el backend procese
+        }, 800); // Esperar 800ms para que el backend procese la reseña nueva
         
         setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 1000);
         

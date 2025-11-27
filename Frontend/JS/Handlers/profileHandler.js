@@ -301,7 +301,11 @@ container.querySelectorAll('.btn-edit').forEach(btn => {
                 const reviewId = this.getAttribute('data-review-id');
                 const reviewTitle = this.closest('.review-item')?.querySelector('.review-title')?.textContent || 'esta reseña';
                 
-                if (typeof showDeleteReviewModal === 'function') {
+                // Usar siempre la versión del módulo deleteModals (igual que en home)
+                if (window.modalsState && typeof window.showDeleteReviewModalFromModule === 'function') {
+                    window.showDeleteReviewModalFromModule(reviewId, reviewTitle);
+                } else if (typeof showDeleteReviewModal === 'function') {
+                    // Fallback a la función local si por alguna razón no está el módulo
                     showDeleteReviewModal(reviewId, reviewTitle);
                 } else {
                     console.warn('showDeleteReviewModal no está disponible');

@@ -492,6 +492,49 @@
     min-width: fit-content;
 }
 
+/* Estilos de estrellas igual que en home.css */
+.review-rating {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.review-stars {
+    font-size: 1.155em;
+    display: flex;
+    gap: 0.1rem;
+}
+
+.review-stars .star {
+    display: inline-block;
+    line-height: 1;
+    overflow: hidden;
+}
+
+.review-stars .full-star {
+    color: #ffd700;
+}
+
+.review-stars .empty-star {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.review-stars .half-star {
+    position: relative;
+    width: 0.5em;
+    color: #ffd700;
+}
+
+.review-stars .half-star::before {
+    content: '★';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1em;
+    overflow: hidden;
+    opacity: 0.5;
+}
+
 /* Asegurar que las reseñas dentro de featured-reviews-section tengan el layout horizontal */
 .featured-reviews-section .review-item {
     display: flex !important;

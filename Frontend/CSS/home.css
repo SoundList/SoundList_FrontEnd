@@ -3833,9 +3833,16 @@ body #alertContainer .custom-alert {
     user-select: none;
 }
 
+/* Solo resaltar la estrella sobre la que está el mouse, no todas */
 .star-input:hover {
     color: #FFD85E;
     transform: scale(1.1);
+}
+
+/* Las estrellas posteriores a la que está en hover deben mantenerse sin resaltar */
+.star-input:hover ~ .star-input {
+    color: rgba(255, 255, 255, 0.3) !important;
+    transform: scale(1);
 }
 
 .star-input.active {

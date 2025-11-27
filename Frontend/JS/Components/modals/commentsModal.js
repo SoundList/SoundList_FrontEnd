@@ -309,18 +309,37 @@ export async function loadCommentsIntoModal(reviewId, state) {
         }
         
         attachCommentActionListeners(state, reviewId);
+        
+        // Actualizar contador en el botón de comentarios de la reseña usando los comentarios ya cargados
+        updateCommentCountInButton(reviewId, comments.length);
     } catch (error) {
         console.error("Error cargando comentarios en modal:", error);
         commentsList.innerHTML = `<div class="comment-empty">Error al cargar comentarios.</div>`;
+        // Intentar actualizar el contador incluso si hay error
+        try {
+            const comments = await getCommentsByReview(reviewId);
+            updateCommentCountInButton(reviewId, comments.length);
+        } catch (e) {
+            console.warn('No se pudo actualizar el contador de comentarios:', e);
+        }
     }
-    
-    // Actualizar contador en el botón de comentarios de la reseña
+}
+
+/**
+ * Actualiza el contador de comentarios en el botón de la reseña
+ */
+function updateCommentCountInButton(reviewId, count) {
     const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
     if (commentBtn) {
         const countSpan = commentBtn.querySelector('.review-comments-count');
         if (countSpan) {
-            const comments = await getCommentsByReview(reviewId);
-            countSpan.textContent = comments.length;
+            countSpan.textContent = count;
+        } else {
+            // Si no encuentra el span con la clase, buscar cualquier span dentro del botón
+            const span = commentBtn.querySelector('span');
+            if (span) {
+                span.textContent = count;
+            }
         }
     }
 }

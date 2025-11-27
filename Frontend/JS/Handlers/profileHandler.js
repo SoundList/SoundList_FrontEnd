@@ -106,6 +106,9 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
         const likeCount = review.likes || 0;
         const commentCount = review.comments || 0;
 
+        const editButtonStyle = (likeCount > 0) ? 'display: none !important;' : '';
+
+
         // Formato EXACTO igual que renderReviews de homeAdmin.js
         return `
             <div class="review-item" data-review-id="${reviewId}">
@@ -141,6 +144,7 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
                                         data-review-title="${review.title || ''}"
                                         data-review-content="${review.comment || ''}"
                                         data-review-rating="${review.rating || 0}"
+                                        style="${editButtonStyle}"
                                         title="Editar reseña">
                                     <i class="fas fa-pencil"></i>
                             </button>
@@ -178,12 +182,12 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
  * Adjunta los event listeners a las reseñas del perfil
  */
 function attachProfileReviewListeners(container, isOwnProfile) {
-    // Likes
+
     container.querySelectorAll('.btn-like').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
                 if (typeof showLoginRequiredModal === 'function') {
@@ -191,120 +195,107 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 }
                 return;
             }
-            
+
             const icon = this.querySelector('i');
             const likesSpan = this.parentElement.querySelector('.review-likes-count');
-            const isLiked = this.classList.contains('liked');
             const reviewId = this.getAttribute('data-review-id');
             const currentUserId = localStorage.getItem('userId');
+            const isLiked = this.classList.contains('liked');
+            const currentLikes = parseInt(likesSpan.textContent) || 0;
+            const likesCacheKey = `review_likes_${reviewId}`;
+            const likeUserKey = `like_${reviewId}_${currentUserId}`;
+            const reactionKey = `reaction_${reviewId}_${currentUserId}`;
 
-            this.style.transform = 'scale(1.2)';
-            setTimeout(() => { this.style.transform = ''; }, 200);
+            const newLikes = isLiked
+                ? Math.max(0, currentLikes - 1)
+                : currentLikes + 1;
 
-            if (isLiked) {
-                // Quitar like (Optimistic Update)
-                this.classList.remove('liked');
-                icon.style.color = 'rgba(255,255,255,0.7)';
-                const currentLikes = parseInt(likesSpan.textContent) || 0;
-                const newLikesCount = Math.max(0, currentLikes - 1);
-                likesSpan.textContent = newLikesCount;
-                
-                // Actualizar cache
-                const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) { /* ignore */ }
-                
-                // Eliminar del localStorage INMEDIATAMENTE (antes de llamar al backend)
-                // Esto asegura que al recargar, el estado sea correcto
-                localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
-                
-                const deleteReviewReactionFn = window.socialApi?.deleteReviewReaction || (typeof deleteReviewReaction !== 'undefined' ? deleteReviewReaction : null);
-                if (deleteReviewReactionFn) {
-                    // La función ahora solo acepta reviewId (usa JWT)
-                    deleteReviewReactionFn(reviewId)
-                        .then(() => {
-                            // Mantener cache actualizado
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        })
-                        .catch(err => {
-                            console.warn('No se pudo eliminar like del backend:', err);
-                            // NO revertir el cambio visual si el backend falla
-                            // El localStorage ya fue limpiado, así que el estado es correcto
-                            // Solo actualizar el cache de likes
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        });
-                } else {
-                    // Si no hay función disponible, al menos actualizar el cache
-                    try {
-                        localStorage.setItem(likesCacheKey, String(newLikesCount));
-                    } catch (e) { /* ignore */ }
-                }
-            } else {
-                // Agregar like (Optimistic Update)
-                this.classList.add('liked');
-                icon.style.color = 'var(--magenta, #EC4899)';
-                const currentLikes = parseInt(likesSpan.textContent) || 0;
-                const newLikesCount = currentLikes + 1;
-                likesSpan.textContent = newLikesCount;
-                
-                // Actualizar cache
-                const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) { /* ignore */ }
-                
-                localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
-                if (typeof addReviewReaction === 'function') {
-                    addReviewReaction(reviewId, currentUserId, authToken)
-                        .then(data => {
-                            const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-                            if (reactionId) {
-                                localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
-                            }
-                            // Mantener cache actualizado
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        })
-                        .catch(err => {
-                            console.warn('No se pudo guardar like:', err);
-                            // Revertir cambio si falla
-                            this.classList.remove('liked');
-                            icon.style.color = 'rgba(255,255,255,0.7)';
-                            likesSpan.textContent = currentLikes;
-                            localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                            try {
-                                localStorage.setItem(likesCacheKey, String(currentLikes));
-                            } catch (e) { /* ignore */ }
-                        });
+            likesSpan.textContent = newLikes;
+            this.classList.toggle('liked');
+            icon.style.color = this.classList.contains('liked')
+                ? 'var(--magenta, #EC4899)'
+                : 'rgba(255,255,255,0.7)';
+
+            const reviewInteractions = this.closest('.review-interactions');
+            if (reviewInteractions) {
+                const editBtn = reviewInteractions.querySelector('.btn-edit');
+                if (editBtn) {
+                    if (newLikes > 0) {
+                        editBtn.style.setProperty('display', 'none', 'important');
+                    } else {
+                        editBtn.style.removeProperty('display');
+                    }
                 }
             }
+
+            try { localStorage.setItem(likesCacheKey, String(newLikes)); } catch (e) {}
+
+
+            if (!isLiked) {
+
+                localStorage.setItem(likeUserKey, 'true');
+                addReviewReaction(reviewId, currentUserId, authToken)
+                    .then(data => {
+                        const reactionId =
+                            data?.Id_Reaction ||
+                            data?.ReactionId ||
+                            data?.id;
+
+                        if (reactionId) {
+                            localStorage.setItem(reactionKey, String(reactionId));
+                        }
+                    })
+                    .catch(err => {
+                        console.warn("Error dando like:", err);
+                        this.classList.remove('liked');
+                        icon.style.color = 'rgba(255,255,255,0.7)';
+                        likesSpan.textContent = currentLikes;
+                        localStorage.removeItem(likeUserKey);
+                        localStorage.setItem(likesCacheKey, String(currentLikes));
+                    });
+
+                return;
+            }
+
+            // ==============================
+            //      REMOVE LIKE → QUITAR
+            // ==============================
+            localStorage.removeItem(likeUserKey);
+            localStorage.removeItem(reactionKey);
+
+            deleteReviewReaction(reviewId)
+                .then(() => {
+                    // mantener cache actualizado
+                    localStorage.setItem(likesCacheKey, String(newLikes));
+                })
+                .catch(err => {
+                    console.warn("Error quitando like:", err);
+                    // NO revertimos UI (querés UI optimista)
+                    try {
+                        localStorage.setItem(likesCacheKey, String(newLikes));
+                    } catch (e) {}
+                });
+
         });
     });
 
-    // Editar (solo si es tu propio perfil)
+
     if (isOwnProfile) {
-        container.querySelectorAll('.btn-edit').forEach(btn => {
+container.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const reviewId = this.getAttribute('data-review-id');
-                const title = this.getAttribute('data-review-title') || '';
-                const content = this.getAttribute('data-review-content') || '';
-                const rating = parseInt(this.getAttribute('data-review-rating')) || 0;
+                if (this.style.display === 'none') return;
                 
-                if (typeof showEditReviewModal === 'function') {
-                    showEditReviewModal(reviewId, title, content, rating);
-                } else {
-                    console.warn('showEditReviewModal no está disponible');
+                const reviewId = this.getAttribute('data-review-id');
+                if (window.showEditReviewModal) {
+                    const item = this.closest('.review-item');
+                    const title = item.querySelector('.review-title')?.textContent || '';
+                    const content = item.querySelector('.review-comment')?.textContent || '';
+                    window.showEditReviewModal(reviewId, title, content, 0);
                 }
             });
         });
+    
 
         // Eliminar (solo si es tu propio perfil)
         container.querySelectorAll('.btn-delete').forEach(btn => {
@@ -595,27 +586,8 @@ async function loadUserReviews(userIdToLoad) {
                     }
 
                     const contentName = contentType === 'song' ? songName : albumName;
-
-                    // Normalizar fecha de creación (misma lógica robusta que en reviewFeed.js)
-                    const createdAtRaw =
-                        review.CreatedAt ||
-                        review.Created ||
-                        review.createdAt ||
-                        review.DateCreated ||
-                        review.dateCreated ||
-                        review.CreatedDate ||
-                        review.createdDate;
-
-                    let createdAtDate;
-                    if (createdAtRaw instanceof Date) {
-                        createdAtDate = createdAtRaw;
-                    } else if (createdAtRaw) {
-                        const parsedDate = new Date(createdAtRaw);
-                        createdAtDate = isNaN(parsedDate.getTime()) ? new Date(0) : parsedDate;
-                    } else {
-                        // Si no viene fecha del backend, usar una fecha muy antigua
-                        createdAtDate = new Date(0);
-                    }
+                    const createdAt = review.CreatedAt || review.Created || review.Date || new Date();
+                    const createdAtDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
 
                     return {
                         id: reviewId,
@@ -781,27 +753,7 @@ async function loadUserProfile(userIdToLoad) {
         
         if (recentContainer) {
             if (userReviews && userReviews.length > 0) {
-                // Ordenar por fecha de creación: más recientes primero
-                const sortedByRecent = [...userReviews].sort((a, b) => {
-                    const getTimestamp = (date) => {
-                        if (date instanceof Date) {
-                            const ts = date.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (date) {
-                            const parsed = new Date(date);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        return 0;
-                    };
-
-                    const dateA = getTimestamp(a.createdAt);
-                    const dateB = getTimestamp(b.createdAt);
-                    return dateB - dateA; // Más recientes primero
-                });
-
-                renderProfileReviews(sortedByRecent, recentContainerId, isOwnProfile);
+                renderProfileReviews(userReviews, recentContainerId, isOwnProfile);
             } else {
                 recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas recientes de este usuario.</p>";
             }
@@ -817,26 +769,8 @@ async function loadUserProfile(userIdToLoad) {
                 const likesB = Number(b.likes) || Number(b.Likes) || 0;
                 // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
                 if (likesB === likesA) {
-                    const getTimestamp = (date, fallback) => {
-                        if (date instanceof Date) {
-                            const ts = date.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (date) {
-                            const parsed = new Date(date);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (fallback) {
-                            const parsed = new Date(fallback);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        return 0;
-                    };
-
-                    const dateA = getTimestamp(a.createdAt, a.CreatedAt);
-                    const dateB = getTimestamp(b.createdAt, b.CreatedAt);
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : (a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0);
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : (b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0);
                     return dateB - dateA;
                 }
                 return likesB - likesA; // Más likes primero
@@ -1098,14 +1032,33 @@ async function showEditReviewModal(reviewId, title, content, rating) {
         const modalTitle = modal.querySelector('.create-review-title');
         if (modalTitle) modalTitle.textContent = 'Editar Reseña';
         
+        
         const contentSelector = document.getElementById('createReviewContentSelector');
+        if (contentSelector) contentSelector.style.display = 'none';
+
+        const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+        if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+
+        const contentSearchInput = document.getElementById('contentSearchInput');
+        if (contentSearchInput) {
+            contentSearchInput.disabled = true;
+            contentSearchInput.style.pointerEvents = "none";
+        }
+
+        const changeContentBtn = document.getElementById('changeContentBtn');
+        if (changeContentBtn) changeContentBtn.style.display = 'none';
         const contentInfo = document.getElementById('createReviewContentInfo');
+        if (contentInfo) {
+            contentInfo.style.pointerEvents = "none"; 
+            contentInfo.style.opacity = "0.7"; 
+        }
+
         if (contentSelector) contentSelector.style.display = 'none';
         if (contentInfo) contentInfo.style.display = 'block';
         
         modal.style.display = 'flex';
     } else {
-        // Si no hay modal, redirigir a home para editar
+    
         if (confirm('Para editar la reseña, serás redirigido a la página principal. ¿Continuar?')) {
             window.location.href = '../home.html';
         }
@@ -2532,43 +2485,31 @@ function initializeCreateReviewModal() {
         });
     }
     
-    // Estrellas (igual que en createReviewModal.js del home)
+    // Estrellas
     if (createReviewStars) {
         let currentRating = 0;
         const stars = createReviewStars.querySelectorAll('.star-input');
         
-        if (stars.length === 0) {
-            console.warn('⚠️ No se encontraron estrellas con la clase .star-input');
-            return;
-        }
-        
-        function highlightStars(rating) {
-            stars.forEach((star, index) => {
-                star.classList.toggle('active', (index + 1) <= rating);
-            });
-        }
-        
-        function updateStarRating(rating) {
-            currentRating = rating;
-            highlightStars(rating);
-        }
-        
-        stars.forEach((star) => {
-            star.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const rating = parseInt(this.getAttribute('data-rating')) || 0;
-                updateStarRating(rating);
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                currentRating = parseInt(star.getAttribute('data-rating'));
+                stars.forEach((s, i) => {
+                    s.classList.toggle('active', i < currentRating);
+                });
             });
             
-            star.addEventListener('mouseenter', function() {
-                const rating = parseInt(this.getAttribute('data-rating')) || 0;
-                highlightStars(rating);
+            star.addEventListener('mouseenter', () => {
+                const hoverRating = parseInt(star.getAttribute('data-rating'));
+                stars.forEach((s, i) => {
+                    s.style.opacity = i < hoverRating ? '1' : '0.5';
+                });
             });
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
-            highlightStars(currentRating);
+            stars.forEach((s, i) => {
+                s.style.opacity = i < currentRating ? '1' : '0.5';
+            });
         });
     }
 }

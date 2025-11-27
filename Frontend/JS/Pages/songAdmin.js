@@ -53,9 +53,6 @@ export function initializeSongPage() {
     initializeCommentsModalLogic();
     initializeDeleteModalsLogic();
 }
-
-// --- 4. FUNCIONES PRINCIPALES ---
-
 // --- 4. FUNCIONES PRINCIPALES ---
 
 async function loadPageData() {
@@ -214,7 +211,6 @@ function renderSongDetails(song) {
     
     document.getElementById('detailName').textContent = song.title;
     document.getElementById('detailReleaseDate').textContent = releaseDate;
-    document.getElementById('detailGenre').textContent = song.genre || '-';
 
     try {
         const parts = song.duration.split(':');

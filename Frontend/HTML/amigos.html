@@ -3,21 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoundList - Amigos</title>
-    <!-- Favicon -->
+    <title>SoundList - Explorar</title>
     <link rel="icon" type="image/png" href="../Assets/default-avatar.png">
     <link rel="shortcut icon" type="image/png" href="../Assets/default-avatar.png">
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Arimo:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../CSS/home.css">
     <link rel="stylesheet" href="../CSS/amigos.css">
+    <link rel="stylesheet" href="../CSS/home.css">
 </head>
 <body>
     <div class="amigos-container">
@@ -35,8 +30,7 @@
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div class="search-dropdown" id="searchDropdown" style="display: none;">
-                    </div>
+                    <div class="search-dropdown" id="searchDropdown" style="display: none;"></div>
                 </div>
 
                 <div class="header-center d-none d-lg-flex">
@@ -94,69 +88,69 @@
                             </button>
                         </div>
                     </div>
-                    <div class="add-review-container" id="addReviewContainer" style="display: none;">
-                        <button class="icon-btn add-review-btn" id="addReviewBtn" title="Crear reseña">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
         </header>
 
         <main class="main-content">
-            <section class="user-search-section">
-                <div class="container-fluid">
-                    <div class="user-search-container">
-                        <h2 class="section-title">
-                            <i class="fas fa-user-plus"></i> Buscar y Seguir Usuarios
-                        </h2>
-                        <div class="user-search-box">
-                            <i class="fas fa-search user-search-icon"></i>
-                            <input type="text" 
-                                class="user-search-input" 
-                                id="userSearchInput" 
-                                placeholder="Buscar por nombre de usuario...">
-                            <button class="user-search-clear" id="userSearchClear" style="display: none;">
-                                <i class="fas fa-times"></i>
-                            </button>
+            <div class="explore-grid container-fluid">
+                
+                <div class="explore-left-column">
+                    
+                    <section class="reviews-filter-section">
+                        <div class="reviews-filter-container">
+                            <h2 class="section-title">
+                                <i class="fas fa-comments"></i> Reseñas
+                            </h2>
+                            <div class="filter-buttons">
+                                <button class="filter-btn active" data-filter="seguidores" id="filterAmigos">
+                                    <i class="fas fa-user-friends"></i> Seguidores
+                                </button>
+                                <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
+                                    <i class="fas fa-heart"></i> Seguidos
+                                </button>
+                            </div>
                         </div>
-                        <div class="user-search-results" id="userSearchResults" style="display: none;">
-                        </div>
-                    </div>
-                </div>
-            </section>
+                    </section>
 
+                    <section class="reviews-list-section">
+                        <div class="reviews-list-container">
+                            
+                            <div class="reviews-list" id="reviewsList"></div>
 
-            <section class="reviews-filter-section">
-                <div class="container-fluid">
-                    <div class="reviews-filter-container">
-                        <h2 class="section-title">
-                            <i class="fas fa-comments"></i> Reseñas
-                        </h2>
-                        <div class="filter-buttons">
-                            <button class="filter-btn active" data-filter="seguidores" id="filterAmigos">
-                                <i class="fas fa-user-friends"></i> Seguidores
-                            </button>
-                            <button class="filter-btn" data-filter="seguidos" id="filterSeguidos">
-                                <i class="fas fa-heart"></i> Seguidos
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                            <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
+                                <i class="fas fa-comment-slash"></i>
+                                <p>No hay reseñas para mostrar</p>
+                            </div>
 
-            <section class="reviews-list-section">
-                <div class="container-fluid">
-                    <div class="reviews-list-container">
-                        <div class="reviews-list" id="reviewsList">
                         </div>
-                        <div class="reviews-empty" id="reviewsEmpty" style="display: none;">
-                            <i class="fas fa-comment-slash"></i>
-                            <p>No hay reseñas para mostrar</p>
-                        </div>
-                    </div>
+                    </section>
+
                 </div>
-            </section>
+
+                <div class="explore-right-column">
+                    <section class="user-search-section sticky-search">
+                        <div class="user-search-container">
+                            <h2 class="section-title small-title">
+                                <i class="fas fa-user-plus"></i> Buscar Usuarios
+                            </h2>
+                            <div class="user-search-box compact-search">
+                                <i class="fas fa-search user-search-icon"></i>
+                                <input type="text" 
+                                    class="user-search-input" 
+                                    id="userSearchInput" 
+                                    placeholder="Buscar usuario...">
+                                <button class="user-search-clear" id="userSearchClear" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="user-search-results compact-results" id="userSearchResults" style="display: none;">
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
         </main>
     </div>
 
@@ -171,6 +165,23 @@
                 <div class="login-required-modal-buttons">
                     <button class="login-required-btn login-required-btn-primary" id="goToLoginBtn">Iniciar sesión</button>
                     <button class="login-required-btn login-required-btn-secondary" id="cancelLoginRequiredBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logout-logo-img">
+                </div>
+                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
                 </div>
             </div>
         </div>
@@ -199,11 +210,76 @@
         </div>
     </div>
 
+    <!-- Comments Modal (igual que en home) -->
+    <div class="comments-modal-overlay" id="commentsModalOverlay" style="display: none;">
+        <div class="comments-modal">
+            <div class="comments-modal-content">
+                <div class="comments-modal-header">
+                    <h2 class="comments-modal-title">Comentarios <span id="commentsCount">0</span></h2>
+                    <button class="comments-modal-close" id="closeCommentsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="comments-list-container" id="commentsList">
+                    <!-- Comments will be populated here -->
+                </div>
+                <div class="comments-input-container">
+                    <div class="comments-input-wrapper">
+                        <img src="../Assets/default-avatar.png" alt="Avatar" class="comments-input-avatar" id="commentsModalAvatar">
+                        <input type="text" 
+                               class="comments-input" 
+                               id="commentInput" 
+                               placeholder="Escribe un comentario..."
+                               maxlength="500">
+                        <button class="comments-send-btn" id="submitCommentBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Comment Modal -->
+    <div class="delete-comment-modal-overlay" id="deleteCommentModalOverlay" style="display: none;">
+        <div class="delete-comment-modal">
+            <div class="delete-comment-modal-content">
+                <div class="delete-comment-icon">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h2 class="delete-comment-title">Eliminar comentario</h2>
+                <p class="delete-comment-message">¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.</p>
+                <div class="delete-comment-buttons">
+                    <button class="delete-comment-btn delete-comment-cancel" id="cancelDeleteCommentBtn">Cancelar</button>
+                    <button class="delete-comment-btn delete-comment-confirm" id="confirmDeleteCommentBtn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Review Modal -->
+    <div class="delete-review-modal-overlay" id="deleteReviewModalOverlay" style="display: none;">
+        <div class="delete-review-modal">
+            <div class="delete-review-modal-content">
+                <div class="delete-review-icon">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h2 class="delete-review-title">Eliminar reseña</h2>
+                <p class="delete-review-message">¿Estás seguro de que quieres eliminar esta reseña? Esta acción no se puede deshacer.</p>
+                <div class="delete-review-buttons">
+                    <button class="delete-review-btn delete-review-cancel" id="cancelDeleteReviewBtn">Cancelar</button>
+                    <button class="delete-review-btn delete-review-confirm" id="confirmDeleteReviewBtn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
     <script src="../JS/APIs/userApi.js"></script>
+    <script type="module" src="../JS/Handlers/likesHandler.js"></script>
+    <script type="module" src="../JS/Handlers/commentHandler.js"></script>
     <script type="module" src="../JS/main.js"></script>
 </body>
 </html>
-

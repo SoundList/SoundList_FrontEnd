@@ -1,3 +1,4 @@
+import {API_BASE_URL} from './../APIs/configApi.js';
 // Reset Password Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const resetPasswordForm = document.getElementById('resetPasswordForm');
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showAlert('Restableciendo contraseña...', 'info');
         
         // Usar el gateway directamente
-        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const GATEWAY_BASE_URL = API_BASE_URL;
         const resetPasswordEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/reset-password`;
         
         axios.post(resetPasswordEndpoint, {

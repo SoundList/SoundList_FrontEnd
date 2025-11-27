@@ -7,6 +7,7 @@ import { initializeCreateReviewModal, showCreateReviewModal, showEditReviewModal
 import { initializeCommentsModalLogic, showCommentsModal } from '../Components/modals/commentsModal.js';
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
 import { initializeDeleteModalsLogic, showDeleteReviewModal } from '../Components/modals/deleteModals.js';
+import { AmigosHandler } from '../Handlers/amigosHandler.js';
 
 // --- 2. VARIABLES GLOBALES (ESPECÍFICAS DEL HOME) ---
 let currentReviewFilter = 'popular'; // Filtro actual de reseñas: 'popular' o 'recent'
@@ -27,8 +28,10 @@ const modalsState = {
 
 // --- 3. PUNTO DE ENTRADA (LLAMADO POR MAIN.JS) ---
 
-export function initializeHomePage() {
+export async function initializeHomePage() {
     console.log("Inicializando lógica de Home...");
+
+    await AmigosHandler.init();
     
     if (document.getElementById('carouselWrapper')) {
         initializeCarousel();
@@ -52,15 +55,40 @@ export function initializeHomePage() {
         initializeDeleteModalsLogic(modalsState);
     }
     
-    // Hacer showCreateReviewModal disponible globalmente para que el headerHandler pueda usarla
-    if (typeof window !== 'undefined') {
-        window.showCreateReviewModal = (contentData = null) => showCreateReviewModal(contentData, modalsState);
-        window.showEditReviewModal = (reviewId, title, content, rating) => showEditReviewModal(reviewId, title, content, rating, modalsState);
+    window.showEditReviewModal = (reviewId, title, content, rating) => {
+    const reviewCard = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+    
+    if (reviewCard) {
+        const likesCountEl = reviewCard.querySelector('.review-likes-count');
+        const likes = parseInt(likesCountEl?.textContent || '0');
+
+        if (likes > 0) {
+            showAlert('No se puede editar esta reseña porque ya tiene reacciones (likes).', 'warning');
+            return;
+        }
+    }
+
+    import('../Components/modals/createReviewModal.js')
+        .then(module => {
+            module.showEditReviewModal(
+                reviewId,
+                title,
+                content,
+                rating,
+                modalsState     
+            );
+        })
+        .catch(err => console.error('Error cargando showEditReviewModal:', err));
+};
+
         window.showCommentsModal = (reviewId) => showCommentsModal(reviewId, modalsState);
         window.showReviewDetailModal = (reviewId) => showReviewDetailModal(reviewId, modalsState);
         window.showDeleteReviewModal = (reviewId, reviewTitle) => showDeleteReviewModal(reviewId, reviewTitle, modalsState);
+        // Exponer funciones de filtro para que el modal pueda cambiar el filtro después de crear una reseña
+        window.setCurrentReviewFilter = (filter) => { currentReviewFilter = filter; };
+        window.getCurrentReviewFilter = () => currentReviewFilter;
     }
-}
+
 
 
 // --- 4. FUNCIONES GLOBALES DEL HOME (FILTRO Y ESTRELLAS) ---

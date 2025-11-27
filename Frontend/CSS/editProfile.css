@@ -326,7 +326,6 @@
     line-height: 1.5;
 }
 
-/* Botón de eliminar cuenta con estilo elegante */
 .btn-delete-account {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
     border: none;
@@ -377,7 +376,6 @@
     box-shadow: none;
 }
 
-/* Botón del sidebar para eliminar cuenta */
 .sidebar button.text-danger {
     color: rgba(255, 255, 255, 0.7);
     border-color: rgba(239, 68, 68, 0.3);
@@ -396,8 +394,6 @@
     color: var(--blanco);
 }
 
-
-/* --- 5. Diseño Responsivo --- */
 @media (max-width: 992px) { 
     .settings-container {
         flex-direction: column;
@@ -453,4 +449,99 @@
         width: 100%;
         padding: 0.75rem 1.5rem;
     }
+}
+.settings-container {
+    position: relative; 
+}
+
+.btn-back-profile {
+    position: absolute;
+    top: 10px;   
+    left: -80px; 
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4); 
+    font-size: 2.5rem; 
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.btn-back-profile:hover {
+    color:rgba(124, 0, 169, 0.927); 
+    background: rgba(255, 255, 255, 0.05); 
+    transform: translateX(-5px) scale(1.1); 
+    
+}
+
+@media (max-width: 1200px) {
+    .btn-back-profile {
+        left: 0;
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .btn-back-profile {
+        position: static; 
+        margin-bottom: 10px;
+        left: 0;
+        font-size: 1.8rem;
+        display: block;
+        width: auto;
+        height: auto;
+        justify-content: flex-start;
+    }
+    
+    .btn-back-profile:hover {
+        transform: translateX(-5px);
+    }
+}
+
+
+.custom-tooltip {
+    position: absolute;
+    top: 120%;  
+    left: 50%;  
+    transform: translateX(-50%) translateY(-10px); 
+    background-color: rgba(13, 17, 32, 0.95);
+    color: var(--blanco);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem; 
+    font-family: 'League Spartan', sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+    z-index: 101;
+}
+
+.custom-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%; 
+    left: 50%;
+    margin-left: -6px; 
+    
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent rgba(13, 17, 32, 0.95) transparent;
+}
+
+.btn-back-profile:hover .custom-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0); 
 }

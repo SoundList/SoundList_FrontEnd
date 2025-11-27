@@ -61,7 +61,27 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
             }
 
             // B. ENRIQUECIMIENTO DE DATOS
-            const enrichedReviews = await Promise.all(reviews.map(async (review) => {
+            // Debug: Log de las primeras 3 reseñas crudas del backend
+            console.log(`[REVIEW FEED] Reseñas recibidas del backend: ${reviews.length}`);
+            if (reviews.length > 0) {
+                console.log(`[REVIEW FEED] Primera reseña cruda del backend:`, {
+                    ReviewId: reviews[0].ReviewId || reviews[0].reviewId || reviews[0].id,
+                    date: reviews[0].date, // Campo que usa el backend
+                    Date: reviews[0].Date,
+                    CreatedAt: reviews[0].CreatedAt,
+                    Created: reviews[0].Created,
+                    createdAt: reviews[0].createdAt,
+                    DateCreated: reviews[0].DateCreated,
+                    dateCreated: reviews[0].dateCreated,
+                    CreatedDate: reviews[0].CreatedDate,
+                    createdDate: reviews[0].createdDate,
+                    allKeys: Object.keys(reviews[0])
+                });
+            }
+            
+            // Guardar el índice original para usar como fallback si las fechas son inválidas
+            // Las reseñas más recientes suelen estar al final del array del backend
+            const enrichedReviews = await Promise.all(reviews.map(async (review, originalIndex) => {
                 try {
                     // Normalizar IDs
                     const reviewId = review.ReviewId || review.reviewId || review.id;
@@ -333,10 +353,55 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                     }
                     
                     // Asegurar que createdAt sea parseable correctamente
-                    const createdAtRaw = review.CreatedAt || review.Created || review.createdAt || new Date();
-                    const createdAtDate = createdAtRaw instanceof Date 
-                        ? createdAtRaw 
-                        : (createdAtRaw ? new Date(createdAtRaw) : new Date());
+                    // Si no hay fecha o no se puede parsear, usar una fecha muy antigua (no la fecha actual)
+                    // Intentar múltiples campos posibles que el backend pueda usar
+                    // IMPORTANTE: El backend devuelve 'date' (minúscula), así que lo buscamos primero
+                    const createdAtRaw = review.date || review.Date || review.CreatedAt || review.Created || review.createdAt || review.DateCreated || review.dateCreated || review.CreatedDate || review.createdDate;
+                    
+                    let createdAtDate;
+                    if (createdAtRaw instanceof Date) {
+                        // Si ya es un Date, verificar que sea válido
+                        if (isNaN(createdAtRaw.getTime())) {
+                            console.warn(`[REVIEW FEED] Date inválido para review ${reviewId}`);
+                            createdAtDate = new Date(0); // 1 de enero de 1970
+                        } else {
+                            createdAtDate = createdAtRaw;
+                            // Log para reseñas muy recientes
+                            const now = new Date();
+                            const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+                            if (createdAtRaw >= fiveMinutesAgo) {
+                                console.log(`[REVIEW FEED] ⭐⭐ Reseña MUY RECIENTE (Date): ID=${reviewId}, Fecha=${createdAtRaw.toISOString()}, Timestamp=${createdAtRaw.getTime()}`);
+                            }
+                        }
+                    } else if (createdAtRaw) {
+                        // Intentar parsear como string/número
+                        const parsedDate = new Date(createdAtRaw);
+                        const timestamp = parsedDate.getTime();
+                        
+                        // Verificar que la fecha sea válida y no sea una fecha inválida del backend (0001-01-01)
+                        // Las fechas válidas deben ser después de 1970 (timestamp > 0) y no ser año 1
+                        const isInvalidDate = isNaN(timestamp) || timestamp <= 0 || 
+                                            parsedDate.getFullYear() <= 1 || 
+                                            createdAtRaw.toString().includes('0001-01-01');
+                        
+                        if (isInvalidDate) {
+                            // Si no se puede parsear o es una fecha inválida del backend, usar una fecha muy antigua
+                            console.warn(`[REVIEW FEED] ⚠️ No se pudo parsear fecha para review ${reviewId}:`, createdAtRaw, 'Tipo:', typeof createdAtRaw);
+                            createdAtDate = new Date(0); // 1 de enero de 1970
+                        } else {
+                            createdAtDate = parsedDate;
+                            // Debug: Log para reseñas recientes (últimas 5 minutos)
+                            const now = new Date();
+                            const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+                            if (parsedDate >= fiveMinutesAgo) {
+                                console.log(`[REVIEW FEED] ⭐⭐ Reseña MUY RECIENTE (parsed): ID=${reviewId}, Fecha=${parsedDate.toISOString()}, Raw=${createdAtRaw}, Timestamp=${timestamp}`);
+                            }
+                        }
+                    } else {
+                        // Si no hay fecha, usar una fecha muy antigua (no la fecha actual)
+                        console.warn(`[REVIEW FEED] ⚠️ No se encontró fecha para review ${reviewId}. Campos disponibles:`, Object.keys(review));
+                        createdAtDate = new Date(0); // 1 de enero de 1970
+                    }
 
                     // Retornar objeto final en formato esperado por renderReviews
                     return {
@@ -355,7 +420,8 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                         comments: commentsCount,  // Aseguramos que sea número
                         userId: userId,
                         userLiked: userLiked,  // Necesario para renderReviews
-                        createdAt: createdAtDate  // Aseguramos que sea Date o string parseable
+                        createdAt: createdAtDate,  // Aseguramos que sea Date o string parseable
+                        originalIndex: originalIndex  // Índice original del backend (las más recientes suelen estar al final)
                     };
 
                 } catch (err) {
@@ -367,10 +433,21 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
             // C. Renderizar
             const validReviews = enrichedReviews.filter(r => r !== null);
             
-            // Debug removido - las reseñas se cargan correctamente
+            // Debug: Log de todas las fechas antes de ordenar
+            console.log(`[REVIEW FEED] Total reseñas válidas antes de ordenar: ${validReviews.length}`);
+            if (validReviews.length > 0) {
+                console.log(`[REVIEW FEED] Fechas de todas las reseñas (antes de ordenar):`);
+                validReviews.forEach((review, index) => {
+                    const dateStr = review.createdAt instanceof Date 
+                        ? review.createdAt.toISOString() 
+                        : (review.createdAt ? new Date(review.createdAt).toISOString() : 'SIN FECHA');
+                    console.log(`  ${index + 1}. ID=${review.id}, Fecha=${dateStr}, Timestamp=${review.createdAt instanceof Date ? review.createdAt.getTime() : (review.createdAt ? new Date(review.createdAt).getTime() : 0)}`);
+                });
+            }
             
             // Ordenar según el filtro actual
             const currentFilter = typeof getCurrentFilter === 'function' ? getCurrentFilter() : 'popular';
+            console.log(`[REVIEW FEED] Filtro actual: ${currentFilter}`);
             
             if (currentFilter === 'popular') {
                 // Ordenar por likes (más populares primero)
@@ -391,15 +468,105 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                 });
             } else if (currentFilter === 'recent') {
                 // Ordenar por fecha (más recientes primero)
+                console.log(`[RECENT FILTER] Iniciando ordenamiento de ${validReviews.length} reseñas...`);
+                
+                // Obtener el tiempo actual para detectar reseñas muy recientes
+                const now = Date.now();
+                const fiveMinutesAgo = now - (5 * 60 * 1000); // Últimos 5 minutos
+                
+                // Función helper robusta para obtener el timestamp de una fecha
+                const getTimestamp = (review) => {
+                    // PRIMERO: Verificar si hay un timestamp de creación guardado en localStorage
+                    // Esto es para reseñas recién creadas que aún no tienen fecha válida del backend
+                    try {
+                        const creationTimestampKey = `review_created_at_${review.id}`;
+                        const storedTimestamp = localStorage.getItem(creationTimestampKey);
+                        if (storedTimestamp) {
+                            const ts = parseInt(storedTimestamp, 10);
+                            if (!isNaN(ts) && ts > 0) {
+                                // Si es muy reciente (últimos 5 minutos), asegurar que tenga prioridad máxima
+                                if (ts >= fiveMinutesAgo) {
+                                    console.log(`[RECENT FILTER] ⭐⭐ Reseña RECIÉN CREADA detectada (localStorage): ID=${review.id}, Timestamp=${ts}, Título="${review.title || 'Sin título'}"`);
+                                    // Darle un timestamp muy alto para que siempre aparezca primero
+                                    return ts + 1000000000000; // Agregar 1 billón de ms para prioridad máxima
+                                }
+                                return ts;
+                            }
+                        }
+                    } catch (e) {
+                        // Ignorar errores de localStorage
+                    }
+                    
+                    // SEGUNDO: Intentar desde el campo createdAt del objeto enriquecido
+                    let date = review.createdAt;
+                    
+                    // Si createdAt es un Date válido
+                    if (date instanceof Date) {
+                        const ts = date.getTime();
+                        if (!isNaN(ts) && ts > 0) {
+                            // Si es muy reciente (últimos 5 minutos), asegurar que tenga prioridad
+                            if (ts >= fiveMinutesAgo) {
+                                console.log(`[RECENT FILTER] ⭐ Reseña reciente detectada: ID=${review.id}, Timestamp=${ts}, Título="${review.title || 'Sin título'}"`);
+                            }
+                            return ts;
+                        }
+                    }
+                    
+                    // Si createdAt es un string o número, intentar parsearlo
+                    if (date) {
+                        const parsed = new Date(date);
+                        const ts = parsed.getTime();
+                        if (!isNaN(ts) && ts > 0) {
+                            // Si es muy reciente (últimos 5 minutos), asegurar que tenga prioridad
+                            if (ts >= fiveMinutesAgo) {
+                                console.log(`[RECENT FILTER] ⭐ Reseña reciente detectada: ID=${review.id}, Timestamp=${ts}, Título="${review.title || 'Sin título'}"`);
+                            }
+                            return ts;
+                        }
+                    }
+                    
+                    // Si no hay fecha válida, usar el índice original como fallback
+                    // Las reseñas más recientes suelen estar al final del array del backend
+                    // Así que mayor índice = más reciente = mayor timestamp
+                    // Usamos un multiplicador grande (1000000) para asegurar que haya suficiente diferencia
+                    const fallbackTimestamp = (review.originalIndex || 0) * 1000000;
+                    console.warn(`[RECENT FILTER] ⚠️ Review ${review.id} sin fecha válida, usando índice original como fallback: ${fallbackTimestamp} (índice: ${review.originalIndex})`);
+                    return fallbackTimestamp;
+                };
+                
+                // Ordenar descendente: más recientes primero (mayor timestamp primero)
                 validReviews.sort((a, b) => {
-                    const dateA = a.createdAt instanceof Date 
-                        ? a.createdAt.getTime() 
-                        : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-                    const dateB = b.createdAt instanceof Date 
-                        ? b.createdAt.getTime() 
-                        : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-                    return dateB - dateA;
+                    const dateA = getTimestamp(a);
+                    const dateB = getTimestamp(b);
+                    const result = dateB - dateA;
+                    
+                    // Debug para las primeras comparaciones y reseñas recientes
+                    if ((validReviews.indexOf(a) < 5 && validReviews.indexOf(b) < 5) || 
+                        (dateA >= fiveMinutesAgo || dateB >= fiveMinutesAgo)) {
+                        console.log(`[RECENT FILTER] Comparando: A(ID=${a.id}, ts=${dateA}, ${dateA >= fiveMinutesAgo ? '⭐ RECIENTE' : ''}) vs B(ID=${b.id}, ts=${dateB}, ${dateB >= fiveMinutesAgo ? '⭐ RECIENTE' : ''}) => resultado=${result}`);
+                    }
+                    
+                    return result;
                 });
+                
+                // Debug: Verificar que el ordenamiento funcionó - mostrar las primeras 5 reseñas
+                if (validReviews.length > 0) {
+                    console.log(`[RECENT FILTER] ✅ Total reseñas después de ordenar: ${validReviews.length}`);
+                    console.log(`[RECENT FILTER] 📅 Top 5 reseñas más recientes (DESPUÉS de ordenar):`);
+                    validReviews.slice(0, 5).forEach((review, index) => {
+                        const timestamp = getTimestamp(review);
+                        const dateStr = timestamp > 0 
+                            ? new Date(timestamp).toISOString() 
+                            : 'SIN FECHA VÁLIDA';
+                        console.log(`  ${index + 1}. ID=${review.id}, Fecha=${dateStr}, Timestamp=${timestamp}, Título="${review.title || 'Sin título'}"`);
+                    });
+                    
+                    // Verificar si hay reseñas con fechas inválidas
+                    const invalidDates = validReviews.filter(r => getTimestamp(r) === 0);
+                    if (invalidDates.length > 0) {
+                        console.warn(`[RECENT FILTER] ⚠️ ${invalidDates.length} reseñas con fechas inválidas (irán al final):`, invalidDates.map(r => r.id));
+                    }
+                }
             }
 
             // Usar renderReviews de reviewRenderer.js (formato correcto como en perfil)

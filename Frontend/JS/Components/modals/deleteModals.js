@@ -54,9 +54,33 @@ export function initializeDeleteModalsLogic(state) {
  * Muestra el modal de eliminar comentario
  */
 export function showDeleteCommentModal(commentId, state) {
+    if (!state) {
+        console.error('showDeleteCommentModal: state no está definido');
+        return;
+    }
     state.deletingCommentId = commentId;
     const modal = document.getElementById('deleteCommentModalOverlay');
-    if(modal) modal.style.display = 'flex';
+    if(modal) {
+        // Guardar el reviewId en el modal si está disponible en el state
+        if (state.currentReviewId) {
+            modal.setAttribute('data-review-id', state.currentReviewId);
+        } else {
+            // Intentar obtenerlo del modal de comentarios si está abierto
+            const commentsModal = document.getElementById('commentsModalOverlay');
+            if (commentsModal && commentsModal.style.display === 'flex') {
+                const reviewId = commentsModal.getAttribute('data-review-id');
+                if (reviewId) {
+                    modal.setAttribute('data-review-id', reviewId);
+                    state.currentReviewId = reviewId;
+                }
+            }
+        }
+        modal.style.display = 'flex';
+        // Asegurar que el modal tenga el z-index más alto
+        modal.style.zIndex = '10005';
+    } else {
+        console.error('Modal de eliminar comentario no encontrado');
+    }
 }
     
 /**
@@ -72,7 +96,14 @@ function hideDeleteCommentModal(state) {
  * Confirma la eliminación de un comentario
  */
 async function confirmDeleteComment(state) {
-    if (!state.deletingCommentId) return;
+    console.log('confirmDeleteComment llamado con state:', state);
+    if (!state || !state.deletingCommentId) {
+        console.error('confirmDeleteComment: state o deletingCommentId no está definido', { state, deletingCommentId: state?.deletingCommentId });
+        return;
+    }
+    
+    const commentId = state.deletingCommentId;
+    console.log('Eliminando comentario:', commentId);
     
     // Obtener reviewId desde diferentes modales posibles
     let reviewId = null;
@@ -80,12 +111,19 @@ async function confirmDeleteComment(state) {
     const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
     const deleteCommentModal = document.getElementById('deleteCommentModalOverlay');
     
-    if (commentsModal && commentsModal.style.display === 'flex') {
+    // Primero intentar obtener del state si está disponible
+    if (state && state.currentReviewId) {
+        reviewId = state.currentReviewId;
+        console.log('reviewId obtenido del state:', reviewId);
+    } else if (commentsModal && commentsModal.style.display === 'flex') {
         reviewId = commentsModal.getAttribute('data-review-id');
+        console.log('reviewId obtenido del commentsModal:', reviewId);
     } else if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
         reviewId = reviewDetailModal.getAttribute('data-review-id');
+        console.log('reviewId obtenido del reviewDetailModal:', reviewId);
     } else if (deleteCommentModal) {
         reviewId = deleteCommentModal.getAttribute('data-review-id');
+        console.log('reviewId obtenido del deleteCommentModal:', reviewId);
     }
     
     if (!reviewId) {
@@ -95,12 +133,31 @@ async function confirmDeleteComment(state) {
         return;
     }
     
-    const authToken = localStorage.getItem('authToken');
-    
     try {
-        await deleteComment(state.deletingCommentId, authToken);
+        console.log('Llamando a deleteComment con commentId:', commentId);
+        await deleteComment(commentId);
+        console.log('Comentario eliminado exitosamente');
         
         hideDeleteCommentModal(state);
+        
+        // Obtener la cantidad actualizada de comentarios
+        const comments = await getCommentsByReview(reviewId);
+        const newCommentsCount = comments.length;
+        
+        // Actualizar contador en el botón de comentarios de la reseña (siempre, no solo si el modal está abierto)
+        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
+        if (commentBtn) {
+            const countSpan = commentBtn.querySelector('.review-comments-count');
+            if (countSpan) {
+                countSpan.textContent = newCommentsCount;
+            } else {
+                // Si no encuentra el span con la clase, buscar cualquier span dentro del botón
+                const span = commentBtn.querySelector('span');
+                if (span) {
+                    span.textContent = newCommentsCount;
+                }
+            }
+        }
         
         // Recargar comentarios en el modal de comentarios si está abierto
         if (commentsModal && commentsModal.style.display === 'flex') {
@@ -111,10 +168,9 @@ async function confirmDeleteComment(state) {
         // Actualizar vista detallada si está abierta
         if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
             const { loadReviewDetailComments } = await import('./reviewDetailModal.js');
-            const comments = await getCommentsByReview(reviewId);
             await loadReviewDetailComments(reviewId, comments, state);
             const commentsCount = document.getElementById('reviewDetailCommentsCount');
-            if (commentsCount) commentsCount.textContent = comments.length;
+            if (commentsCount) commentsCount.textContent = newCommentsCount;
         }
         
         showAlert('Comentario eliminado exitosamente', 'success');

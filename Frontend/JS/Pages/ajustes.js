@@ -1,3 +1,4 @@
+import {API_BASE_URL} from './../APIs/configApi.js';
 // Ajustes Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar si el usuario está logueado
@@ -76,7 +77,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
+const backBtn = document.getElementById('btn-back-profile');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'index.html'; 
+            }
+        });
+    }
     // Formulario de cambio de contraseña
     const passwordForm = document.getElementById('form-change-password');
     if (passwordForm) {
@@ -130,6 +140,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+
+
+function customConfirmAsync(message) {
+    const modal = document.getElementById('custom-confirm-modal');
+    const messageElement = document.getElementById('custom-confirm-message');
+    const okButton = document.getElementById('custom-confirm-ok');
+    const cancelButton = document.getElementById('custom-confirm-cancel');
+
+    if (!modal || !messageElement || !okButton || !cancelButton) {
+        console.error("Error: No se encontraron todos los elementos del modal de confirmación.");
+        return Promise.resolve(window.confirm(message));
+    }
+    
+    return new Promise((resolve) => {
+        const windowClickHandler = function(event) {
+            if (event.target == modal) {
+                cleanUp(false);
+            }
+        };
+
+        const cleanUp = (result) => {
+            okButton.onclick = null;
+            cancelButton.onclick = null;
+            
+            window.removeEventListener('click', windowClickHandler);
+
+            modal.style.display = 'none';
+            resolve(result);
+        };
+
+        messageElement.textContent = message; 
+
+        modal.style.display = 'flex';         
+        
+        okButton.onclick = () => {
+            cleanUp(true);
+        };
+        
+        cancelButton.onclick = () => {
+            cleanUp(false);
+        };
+        window.addEventListener('click', windowClickHandler);
+    });
+}
+
     // Formulario de eliminar cuenta
     const deleteAccountForm = document.getElementById('form-delete-account');
     if (deleteAccountForm) {
@@ -150,8 +205,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Confirmación adicional
-            const userConfirm = confirm('¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es permanente y no se puede deshacer.');
+            const confirmationMessage = '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es permanente y no se puede deshacer.';
+            const userConfirm = await customConfirmAsync(confirmationMessage);
             if (!userConfirm) {
                 return;
             }
@@ -169,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('userId');
                     localStorage.removeItem('username');
-                    window.location.href = 'login.html';
+                    window.location.href = '../login.html';
                 }, 2000);
             } catch (error) {
                 showAlert(getErrorMessage(error), 'danger');
@@ -231,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function updateUserEmail(userId, newEmail, confirmEmail) {
         const PORTS = [
-            { url: 'http://localhost:5000', isGateway: true },
+            { url: API_BASE_URL, isGateway: true },
             { url: 'http://localhost:8003', isGateway: false }
         ];
 
@@ -280,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function updateUserPassword(userId, oldPassword, newPassword) {
         const PORTS = [
-            { url: 'http://localhost:5000', isGateway: true },
+            { url: API_BASE_URL, isGateway: true },
             { url: 'http://localhost:8003', isGateway: false }
         ];
 

@@ -1,8 +1,9 @@
+import { showAlert } from '../Utils/reviewHelpers.js';
+window.showAlert = showAlert;
 
 let selectedAvatarFile = null;
 
 function showSection(sectionId) {
-
     document.querySelectorAll('.setting-section').forEach(section => {
         section.classList.add('hidden');
     });
@@ -25,7 +26,7 @@ async function loadCurrentProfileData() {
     try {
         const currentUserId = localStorage.getItem('userId');
         if (!currentUserId) {
-            window.showAlert("Sesión no encontrada. Redirigiendo a login.", "danger");
+            showAlert("Sesión no encontrada. Redirigiendo a login.", "danger");
             window.location.href = '../login.html';
             return;
         }
@@ -52,7 +53,7 @@ async function loadCurrentProfileData() {
         
     } catch (error) {
         console.error("Error al cargar datos del perfil:", error);
-        (window.showAlert || alert)("Error al cargar datos actuales. Por favor, verifica tu sesión.", "danger");
+        showAlert("Error al cargar datos actuales. Por favor, verifica tu sesión.", "danger");
     }
 }
 
@@ -63,14 +64,14 @@ async function handleDescriptionSubmit(e) {
     const newQuote = newDescriptionInput.value.trim();
 
     if (!newQuote) {
-        (window.showAlert || alert)("La nueva descripción no puede estar vacía.", "warning");
+        showAlert("La nueva descripción no puede estar vacía.", "warning");
         return;
     }
     
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
-         (window.showAlert || alert)("Error de sesión.", "danger");
-         return;
+        showAlert("Error de sesión. Por favor, reinicia la sesión.", "danger");
+        return;
     }
 
     const confirmBtn = form.querySelector('button[type="submit"]');
@@ -80,15 +81,12 @@ async function handleDescriptionSubmit(e) {
     let isSuccess = false; 
 
     try {
-        // Enviar tanto userQuote como bio para compatibilidad con el backend
-        const updateData = { 
-            userQuote: newQuote,
-            bio: newQuote,
-            Bio: newQuote
-        };
+        const updateData = { Bio: newQuote };
         await window.userApi.updateUserProfile(currentUserId, updateData);
 
-        (window.showAlert || alert)("Descripción actualizada exitosamente.", "success");
+        // USAMOS LA ALERTA BONITA AQUÍ
+        showAlert("Descripción actualizada exitosamente.", "success");
+        
         newDescriptionInput.value = ''; 
 
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
@@ -103,13 +101,10 @@ async function handleDescriptionSubmit(e) {
             confirmBtn.classList.remove('btn-success-feedback');
         }, 2000);
 
-
     } catch (error) {
         console.error("Error al guardar la descripción:", error);
-        (window.showAlert || alert)("Error al actualizar la descripción.", "danger");
-    
+        showAlert("Error al actualizar la descripción.", "danger");
     } finally {
-
         if (!isSuccess) {
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = 'Confirmar';
@@ -121,14 +116,14 @@ async function handleImageSubmit(e) {
     e.preventDefault();
     
     if (!selectedAvatarFile) {
-        (window.showAlert || alert)("Por favor, selecciona una imagen primero.", "warning");
+        showAlert("Por favor, selecciona una imagen primero.", "warning");
         return;
     }
     
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
-         (window.showAlert || alert)("Error de sesión.", "danger");
-         return;
+        showAlert("Error de sesión. El ID de usuario no está disponible.", "danger");
+        return;
     }
 
     const confirmBtn = document.getElementById('confirm-image-btn');
@@ -140,27 +135,29 @@ async function handleImageSubmit(e) {
     try {
         const reader = new FileReader();
         reader.readAsDataURL(selectedAvatarFile);
+        
         await new Promise((resolve, reject) => {
             reader.onload = resolve;
             reader.onerror = reject;
         });
 
-        const base64Image = reader.result; 
-        const updateData = { imgProfile: base64Image };
+        const base64Url = reader.result; 
+        const updateData = { imgProfile: base64Url }; 
         
-        await window.userApi.updateUserProfile(currentUserId, updateData);
+        await window.userApi.updateUserProfile(currentUserId, updateData); 
         
-        document.getElementById('avatar-preview').src = base64Image;
-        document.getElementById('image-upload-preview').src = base64Image;
-        localStorage.setItem('userAvatar', base64Image); 
+        document.getElementById('avatar-preview').src = base64Url;
+        document.getElementById('image-upload-preview').src = base64Url;
+        localStorage.setItem('userAvatar', base64Url); 
         selectedAvatarFile = null;
 
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback');
-        (window.showAlert || alert)
+        
+        // USAMOS LA ALERTA BONITA AQUÍ
+        showAlert("¡Imagen de perfil actualizada con éxito!", "success"); 
         isSuccess = true; 
         
-        // Recargar los datos del perfil para asegurar que todo esté actualizado
         await loadCurrentProfileData();
         
         setTimeout(() => {
@@ -169,11 +166,10 @@ async function handleImageSubmit(e) {
             confirmBtn.classList.remove('btn-success-feedback');
         }, 2000);
 
-
     } catch (error) {
         console.error("Error al subir la imagen:", error);
-        (window.showAlert || alert)("Error al actualizar la imagen.", "danger");
-
+        const status = error.response?.status || 'desconocido';
+        showAlert(`Error al actualizar la imagen (Estado: ${status}).`, "danger");
     } finally {
         if (!isSuccess) {
             confirmBtn.disabled = false;
@@ -182,11 +178,18 @@ async function handleImageSubmit(e) {
     }
 }
 
-
 document.addEventListener("DOMContentLoaded", () => {
-
-
     loadCurrentProfileData();
+
+    const hash = window.location.hash;
+    if (hash) {
+        const sectionId = hash.substring(1); 
+        if (sectionId === 'image' || sectionId === 'description') {
+            setTimeout(() => {
+                showSection(sectionId);
+            }, 100);
+        }
+    }
 
     document.querySelectorAll('.sidebar button').forEach(button => {
         button.addEventListener('click', () => {
@@ -226,5 +229,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (imageForm) {
         imageForm.addEventListener('submit', handleImageSubmit);
     }
-    
+    const backBtn = document.getElementById('btn-back-profile');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '../../index.html'; 
+            }
+        });
+    }
 });

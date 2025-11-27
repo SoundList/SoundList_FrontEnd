@@ -16,39 +16,95 @@
 <body>
     <div class="home-container">
         <header class="top-header">
-            <div class="header-content">
-                <div class="header-left">
-                    <img src="./../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon">
-                    <div class="search-container">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, album">
-                        <button class="search-clear" id="searchClear" style="display: none;">
-                            <i class="fas fa-times"></i>
-                        </button>
+    <div class="header-content container-fluid">
+        <button class="mobile-menu-toggle d-lg-none" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="header-left">
+            <img src="./../Assets/default-avatar.png" alt="SoundList Logo" class="logo-icon d-none d-md-block">
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar cancion, artista, album">
+                <button class="search-clear" id="searchClear" style="display: none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="search-dropdown" id="searchDropdown" style="display: none;">
+                </div>
+        </div>
+
+        <div class="header-center d-none d-lg-flex">
+            <button class="nav-btn" data-page="inicio">INICIO</button>
+            <button class="nav-btn" data-page="rankings">RANKINGS</button>
+            <button class="nav-btn active" data-page="amigos">EXPLORAR</button>
+        </div>
+
+        <div class="mobile-nav-menu" id="mobileNavMenu">
+            <button class="mobile-nav-btn" data-page="inicio">INICIO</button>
+            <button class="mobile-nav-btn" data-page="rankings">RANKINGS</button>
+            <button class="mobile-nav-btn active" data-page="amigos">EXPLORAR</button>
+        </div>
+
+        <div class="header-right">
+            <div class="notifications-dropdown-container" id="notificationsContainer" style="display: none;">
+                <button class="icon-btn" id="notificationsBtn" title="Notificaciones">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <div class="notifications-dropdown" id="notificationsDropdown" style="display: none;">
+                    <div class="notifications-dropdown-header">
+                        <h3>Notificaciones</h3>
                     </div>
-                    <div class="search-dropdown" id="searchDropdown" style="display: none;"></div>
-                </div>
-                <div class="header-center">
-                    <button class="nav-btn" data-page="inicio">INICIO</button>
-                    <button class="nav-btn" data-page="rankings">RANKINGS</button>
-                    <button class="nav-btn active" data-page="explorar">EXPLORAR</button>
-                </div>
-                <div class="header-right">
-                    <button class="icon-btn" id="notificationsBtn"><i class="fas fa-bell"></i></button>
-                    <div class="profile-dropdown-container">
-                        <button class="icon-btn profile-btn" id="profileBtn">
-                            <img src="./../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
-                        </button>
+                    <div class="notifications-list" id="notificationsList">
+                        <div class="notification-empty">
+                            <i class="fas fa-bell-slash"></i>
+                            <p>No tienes notificaciones</p>
                         </div>
+                    </div>
                 </div>
             </div>
-        </header>
+            <div class="login-container" id="loginContainer" style="display: none;">
+                <button class="login-btn" id="loginBtn">
+                    <img src="./../Assets/logo_perfil.png" alt="Iniciar Sesion" class="login-icon">
+                    <span class="login-text">Iniciar Sesion</span>
+                </button>
+            </div>
+            <div class="profile-dropdown-container" id="profileContainer" style="display: none;">
+                <button class="icon-btn profile-btn" id="profileBtn" title="Perfil">
+                    <img src="./../Assets/logo_perfil.png" alt="Perfil" class="profile-icon">
+                </button>
+                <div class="profile-dropdown" id="profileDropdown" style="display: none;">
+                    <div class="profile-dropdown-header">
+                        <img src="./../Assets/logo_perfil.png" alt="Perfil" class="profile-icon-small">
+                        <span id="usernameDisplay">Usuario</span>
+                    </div>
+                    <button class="profile-dropdown-item" id="verPerfilBtn">
+                        <i class="fas fa-user"></i> Perfil
+                    </button>
+                    <button class="profile-dropdown-item" id="ajustesBtn">
+                        <i class="fas fa-cog"></i> Ajustes
+                    </button>
+                    <button class="profile-dropdown-item" id="cerrarSesionBtn">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                    </button>
+                </div>
+            </div>
+            </div>
+    </div>
+</header>
 
         <main class="main-content song-page-container">
             
-            <div id="loadingSpinner" class="text-center py-5" style="display: none;">
-                <div class="spinner-border text-light" role="status"><span class="visually-hidden">Cargando...</span></div>
-            </div>
+<div id="loadingSpinner" class="custom-loader-container" style="display: none;">
+    <div class="music-waves">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+    </div>
+</div>
+
 
             <div id="songContent" style="display: block;">
                 <section class="song-hero">
@@ -108,10 +164,6 @@
                                     <span class="detail-value" id="detailReleaseDate">-</span>
                                 </div>
                                 <div class="detail-item">
-                                    <span class="detail-label">GÉNERO</span>
-                                    <span class="detail-value" id="detailGenre">-</span>
-                                </div>
-                                <div class="detail-item">
                                     <span class="detail-label">DURACIÓN</span>
                                     <span class="detail-value" id="detailDuration">-</span>
                                 </div>
@@ -159,9 +211,26 @@
         </div>
     </div>
 
+
+        <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
+        <div class="logout-modal">
+            <div class="logout-modal-content">
+                <div class="logout-modal-logo">
+                    <img src="../Assets/default-avatar.png" alt="SoundList Logo" class="logout-logo-img">
+                </div>
+                <h2 class="logout-modal-title" id="logoutModalTitle">¿Salir de Usuario?</h2>
+                <p class="logout-modal-message">Se cerrará sesión de su cuenta, podrá ingresar más tarde.</p>
+                <div class="logout-modal-buttons">
+                    <button class="logout-btn logout-btn-primary" id="confirmLogoutBtn">Salir</button>
+                    <button class="logout-btn logout-btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script type="module" src="../JS/main.js"></script></body>
+    <script type="module" src="../JS/main.js"></script>
 </body>
 </html>

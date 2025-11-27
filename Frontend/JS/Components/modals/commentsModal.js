@@ -48,6 +48,67 @@ export async function showCommentsModal(reviewId, state) {
     modal.setAttribute('data-review-id', reviewId);
     modal.style.display = 'flex';
     
+    // Asegurar que el reviewId esté en el state
+    if (state) {
+        state.currentReviewId = reviewId;
+    }
+    
+    // Actualizar el avatar del input con la foto de perfil del usuario actual
+    const avatarImg = document.getElementById('commentsModalAvatar') || 
+                     document.querySelector('.comments-input-avatar');
+    if (avatarImg) {
+        // Detectar la ruta correcta para el avatar por defecto
+        const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+        const isAmigosPage = window.location.pathname.includes('/amigos.html');
+        const defaultAvatar = isProfilePage ? '../../Assets/default-avatar.png' : 
+                             isAmigosPage ? '../Assets/default-avatar.png' :
+                             '../Assets/default-avatar.png';
+        
+        // Intentar obtener el avatar desde localStorage primero
+        let userAvatar = localStorage.getItem('userAvatar');
+        
+        // Siempre intentar obtener el avatar más reciente del usuario (por si cambió)
+        try {
+            const currentUserId = localStorage.getItem('userId');
+            if (currentUserId) {
+                // Intentar obtener el perfil del usuario
+                const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
+                    try {
+                        if (window.userApi && window.userApi.getUserProfile) {
+                            return await window.userApi.getUserProfile(userId);
+                        }
+                        const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                        const token = localStorage.getItem('authToken');
+                        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                        const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                        if (axiosInstance) {
+                            const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
+                            return response.data;
+                        }
+                        return null;
+                    } catch (error) {
+                        console.debug(`No se pudo obtener usuario ${userId}:`, error);
+                        return null;
+                    }
+                });
+                
+                const userData = await getUserFn(currentUserId);
+                if (userData) {
+                    const newAvatar = userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image;
+                    if (newAvatar) {
+                        userAvatar = newAvatar;
+                        localStorage.setItem('userAvatar', newAvatar);
+                    }
+                }
+            }
+        } catch (e) {
+            console.debug('Error obteniendo avatar del usuario:', e);
+        }
+        
+        // Usar el avatar obtenido o el default
+        avatarImg.src = userAvatar || defaultAvatar;
+    }
+    
     await loadCommentsIntoModal(reviewId, state);
 }
 
@@ -65,16 +126,36 @@ export async function loadCommentsIntoModal(reviewId, state) {
         let comments = await getCommentsByReview(reviewId);
         
         // Enriquecer comentarios con datos de usuario si no tienen username (igual que en profileHandler.js)
-        const { getUser } = await import('../../APIs/socialApi.js');
-        const getUserFn = window.socialApi?.getUser || getUser;
+        // Usar getUserProfile de userApi que ya está bien implementada, o axios directamente
+        const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
+            try {
+                // Intentar usar getUserProfile de userApi si está disponible
+                if (window.userApi && window.userApi.getUserProfile) {
+                    return await window.userApi.getUserProfile(userId);
+                }
+                // Fallback: usar axios directamente con el endpoint correcto
+                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
+                if (axiosInstance) {
+                    const response = await axiosInstance.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
+                    return response.data;
+                }
+                return null;
+            } catch (error) {
+                console.debug(`No se pudo obtener usuario ${userId}:`, error);
+                return null;
+            }
+        });
         
         comments = await Promise.all(comments.map(async (comment) => {
-            // Si ya tiene username, devolverlo tal cual
-            if (comment.UserName || comment.username) {
+            // Si ya tiene username y avatar, devolverlo tal cual
+            if ((comment.UserName || comment.username) && (comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar)) {
                 return comment;
             }
             
-            // Si no tiene username, obtenerlo del User Service
+            // Si no tiene username o avatar, obtenerlo del User Service
             const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
             if (userId) {
                 try {
@@ -82,9 +163,9 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     if (userData) {
                         return {
                             ...comment,
-                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                            UserName: userData.Username || userData.username || userData.UserName || comment.UserName || comment.username || 'Usuario',
+                            username: userData.Username || userData.username || userData.UserName || comment.UserName || comment.username || 'Usuario',
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image || comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar
                         };
                     }
                 } catch (error) {
@@ -132,6 +213,16 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     commentId = String(commentId).trim();
                 }
                 const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
+                // Obtener la foto de perfil del usuario (con fallback a default)
+                let userAvatar = comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar || comment.imgProfile || comment.ImgProfile || comment.image;
+                // Si no hay avatar o es una cadena vacía, usar el default
+                // La ruta debe ser relativa al HTML donde se renderiza (home.html usa ../Assets, profile.html usa ../../Assets)
+                // Usamos una ruta que funcione desde ambos contextos detectando la ubicación
+                if (!userAvatar || userAvatar === '' || userAvatar === 'null' || userAvatar === 'undefined') {
+                    // Detectar si estamos en profile.html o home.html basado en la ruta actual
+                    const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                    userAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+                }
                 
                 // Verificar likes desde cache primero (igual que con reseñas)
                 const commentLikesCacheKey = `comment_likes_${commentId}`;
@@ -187,10 +278,14 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     actionButtons = '';
                 }
                 
+                // Determinar la ruta del fallback basado en la página actual
+                const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                const fallbackAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+                
                 return `
                 <div class="comment-item" data-comment-id="${commentId}">
                     <div class="comment-avatar">
-                        <img src="../Assets/default-avatar.png" alt="${username}">
+                        <img src="${userAvatar}" alt="${username}" onerror="this.src='${fallbackAvatar}'">
                     </div>
                     <div class="comment-content">
                         <div class="comment-header">
@@ -213,19 +308,38 @@ export async function loadCommentsIntoModal(reviewId, state) {
             }).join('');
         }
         
-        attachCommentActionListeners(state);
+        attachCommentActionListeners(state, reviewId);
+        
+        // Actualizar contador en el botón de comentarios de la reseña usando los comentarios ya cargados
+        updateCommentCountInButton(reviewId, comments.length);
     } catch (error) {
         console.error("Error cargando comentarios en modal:", error);
         commentsList.innerHTML = `<div class="comment-empty">Error al cargar comentarios.</div>`;
+        // Intentar actualizar el contador incluso si hay error
+        try {
+            const comments = await getCommentsByReview(reviewId);
+            updateCommentCountInButton(reviewId, comments.length);
+        } catch (e) {
+            console.warn('No se pudo actualizar el contador de comentarios:', e);
+        }
     }
-    
-    // Actualizar contador en el botón de comentarios de la reseña
+}
+
+/**
+ * Actualiza el contador de comentarios en el botón de la reseña
+ */
+function updateCommentCountInButton(reviewId, count) {
     const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
     if (commentBtn) {
         const countSpan = commentBtn.querySelector('.review-comments-count');
         if (countSpan) {
-            const comments = await getCommentsByReview(reviewId);
-            countSpan.textContent = comments.length;
+            countSpan.textContent = count;
+        } else {
+            // Si no encuentra el span con la clase, buscar cualquier span dentro del botón
+            const span = commentBtn.querySelector('span');
+            if (span) {
+                span.textContent = count;
+            }
         }
     }
 }
@@ -258,9 +372,10 @@ async function submitComment(state) {
         const authToken = localStorage.getItem('authToken');
         const userId = localStorage.getItem('userId');
         
-        await createComment(reviewId, commentText, userId, authToken);
+        await createComment(reviewId, commentText);
         
         commentInput.value = '';
+        // Recargar comentarios para obtener el username del backend
         await loadCommentsIntoModal(reviewId, state);
         
         // Actualizar vista detallada si está abierta
@@ -283,26 +398,77 @@ async function submitComment(state) {
 /**
  * Adjunta listeners a los botones de acción de comentarios
  */
-function attachCommentActionListeners(state) {
+function attachCommentActionListeners(state, reviewId) {
+    // Remover listeners anteriores para evitar duplicados
+    document.querySelectorAll('.comment-edit-btn[data-listener-attached]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
     document.querySelectorAll('.comment-edit-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        // Marcar que ya tiene listener para evitar duplicados
+        if (btn.hasAttribute('data-listener-attached')) return;
+        btn.setAttribute('data-listener-attached', 'true');
+        
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
             const commentId = this.getAttribute('data-comment-id');
+            if (!commentId) {
+                console.warn('Botón de editar sin data-comment-id');
+                return;
+            }
             editComment(commentId, state);
         });
     });
     
+    // Remover listeners anteriores para evitar duplicados
+    document.querySelectorAll('.comment-delete-btn[data-listener-attached]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
     document.querySelectorAll('.comment-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
+        // Marcar que ya tiene listener para evitar duplicados
+        if (btn.hasAttribute('data-listener-attached')) return;
+        btn.setAttribute('data-listener-attached', 'true');
+        
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            e.preventDefault();
             const commentId = this.getAttribute('data-comment-id');
+            if (!commentId) {
+                console.warn('Botón de eliminar sin data-comment-id');
+                return;
+            }
             const { showDeleteCommentModal } = await import('./deleteModals.js');
+            // Asegurar que el reviewId esté disponible en el state
+            if (reviewId && state) {
+                state.currentReviewId = reviewId;
+            }
             showDeleteCommentModal(commentId, state);
         });
     });
     
+    // Remover listeners anteriores para evitar duplicados
+    document.querySelectorAll('.comment-like-btn[data-listener-attached]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
     document.querySelectorAll('.comment-like-btn').forEach(btn => {
+        // Marcar que ya tiene listener para evitar duplicados
+        if (btn.hasAttribute('data-listener-attached')) return;
+        btn.setAttribute('data-listener-attached', 'true');
+        
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
             const commentId = this.getAttribute('data-comment-id');
+            if (!commentId) {
+                console.warn('Botón de like sin data-comment-id');
+                return;
+            }
             toggleCommentLike(commentId, this);
         });
     });
@@ -400,10 +566,63 @@ function editComment(commentId, state) {
  * Muestra el modal de edición de comentario
  */
 function showEditCommentModal(commentId, state) {
+    if (!commentId || !state) {
+        console.error('showEditCommentModal: commentId o state no está definido', { commentId, state });
+        return;
+    }
+    
+    // Verificar si ya hay otro comentario en edición
+    if (state.editingCommentId && state.editingCommentId !== commentId) {
+        const currentlyEditing = document.querySelector(`.comment-item[data-comment-id="${state.editingCommentId}"]`);
+        if (currentlyEditing && currentlyEditing.classList.contains('editing')) {
+            if (typeof window.showAlert === 'function') {
+                window.showAlert('Termina de editar el otro comentario primero.', 'warning');
+            } else {
+                alert('Termina de editar el otro comentario primero.');
+            }
+            return;
+        }
+    }
+    
     const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
     const commentTextElement = document.getElementById(`comment-text-${commentId}`);
-    if (!commentItem || !commentTextElement) return;
-    if (commentItem.classList.contains('editing')) return;
+    
+    if (!commentItem) {
+        console.error(`No se encontró commentItem con ID: ${commentId}`);
+        return;
+    }
+    
+    if (!commentTextElement) {
+        console.error(`No se encontró commentTextElement con ID: comment-text-${commentId}`);
+        return;
+    }
+    
+    if (commentItem.classList.contains('editing')) {
+        console.warn(`El comentario ${commentId} ya está en modo edición`);
+        return;
+    }
+    
+    // Verificar si el comentario tiene likes antes de permitir editar
+    try {
+        const likeBtn = commentItem.querySelector('.comment-like-btn');
+        if (likeBtn) {
+            const likesCountEl = likeBtn.querySelector('.comment-likes-count');
+            if (likesCountEl) {
+                const likesCount = parseInt(likesCountEl.textContent, 10) || 0;
+                if (likesCount > 0) {
+                    if (typeof window.showAlert === 'function') {
+                        window.showAlert('No se puede editar este comentario porque ya tiene reacciones (likes).', 'warning');
+                    } else {
+                        alert('No se puede editar este comentario porque ya tiene reacciones (likes).');
+                    }
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Error al verificar likes del comentario:', error);
+        // Continuar con la edición si no se puede verificar
+    }
     
     state.originalCommentText = commentTextElement.textContent.trim();
     state.editingCommentId = commentId;
@@ -449,7 +668,27 @@ function showEditCommentModal(commentId, state) {
     textarea.parentNode.insertBefore(buttonsContainer, textarea.nextSibling);
         
     commentItem.classList.add('editing');
-    
+
+state.originalCommentText = commentTextElement.textContent.trim();
+state.editingCommentId = commentId;
+
+function handleClickOutside(e) {
+    // Si se hizo clic dentro del comentario en edición, no cancelar
+    if (commentItem.contains(e.target)) return;
+
+    commentItem.classList.remove('editing');
+    commentTextElement.textContent = state.originalCommentText;
+
+    state.editingCommentId = null;
+    state.originalCommentText = null;
+
+    document.removeEventListener('click', handleClickOutside);
+}
+
+setTimeout(() => {
+    document.addEventListener('click', handleClickOutside);
+});
+
     const commentFooter = commentItem.querySelector('.comment-footer');
     if (commentFooter) commentFooter.style.display = 'none';
     
@@ -460,8 +699,21 @@ function showEditCommentModal(commentId, state) {
  * Cancela la edición de un comentario
  */
 function cancelEditComment(commentId, state) {
+    if (!commentId || !state) {
+        console.error('cancelEditComment: commentId o state no está definido', { commentId, state });
+        return;
+    }
+    
     const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
-    if (!commentItem) return;
+    if (!commentItem) {
+        console.warn(`No se encontró commentItem con ID: ${commentId} para cancelar edición`);
+        // Limpiar el estado de todas formas
+        if (state) {
+            state.editingCommentId = null;
+            state.originalCommentText = null;
+        }
+        return;
+    }
     
     const textarea = document.getElementById(`comment-text-edit-${commentId}`);
     const buttonsContainer = commentItem.querySelector('.comment-edit-buttons');
@@ -471,7 +723,7 @@ function cancelEditComment(commentId, state) {
         const commentTextElement = document.createElement('p');
         commentTextElement.className = 'comment-text';
         commentTextElement.id = `comment-text-${commentId}`;
-        commentTextElement.textContent = state.originalCommentText;
+        commentTextElement.textContent = state.originalCommentText || '';
         textarea.replaceWith(commentTextElement);
     }
     
@@ -480,8 +732,11 @@ function cancelEditComment(commentId, state) {
     
     commentItem.classList.remove('editing');
     
-    state.editingCommentId = null;
-    state.originalCommentText = null;
+    // Limpiar el estado solo si este comentario es el que está en edición
+    if (state.editingCommentId === commentId) {
+        state.editingCommentId = null;
+        state.originalCommentText = null;
+    }
 }
     
 /**
@@ -524,7 +779,27 @@ async function confirmEditComment(commentId, state) {
         showAlert('Comentario editado exitosamente', 'success');
     } catch (error) {
         console.error('❌ Error al actualizar comentario:', error);
-        showAlert('Error al actualizar el comentario. Por favor, intenta nuevamente.', 'danger');
+        
+        // Manejar diferentes tipos de errores
+        let errorMessage = 'Error al actualizar el comentario. Por favor, intenta nuevamente.';
+        
+        if (error.response?.status === 409) {
+            errorMessage = 'No se puede editar este comentario porque ya tiene reacciones (likes).';
+        } else if (error.response?.status === 404) {
+            errorMessage = 'El comentario no fue encontrado o no tienes permiso para editarlo.';
+        } else if (error.response?.status === 401) {
+            errorMessage = 'Debes iniciar sesión para editar comentarios.';
+        } else if (error.response?.status === 405) {
+            errorMessage = 'El método de actualización no está disponible. Por favor, intenta más tarde.';
+        }
+        
+        showAlert(errorMessage, 'danger');
+        
+        // Revertir el estado de edición si falla
+        const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+        if (commentItem && commentItem.classList.contains('editing')) {
+            cancelEditComment(commentId, state);
+        }
     }
     
     state.editingCommentId = null;
@@ -552,6 +827,7 @@ async function updateCommentInData(reviewId, commentId, newText, state) {
         }
     }
     
-    await updateComment(commentId, newText, authToken);
+    // updateComment solo acepta commentId y newText, el authToken se obtiene internamente
+    await updateComment(commentId, newText);
 }
 

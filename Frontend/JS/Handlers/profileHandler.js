@@ -9,6 +9,13 @@ let getOrCreateSong = null;
 let getOrCreateAlbum = null;
 let createReview = null;
 
+// Estado del modal de comentarios (igual que en home)
+const profileCommentsModalState = {
+    editingCommentId: null,
+    originalCommentText: null,
+    commentsData: {}
+};
+
 // Intentar importar funciones si están disponibles
 if (typeof window !== 'undefined') {
     // fetchSearchResults puede estar en window.searchApi o como función global
@@ -69,10 +76,62 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
     }
 
     // Ordenar por fecha de creación (más recientes primero)
+    // Usar la misma lógica que reviewFeed.js para manejar reseñas recién creadas
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    
+    const getTimestamp = (review) => {
+        // PRIMERO: Verificar si hay un timestamp de creación guardado en localStorage
+        // Esto es para reseñas recién creadas que aún no tienen fecha válida del backend
+        try {
+            const reviewId = review.id || review.ReviewId || review.reviewId;
+            if (reviewId) {
+                const creationTimestampKey = `review_created_at_${reviewId}`;
+                const storedTimestamp = localStorage.getItem(creationTimestampKey);
+                if (storedTimestamp) {
+                    const ts = parseInt(storedTimestamp, 10);
+                    if (!isNaN(ts) && ts > 0) {
+                        // Si es muy reciente (últimos 5 minutos), darle prioridad máxima
+                        if (ts >= fiveMinutesAgo) {
+                            return ts + 1000000000000; // Agregar 1 billón de ms para prioridad máxima
+                        }
+                        return ts;
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignorar errores de localStorage
+        }
+        
+        // SEGUNDO: Intentar desde el campo createdAt del objeto
+        let date = review.createdAt || review.CreatedAt || review.Created || review.created || review.date || review.Date;
+        
+        // Si createdAt es un Date válido
+        if (date instanceof Date) {
+            const ts = date.getTime();
+            if (!isNaN(ts) && ts > 0) {
+                return ts;
+            }
+        }
+        
+        // Si createdAt es un string o número, intentar parsearlo
+        if (date) {
+            const parsed = new Date(date);
+            const ts = parsed.getTime();
+            if (!isNaN(ts) && ts > 0 && parsed.getFullYear() > 1 && !date.toString().includes('0001-01-01')) {
+                return ts;
+            }
+        }
+        
+        // Fallback: usar índice (las reseñas más recientes suelen estar al final del array)
+        const fallbackTimestamp = (review.originalIndex !== undefined ? review.originalIndex : reviews.indexOf(review)) * 1000000;
+        return fallbackTimestamp;
+    };
+    
     const sortedReviews = [...reviews].sort((a, b) => {
-        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-        return dateB - dateA;
+        const dateA = getTimestamp(a);
+        const dateB = getTimestamp(b);
+        return dateB - dateA; // Más recientes primero (mayor timestamp primero)
     });
 
     container.innerHTML = sortedReviews.map((review) => {
@@ -92,9 +151,15 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
             return '';
         }
 
-        const isLiked = review.userLiked || false;
+        // El isLiked viene del procesamiento de la reseña (userLiked calculado desde localStorage)
+        // NO usar review.userLiked del backend directamente porque puede estar desactualizado
+        // Si userLiked es explícitamente true, usarlo; si es false o undefined, usar false
+        const isLiked = review.userLiked === true;
         const likeCount = review.likes || 0;
         const commentCount = review.comments || 0;
+
+        const editButtonStyle = (likeCount > 0) ? 'display: none !important;' : '';
+
 
         // Formato EXACTO igual que renderReviews de homeAdmin.js
         return `
@@ -131,6 +196,7 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
                                         data-review-title="${review.title || ''}"
                                         data-review-content="${review.comment || ''}"
                                         data-review-rating="${review.rating || 0}"
+                                        style="${editButtonStyle}"
                                         title="Editar reseña">
                                     <i class="fas fa-pencil"></i>
                             </button>
@@ -168,12 +234,12 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
  * Adjunta los event listeners a las reseñas del perfil
  */
 function attachProfileReviewListeners(container, isOwnProfile) {
-    // Likes
+
     container.querySelectorAll('.btn-like').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
                 if (typeof showLoginRequiredModal === 'function') {
@@ -181,112 +247,107 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 }
                 return;
             }
-            
+
             const icon = this.querySelector('i');
             const likesSpan = this.parentElement.querySelector('.review-likes-count');
-            const isLiked = this.classList.contains('liked');
             const reviewId = this.getAttribute('data-review-id');
             const currentUserId = localStorage.getItem('userId');
+            const isLiked = this.classList.contains('liked');
+            const currentLikes = parseInt(likesSpan.textContent) || 0;
+            const likesCacheKey = `review_likes_${reviewId}`;
+            const likeUserKey = `like_${reviewId}_${currentUserId}`;
+            const reactionKey = `reaction_${reviewId}_${currentUserId}`;
 
-            this.style.transform = 'scale(1.2)';
-            setTimeout(() => { this.style.transform = ''; }, 200);
+            const newLikes = isLiked
+                ? Math.max(0, currentLikes - 1)
+                : currentLikes + 1;
 
-            if (isLiked) {
-                // Quitar like (Optimistic Update)
-                this.classList.remove('liked');
-                icon.style.color = 'rgba(255,255,255,0.7)';
-                const currentLikes = parseInt(likesSpan.textContent) || 0;
-                const newLikesCount = Math.max(0, currentLikes - 1);
-                likesSpan.textContent = newLikesCount;
-                
-                // Actualizar cache
-                const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) { /* ignore */ }
-                
-                const reactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-                if (typeof deleteReviewReaction === 'function') {
-                    deleteReviewReaction(reviewId, currentUserId, authToken, reactionId)
-                        .then(() => {
-                            localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                            localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
-                            // Mantener cache actualizado
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        })
-                        .catch(err => {
-                            console.warn('No se pudo eliminar like:', err);
-                            // Revertir cambio si falla
-                            this.classList.add('liked');
-                            icon.style.color = 'var(--magenta, #EC4899)';
-                            likesSpan.textContent = currentLikes;
-                            try {
-                                localStorage.setItem(likesCacheKey, String(currentLikes));
-                            } catch (e) { /* ignore */ }
-                        });
-                }
-            } else {
-                // Agregar like (Optimistic Update)
-                this.classList.add('liked');
-                icon.style.color = 'var(--magenta, #EC4899)';
-                const currentLikes = parseInt(likesSpan.textContent) || 0;
-                const newLikesCount = currentLikes + 1;
-                likesSpan.textContent = newLikesCount;
-                
-                // Actualizar cache
-                const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) { /* ignore */ }
-                
-                localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
-                if (typeof addReviewReaction === 'function') {
-                    addReviewReaction(reviewId, currentUserId, authToken)
-                        .then(data => {
-                            const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-                            if (reactionId) {
-                                localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
-                            }
-                            // Mantener cache actualizado
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        })
-                        .catch(err => {
-                            console.warn('No se pudo guardar like:', err);
-                            // Revertir cambio si falla
-                            this.classList.remove('liked');
-                            icon.style.color = 'rgba(255,255,255,0.7)';
-                            likesSpan.textContent = currentLikes;
-                            localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                            try {
-                                localStorage.setItem(likesCacheKey, String(currentLikes));
-                            } catch (e) { /* ignore */ }
-                        });
+            likesSpan.textContent = newLikes;
+            this.classList.toggle('liked');
+            icon.style.color = this.classList.contains('liked')
+                ? 'var(--magenta, #EC4899)'
+                : 'rgba(255,255,255,0.7)';
+
+            const reviewInteractions = this.closest('.review-interactions');
+            if (reviewInteractions) {
+                const editBtn = reviewInteractions.querySelector('.btn-edit');
+                if (editBtn) {
+                    if (newLikes > 0) {
+                        editBtn.style.setProperty('display', 'none', 'important');
+                    } else {
+                        editBtn.style.removeProperty('display');
+                    }
                 }
             }
+
+            try { localStorage.setItem(likesCacheKey, String(newLikes)); } catch (e) {}
+
+
+            if (!isLiked) {
+
+                localStorage.setItem(likeUserKey, 'true');
+                addReviewReaction(reviewId, currentUserId, authToken)
+                    .then(data => {
+                        const reactionId =
+                            data?.Id_Reaction ||
+                            data?.ReactionId ||
+                            data?.id;
+
+                        if (reactionId) {
+                            localStorage.setItem(reactionKey, String(reactionId));
+                        }
+                    })
+                    .catch(err => {
+                        console.warn("Error dando like:", err);
+                        this.classList.remove('liked');
+                        icon.style.color = 'rgba(255,255,255,0.7)';
+                        likesSpan.textContent = currentLikes;
+                        localStorage.removeItem(likeUserKey);
+                        localStorage.setItem(likesCacheKey, String(currentLikes));
+                    });
+
+                return;
+            }
+
+            // ==============================
+            //      REMOVE LIKE → QUITAR
+            // ==============================
+            localStorage.removeItem(likeUserKey);
+            localStorage.removeItem(reactionKey);
+
+            deleteReviewReaction(reviewId)
+                .then(() => {
+                    // mantener cache actualizado
+                    localStorage.setItem(likesCacheKey, String(newLikes));
+                })
+                .catch(err => {
+                    console.warn("Error quitando like:", err);
+                    // NO revertimos UI (querés UI optimista)
+                    try {
+                        localStorage.setItem(likesCacheKey, String(newLikes));
+                    } catch (e) {}
+                });
+
         });
     });
 
-    // Editar (solo si es tu propio perfil)
+
     if (isOwnProfile) {
-        container.querySelectorAll('.btn-edit').forEach(btn => {
+container.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const reviewId = this.getAttribute('data-review-id');
-                const title = this.getAttribute('data-review-title') || '';
-                const content = this.getAttribute('data-review-content') || '';
-                const rating = parseInt(this.getAttribute('data-review-rating')) || 0;
+                if (this.style.display === 'none') return;
                 
-                if (typeof showEditReviewModal === 'function') {
-                    showEditReviewModal(reviewId, title, content, rating);
-                } else {
-                    console.warn('showEditReviewModal no está disponible');
+                const reviewId = this.getAttribute('data-review-id');
+                if (window.showEditReviewModal) {
+                    const item = this.closest('.review-item');
+                    const title = item.querySelector('.review-title')?.textContent || '';
+                    const content = item.querySelector('.review-comment')?.textContent || '';
+                    window.showEditReviewModal(reviewId, title, content, 0);
                 }
             });
         });
+    
 
         // Eliminar (solo si es tu propio perfil)
         container.querySelectorAll('.btn-delete').forEach(btn => {
@@ -295,7 +356,11 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 const reviewId = this.getAttribute('data-review-id');
                 const reviewTitle = this.closest('.review-item')?.querySelector('.review-title')?.textContent || 'esta reseña';
                 
-                if (typeof showDeleteReviewModal === 'function') {
+                // Usar siempre la versión del módulo deleteModals (igual que en home)
+                if (window.modalsState && typeof window.showDeleteReviewModalFromModule === 'function') {
+                    window.showDeleteReviewModalFromModule(reviewId, reviewTitle);
+                } else if (typeof showDeleteReviewModal === 'function') {
+                    // Fallback a la función local si por alguna razón no está el módulo
                     showDeleteReviewModal(reviewId, reviewTitle);
                 } else {
                     console.warn('showDeleteReviewModal no está disponible');
@@ -315,51 +380,35 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 }
                 
                 const reviewId = this.getAttribute('data-review-id');
-                if (reviewId && typeof showReviewDetailModal === 'function') {
-                    showReviewDetailModal(reviewId);
-                }
-            });
-        });
-    } else {
-        // Comentarios
-        container.querySelectorAll('.comment-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const authToken = localStorage.getItem('authToken');
-                if (!authToken) {
-                    if (typeof showLoginRequiredModal === 'function') {
-                        showLoginRequiredModal();
-                    }
-                    return;
-                }
-                
-                const reviewId = this.getAttribute('data-review-id');
-                if (typeof showCommentsModal === 'function') {
-                    showCommentsModal(reviewId);
-                } else {
-                    console.warn('showCommentsModal no está disponible');
-                }
-            });
-        });
-
-        // Click en la reseña para ver detalles
-        container.querySelectorAll('.review-clickable').forEach(element => {
-            element.addEventListener('click', function(e) {
-                if (e.target.closest('.review-actions') || 
-                    e.target.closest('.btn-edit') || 
-                    e.target.closest('.btn-delete') || 
-                    e.target.closest('.btn-like') || 
-                    e.target.closest('.comment-btn')) {
-                    return;
-                }
-                
-                const reviewId = this.getAttribute('data-review-id');
-                if (reviewId && typeof showReviewDetailModal === 'function') {
-                    showReviewDetailModal(reviewId);
+                if (reviewId && typeof window.showReviewDetailModal === 'function') {
+                    window.showReviewDetailModal(reviewId);
                 }
             });
         });
     }
+    
+    // Comentarios (funciona tanto en perfil propio como ajeno)
+    container.querySelectorAll('.comment-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal();
+                }
+                return;
+            }
+            
+            const reviewId = this.getAttribute('data-review-id');
+            if (typeof window.showCommentsModal === 'function') {
+                window.showCommentsModal(reviewId);
+            } else if (typeof showCommentsModal === 'function') {
+                showCommentsModal(reviewId);
+            } else {
+                console.warn('showCommentsModal no está disponible');
+            }
+        });
+    });
 }
 
 /**
@@ -508,12 +557,28 @@ async function loadUserReviews(userIdToLoad) {
                         comments = await getCommentsByReview(reviewId).catch(() => []);
                     }
 
-                    // Verificar si el usuario actual dio like desde localStorage (fuente de verdad)
+                    // Verificar si el usuario actual dio like (igual que en home/reviewFeed.js)
+                    // IMPORTANTE: localStorage es la fuente de verdad inicial
                     let userLiked = false;
+                    
                     if (currentUserId) {
+                        // Verificar localStorage PRIMERO (fuente de verdad)
                         const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
                         const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-                        userLiked = storedReactionId !== null || localLike === 'true';
+                        
+                        // Solo marcar como liked si AMBOS están presentes o si localLike es explícitamente 'true'
+                        // Si alguno está null o undefined, significa que NO hay like
+                        if (storedReactionId !== null && storedReactionId !== 'null' && storedReactionId !== 'undefined') {
+                            userLiked = true;
+                        } else if (localLike === 'true') {
+                            userLiked = true;
+                        } else {
+                            // Si no hay en localStorage (null, undefined, o cualquier otro valor), NO hay like
+                            userLiked = false;
+                        }
+                        
+                        // NUNCA usar review.userLiked del backend aquí porque puede estar desactualizado
+                        // El localStorage es la única fuente de verdad
                     }
 
                     // Obtener datos del contenido
@@ -606,6 +671,36 @@ async function loadUserReviews(userIdToLoad) {
     }
 }
 
+// --- FUNCIÓN AUXILIAR PARA CARGAR API ---
+async function loadUserApi() {
+    if (window.userApi && window.userApi.getUserProfile) {
+        return window.userApi;
+    }
+    
+    // Esperar un poco para que el script se cargue si es necesario
+    let attempts = 0;
+    while (attempts < 10 && (!window.userApi || !window.userApi.getUserProfile)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (window.userApi && window.userApi.getUserProfile) {
+        return window.userApi;
+    }
+    
+    // Si aún no está disponible, intentar importarlo dinámicamente
+    try {
+        await import('../APIs/userApi.js');
+        if (window.userApi && window.userApi.getUserProfile) {
+            return window.userApi;
+        }
+    } catch (e) {
+        console.warn("No se pudo importar userApi dinámicamente:", e);
+    }
+    
+    throw new Error("userApi no está disponible");
+}
+
 // --- FUNCIÓN PRINCIPAL DE CARGA DE PERFIL ---
 
 async function loadUserProfile(userIdToLoad) {
@@ -654,7 +749,9 @@ async function loadUserProfile(userIdToLoad) {
     let user = null; 
 
     try {
-        user = await window.userApi.getUserProfile(userIdToLoad); 
+        // Asegurar que userApi esté disponible antes de usarlo
+        const userApi = await loadUserApi();
+        user = await userApi.getUserProfile(userIdToLoad); 
 
         // Cargar datos del usuario desde el backend (como Spotify)
         if (userAvatarEl) {
@@ -721,8 +818,9 @@ async function loadUserProfile(userIdToLoad) {
 
 
     try {
-        const followerCount = await window.userApi.getFollowerCount(userIdToLoad);
-        const followingCount = await window.userApi.getFollowingCount(userIdToLoad);
+        const userApi = await loadUserApi();
+        const followerCount = await userApi.getFollowerCount(userIdToLoad);
+        const followingCount = await userApi.getFollowingCount(userIdToLoad);
         
         if (followerCountEl) followerCountEl.textContent = followerCount || 0;
         if (followingCountEl) followingCountEl.textContent = followingCount || 0;
@@ -752,12 +850,12 @@ async function loadUserProfile(userIdToLoad) {
         if (featuredContainer && userReviews && userReviews.length > 0) {
             // Ordenar por likes (más populares primero) - igual que en homeAdmin.js
             const bestReviews = [...userReviews].sort((a, b) => {
-                const likesA = Number(a.likes) || 0;
-                const likesB = Number(b.likes) || 0;
+                const likesA = Number(a.likes) || Number(a.Likes) || 0;
+                const likesB = Number(b.likes) || Number(b.Likes) || 0;
                 // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
                 if (likesB === likesA) {
-                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : (a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0);
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : (b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0);
                     return dateB - dateA;
                 }
                 return likesB - likesA; // Más likes primero
@@ -780,6 +878,42 @@ async function loadUserProfile(userIdToLoad) {
         if (recentContainer) recentContainer.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
         if (reviewCountEl) reviewCountEl.textContent = 0;
     }
+
+    // Hacer el avatar clickeable solo si es el perfil propio
+    setupAvatarClickability(isOwnProfile);
+}
+
+/**
+ * Configura el avatar para que sea clickeable solo si es el perfil propio
+ * @param {boolean} isOwnProfile - Indica si es el perfil del usuario actual
+ */
+function setupAvatarClickability(isOwnProfile) {
+    const userAvatarEl = document.querySelector(".profile-avatar");
+    
+    if (!userAvatarEl) return;
+    
+    // Remover cualquier listener previo
+    const newAvatar = userAvatarEl.cloneNode(true);
+    userAvatarEl.parentNode.replaceChild(newAvatar, userAvatarEl);
+    
+    // Obtener el nuevo elemento
+    const avatarEl = document.querySelector(".profile-avatar");
+    
+    if (isOwnProfile) {
+        // Perfil propio: hacer clickeable
+        avatarEl.style.cursor = 'pointer';
+        avatarEl.title = 'Haz clic para editar tu foto de perfil';
+        avatarEl.setAttribute('data-editable', 'true');
+        
+        avatarEl.addEventListener('click', function() {
+            window.location.href = 'editProfile.html#image';
+        });
+    } else {
+        // Perfil ajeno: no clickeable
+        avatarEl.style.cursor = 'default';
+        avatarEl.title = '';
+        avatarEl.removeAttribute('data-editable');
+    }
 }
 
 /**
@@ -787,6 +921,7 @@ async function loadUserProfile(userIdToLoad) {
  * VERSIÓN BLINDADA: Maneja errores de lista y autocorrige el estado con error 409
  */
 async function setupFollowButton(container, targetUserId) {
+    // 1. Crear el botón
     const followBtn = document.createElement("button");
     followBtn.id = "profile-follow-btn";
     followBtn.className = "btn-edit"; 
@@ -800,83 +935,105 @@ async function setupFollowButton(container, targetUserId) {
 
     // --- FASE 1: DETECCIÓN DE ESTADO INICIAL ---
     try {
-        // INTENTO 1: API directa (suele fallar con 405, pero lo dejamos por si acaso)
+        // INTENTO 1: API directa
         try {
-            isFollowing = await window.userApi.checkFollowStatus(targetUserId);
+            const userApi = await loadUserApi();
+            isFollowing = await userApi.checkFollowStatus(targetUserId);
         } catch (e) { /* Ignoramos fallo directo */ }
 
         // INTENTO 2: Fallback Manual (Descargar lista de seguidos)
         if (!isFollowing && currentUserId) {
             try {
-                const API_BASE = window.API_BASE_URL || 'http://localhost:5000';
+                // Aseguramos la URL base
+                const API_BASE = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : 'http://localhost:5000';
                 const token = localStorage.getItem("authToken");
                 
-                // Pedimos la lista de a quién sigo yo
-                const response = await axios.get(`${API_BASE}/api/gateway/users/${currentUserId}/follow`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                if (token) {
+                    const response = await axios.get(`${API_BASE}/api/gateway/users/${currentUserId}/follow`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
 
-                // 🛡️ PROTECCIÓN CONTRA EL ERROR "some is not a function"
-                // Nos aseguramos de extraer el array correctamente, venga como venga
-                let list = [];
-                if (Array.isArray(response.data)) {
-                    list = response.data;
-                } else if (response.data && Array.isArray(response.data.Items)) {
-                    list = response.data.Items;
-                } else if (response.data && Array.isArray(response.data.items)) {
-                    list = response.data.items;
+                    let list = [];
+                    // Normalización de respuesta (Items, items o array directo)
+                    if (Array.isArray(response.data)) {
+                        list = response.data;
+                    } else if (response.data && Array.isArray(response.data.Items)) {
+                        list = response.data.Items;
+                    } else if (response.data && Array.isArray(response.data.items)) {
+                        list = response.data.items;
+                    }
+
+                    isFollowing = list.some(f => {
+                        const fId = f.FollowingId || f.followingId || f.id || f.UserId || f.userId;
+                        return String(fId).toLowerCase().trim() === String(targetUserId).toLowerCase().trim();
+                    });
                 }
-
-                // Buscamos si el ID está en la lista
-                isFollowing = list.some(f => {
-                    // Mapeo robusto de propiedades (el backend a veces cambia mayúsculas/minúsculas)
-                    const fId = f.FollowingId || f.followingId || f.id || f.UserId || f.userId;
-                    return String(fId).toLowerCase().trim() === String(targetUserId).toLowerCase().trim();
-                });
-
             } catch (err) {
-                console.warn("⚠️ Fallback de verificación falló, asumiendo 'No Seguido'", err);
+                console.warn("⚠️ Fallback de verificación falló", err);
             }
         }
     } catch (fatal) {
         console.error("Error fatal en setup", fatal);
     }
 
-    // Renderizamos el estado inicial detectado
+    // Renderizar estado inicial
     updateFollowBtnUI(followBtn, isFollowing);
 
-
-    // --- FASE 2: MANEJO DEL CLIC ---
+    // --- FASE 2: MANEJO DEL CLIC (AQUÍ ESTÁ LA MAGIA) ---
     followBtn.onclick = async () => {
         const currentState = followBtn.getAttribute("data-following") === "true";
         
-        // UI Optimista: Cambiamos visualmente antes de esperar (opcional, aquí bloqueo para seguridad)
+        // Bloqueo visual temporal
         followBtn.disabled = true;
+        const originalContent = followBtn.innerHTML;
         followBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         try {
+            const userApi = await loadUserApi();
+            
             if (currentState) {
+                // ---------------------------
                 // DEJAR DE SEGUIR
-                await window.userApi.unfollowUser(targetUserId);
+                // ---------------------------
+                await userApi.unfollowUser(targetUserId);
                 updateFollowBtnUI(followBtn, false);
                 updateFollowerCount(-1);
             } else {
-                // SEGUIR
-                await window.userApi.followUser(targetUserId);
+                // ---------------------------
+                // SEGUIR (CON HIDRATACIÓN DE DATOS)
+                // ---------------------------
+                
+                // 1. Obtener datos visuales del perfil que estamos viendo
+                // (Esto evita tener que pedirlos al backend de nuevo)
+                const targetNameElement = document.querySelector(".username");
+                const targetImageElement = document.querySelector(".profile-avatar");
+
+                const targetName = targetNameElement ? targetNameElement.textContent.trim() : "Usuario";
+                // Si la imagen es la default o falla, mandamos un string vacío o default
+                let targetImage = targetImageElement ? targetImageElement.src : "";
+                if (targetImage.includes("default-avatar") || targetImage.startsWith("file://")) {
+                    targetImage = "default.png";
+                }
+
+                console.log("📤 Enviando Follow con datos:", { targetUserId, targetName, targetImage });
+
+                // 2. Llamar a la API con los 3 parámetros
+                await userApi.followUser(targetUserId, targetName, targetImage);
+                
                 updateFollowBtnUI(followBtn, true);
                 updateFollowerCount(1);
             }
         } catch (error) {
             console.error("Error acción follow:", error);
 
-            // 🚑 AUTOCORRECCIÓN POR ERROR 409 (CONFLICTO)
-            // Si el backend dice "Ya lo sigues", le creemos al backend y actualizamos el botón.
-            if (error.response && error.response.status === 409) {
-                console.log("🔄 Sincronizando: El backend dice que ya lo seguimos.");
-                updateFollowBtnUI(followBtn, true); // Forzamos estado "Siguiendo"
+            // AUTOCORRECCIÓN POR ERROR 409 (Ya existe)
+            if (error.response && (error.response.status === 409 || error.response.status === 500)) {
+                // A veces el 500 esconde un "duplicate key", asumimos éxito visual
+                console.log("🔄 Sincronizando visualmente (asumimos éxito o ya seguido).");
+                updateFollowBtnUI(followBtn, true);
             } else {
-                // Si es otro error, revertimos el botón a como estaba
-                updateFollowBtnUI(followBtn, currentState);
+                // Revertir cambio visual
+                followBtn.innerHTML = originalContent;
                 alert("Hubo un error al conectar con el servidor.");
             }
         } finally {
@@ -884,7 +1041,6 @@ async function setupFollowButton(container, targetUserId) {
         }
     };
 }
-
 /**
  * Actualiza el estilo y texto del botón según el estado
  */
@@ -964,14 +1120,33 @@ async function showEditReviewModal(reviewId, title, content, rating) {
         const modalTitle = modal.querySelector('.create-review-title');
         if (modalTitle) modalTitle.textContent = 'Editar Reseña';
         
+        
         const contentSelector = document.getElementById('createReviewContentSelector');
+        if (contentSelector) contentSelector.style.display = 'none';
+
+        const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+        if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+
+        const contentSearchInput = document.getElementById('contentSearchInput');
+        if (contentSearchInput) {
+            contentSearchInput.disabled = true;
+            contentSearchInput.style.pointerEvents = "none";
+        }
+
+        const changeContentBtn = document.getElementById('changeContentBtn');
+        if (changeContentBtn) changeContentBtn.style.display = 'none';
         const contentInfo = document.getElementById('createReviewContentInfo');
+        if (contentInfo) {
+            contentInfo.style.pointerEvents = "none"; 
+            contentInfo.style.opacity = "0.7"; 
+        }
+
         if (contentSelector) contentSelector.style.display = 'none';
         if (contentInfo) contentInfo.style.display = 'block';
         
         modal.style.display = 'flex';
     } else {
-        // Si no hay modal, redirigir a home para editar
+    
         if (confirm('Para editar la reseña, serás redirigido a la página principal. ¿Continuar?')) {
             window.location.href = '../home.html';
         }
@@ -1143,25 +1318,43 @@ async function deleteReviewLogic(reviewId) {
 }
 
 /**
- * Muestra el modal de comentarios - usa el modal de detalles de reseña que ya incluye comentarios
+ * Muestra el modal de comentarios (igual que en home)
  */
 async function showCommentsModal(reviewId) {
-    // Usar el modal de detalles de reseña que ya tiene la funcionalidad de comentarios
-    if (typeof showReviewDetailModal === 'function') {
-        await showReviewDetailModal(reviewId);
-    } else {
-        // Fallback: intentar abrir directamente el modal de detalles
-        const modal = document.getElementById('reviewDetailModalOverlay');
-        if (modal) {
-            modal.setAttribute('data-review-id', reviewId);
-            modal.style.display = 'flex';
-            // Cargar la reseña y comentarios
-            if (typeof showReviewDetailModal === 'function') {
-                await showReviewDetailModal(reviewId);
+    // Intentar usar el modal de comentarios del módulo (igual que en home)
+    try {
+        const { showCommentsModal: showCommentsModalFromModule } = await import('../../Components/modals/commentsModal.js');
+        if (showCommentsModalFromModule) {
+            await showCommentsModalFromModule(reviewId, profileCommentsModalState);
+            
+            // Actualizar el avatar del input
+            const avatarImg = document.getElementById('commentsModalAvatar');
+            if (avatarImg) {
+                avatarImg.src = localStorage.getItem('userAvatar') || '../../Assets/default-avatar.png';
             }
-        } else {
-            console.warn('Modal de detalles de reseña no disponible');
+            return;
         }
+    } catch (importError) {
+        console.warn('No se pudo importar showCommentsModal del módulo:', importError);
+    }
+    
+    // Fallback: usar el modal directamente si existe
+    const modal = document.getElementById('commentsModalOverlay');
+    if (modal) {
+        modal.setAttribute('data-review-id', reviewId);
+        modal.style.display = 'flex';
+        
+        // Intentar cargar comentarios
+        try {
+            const { loadCommentsIntoModal } = await import('../../Components/modals/commentsModal.js');
+            if (loadCommentsIntoModal) {
+                await loadCommentsIntoModal(reviewId, profileCommentsModalState);
+            }
+        } catch (loadError) {
+            console.warn('No se pudieron cargar los comentarios:', loadError);
+        }
+    } else {
+        console.warn('Modal de comentarios no disponible');
     }
 }
 
@@ -1339,9 +1532,9 @@ async function showReviewDetailModal(reviewId) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar" onerror="this.src='../../Assets/default-avatar.png'">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username">${username}</span>
+                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
                             <span class="review-detail-time">${timeAgo}</span>
                         </div>
                     </div>
@@ -1373,6 +1566,9 @@ async function showReviewDetailModal(reviewId) {
         }
         
         await loadReviewDetailComments(reviewId, comments);
+        
+        // Agregar event listeners para navegación a perfil en la reseña principal
+        attachProfileNavigationListeners();
         
         const likeBtn = document.getElementById('reviewDetailLikeBtn');
         if (likeBtn) {
@@ -1427,9 +1623,14 @@ async function loadReviewDetailComments(reviewId, comments) {
         }
         
         // Enriquecer comentarios con datos de usuario si no tienen username
-        const getUserFn = window.socialApi?.getUser || (async (userId) => {
+        // Usar getUserProfile de userApi que ya está bien implementada
+        const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/gateway/users/${userId}`);
+                // Usar axios directamente con el endpoint correcto
+                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
                 return response.data;
             } catch (error) {
                 console.debug(`No se pudo obtener usuario ${userId}:`, error);
@@ -1453,7 +1654,7 @@ async function loadReviewDetailComments(reviewId, comments) {
                             ...comment,
                             UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
                             username: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || comment.UserProfilePicUrl
+                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || userData.image || comment.UserProfilePicUrl
                         };
                     }
                 } catch (error) {
@@ -1474,7 +1675,12 @@ async function loadReviewDetailComments(reviewId, comments) {
                 }
             }
             
-            return comment;
+            // Si aún no tenemos username, devolver con "Usuario" como fallback
+            return {
+                ...comment,
+                UserName: 'Usuario',
+                username: 'Usuario'
+            };
         }));
         
         const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
@@ -1548,10 +1754,10 @@ async function loadReviewDetailComments(reviewId, comments) {
                 
                 return `
                     <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar" onerror="this.src='../../Assets/default-avatar.png'">
+                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
                         <div class="review-detail-comment-content">
                             <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username">${username}</span>
+                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
                                 <span class="review-detail-comment-time">${timeAgo}</span>
                             </div>
                             <p class="review-detail-comment-text">${text}</p>
@@ -1569,11 +1775,32 @@ async function loadReviewDetailComments(reviewId, comments) {
             }).join('');
         }
         
+        // Agregar event listeners para navegación a perfil
+        attachProfileNavigationListeners();
+        
         attachReviewDetailCommentListeners(reviewId);
     } catch (error) {
         console.error('Error cargando comentarios en vista detallada:', error);
         commentsList.innerHTML = '<div class="review-detail-comment-empty">Error al cargar comentarios.</div>';
     }
+}
+
+/**
+ * Adjunta listeners para navegación a perfil desde avatares y usernames
+ */
+function attachProfileNavigationListeners() {
+    document.querySelectorAll('.profile-navigation-trigger').forEach(element => {
+        if (!element.hasAttribute('data-navigation-listener-attached')) {
+            element.setAttribute('data-navigation-listener-attached', 'true');
+            element.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                if (userId && typeof window.navigateToProfile === 'function') {
+                    window.navigateToProfile(userId);
+                }
+            });
+        }
+    });
 }
 
 function attachReviewDetailCommentListeners(reviewId) {
@@ -2231,7 +2458,7 @@ async function submitReviewDetailComment() {
         }
         
         if (createCommentFn) {
-            await createCommentFn(reviewId, commentText, userId, authToken);
+            await createCommentFn(reviewId, commentText);
         } else {
             console.error('No se encontró función createComment en ninguna fuente disponible');
             if (typeof showAlert === 'function') {
@@ -2243,23 +2470,23 @@ async function submitReviewDetailComment() {
         // Limpiar input
         commentInput.value = '';
         
-        // Recargar comentarios en el modal de detalle
-        await loadReviewDetailComments(reviewId);
+        // Recargar comentarios para obtener el username del backend
+        const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
+        const comments = await getCommentsByReviewFn(reviewId);
+        await loadReviewDetailComments(reviewId, comments);
         
         // Actualizar contador en el modal de detalles
         const commentsCount = document.getElementById('reviewDetailCommentsCount');
         if (commentsCount) {
-            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
-            const comments = await getCommentsByReviewFn(reviewId);
             commentsCount.textContent = comments.length;
-            
-            // Actualizar también el contador en la tarjeta de reseña del perfil
-            const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
-            if (reviewItem) {
-                const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
-                if (reviewCommentsCount) {
-                    reviewCommentsCount.textContent = comments.length;
-                }
+        }
+        
+        // Actualizar también el contador en la tarjeta de reseña del perfil
+        const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
+        if (reviewItem) {
+            const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
+            if (reviewCommentsCount) {
+                reviewCommentsCount.textContent = comments.length;
             }
         }
         
@@ -2359,17 +2586,24 @@ function initializeCreateReviewModal() {
                 });
             });
             
-            star.addEventListener('mouseenter', () => {
-                const hoverRating = parseInt(star.getAttribute('data-rating'));
+            star.addEventListener('mouseenter', function() {
+                // Solo resaltar esta estrella y las anteriores (hasta esta posición)
+                const hoverRating = parseInt(this.getAttribute('data-rating')) || 0;
                 stars.forEach((s, i) => {
-                    s.style.opacity = i < hoverRating ? '1' : '0.5';
+                    // Solo activar las estrellas hasta la posición actual (i + 1 <= hoverRating)
+                    const shouldBeActive = (i + 1) <= hoverRating;
+                    s.classList.toggle('active', shouldBeActive);
+                    // No cambiar opacity, dejar que el CSS maneje el hover
                 });
             });
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
+            // Restaurar al rating actual cuando se sale del área
             stars.forEach((s, i) => {
-                s.style.opacity = i < currentRating ? '1' : '0.5';
+                const shouldBeActive = (i + 1) <= currentRating;
+                s.classList.toggle('active', shouldBeActive);
+                s.style.opacity = shouldBeActive ? '1' : '0.5';
             });
         });
     }
@@ -2709,11 +2943,11 @@ async function submitCreateReview() {
                 });
             }
             
-            console.log('✅ Reseña editada exitosamente');
+            console.log(' Reseña editada exitosamente');
             if (typeof showAlert === 'function') {
-                showAlert('✅ Reseña editada exitosamente', 'success');
+                showAlert(' Reseña editada exitosamente', 'success');
             } else {
-                alert('✅ Reseña editada exitosamente');
+                alert(' Reseña editada exitosamente');
             }
             hideCreateReviewModal();
             if (modal) modal.removeAttribute('data-edit-review-id');
@@ -2885,7 +3119,8 @@ async function submitCreateReview() {
         // Guardar datos del contenido en localStorage para uso futuro
         const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
         if (reviewId) {
-            const storageKey = `review_content_${String(reviewId).trim()}`;
+            const reviewIdStr = String(reviewId).trim();
+            const storageKey = `review_content_${reviewIdStr}`;
             localStorage.setItem(storageKey, JSON.stringify({
                 type: currentReviewData.type,
                 id: currentReviewData.id,
@@ -2893,20 +3128,29 @@ async function submitCreateReview() {
                 artist: currentReviewData.artist,
                 image: currentReviewData.image
             }));
+            
+            // Guardar el timestamp de creación para que aparezca primero en el filtro "recent"
+            const creationTimestampKey = `review_created_at_${reviewIdStr}`;
+            const now = Date.now();
+            localStorage.setItem(creationTimestampKey, String(now));
+            console.log(`⏰ Timestamp de creación guardado para review ${reviewIdStr}: ${now}`);
         }
         
         hideCreateReviewModal();
         
         if (typeof showAlert === 'function') {
-            showAlert('✅ Reseña creada exitosamente', 'success');
+            showAlert(' Reseña creada exitosamente', 'success');
         } else {
-            alert('✅ Reseña creada exitosamente');
+            alert(' Reseña creada exitosamente');
         }
         
-        // Recargar las reseñas del perfil
-        if (profileUserId && typeof loadUserProfile === 'function') {
-            await loadUserProfile(profileUserId);
-        }
+        // Esperar un momento para que el backend procese la reseña antes de recargar
+        setTimeout(async () => {
+            // Recargar las reseñas del perfil
+            if (profileUserId && typeof loadUserProfile === 'function') {
+                await loadUserProfile(profileUserId);
+            }
+        }, 500);
         
     } catch (error) {
         console.error('❌ Error creando reseña:', error);
@@ -2916,6 +3160,200 @@ async function submitCreateReview() {
         } else {
             alert(`Error al crear la reseña: ${errorMessage}`);
         }
+    }
+}
+
+// --- FUNCIONES PARA MODAL DE SEGUIDORES/SEGUIDOS ---
+
+/**
+ * Carga y muestra la lista de seguidores o seguidos en el modal
+ * @param {string} userId - ID del usuario
+ * @param {string} type - 'followers' o 'following'
+ */
+async function showFollowersModal(userId, type) {
+    const modal = document.getElementById('followersModalOverlay');
+    const modalTitle = document.getElementById('followersModalTitle');
+    const followersList = document.getElementById('followersList');
+    
+    if (!modal || !modalTitle || !followersList) {
+        console.error('❌ Elementos del modal no encontrados');
+        return;
+    }
+    
+    // Configurar título
+    modalTitle.textContent = type === 'followers' ? 'Seguidores' : 'Seguidos';
+    
+    // Mostrar modal
+    modal.style.display = 'flex';
+    
+    // Mostrar loading
+    followersList.innerHTML = `
+        <div class="followers-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Cargando...</p>
+        </div>
+    `;
+    
+    try {
+        const userApi = await loadUserApi();
+        let users = [];
+        
+        if (type === 'followers') {
+            // Obtener lista de seguidores
+            const response = await userApi.getFollowerList(userId);
+            const data = response.Items || response.items || response || [];
+            
+            // Obtener información completa de cada usuario
+            for (const item of data) {
+                const followerId = item.FollowerId || item.followerId || item.UserId || item.userId || item.id;
+                if (followerId) {
+                    try {
+                        const userInfo = await userApi.getUserProfile(followerId);
+                        users.push({
+                            userId: followerId,
+                            username: userInfo.Username || userInfo.username || 'Usuario',
+                            avatar: userInfo.ImgProfile || userInfo.imgProfile || userInfo.avatar || '../../Assets/default-avatar.png',
+                            bio: userInfo.Bio || userInfo.bio || ''
+                        });
+                    } catch (err) {
+                        console.warn(`⚠️ Error obteniendo info del usuario ${followerId}:`, err);
+                        // Agregar usuario con datos mínimos
+                        users.push({
+                            userId: followerId,
+                            username: 'Usuario',
+                            avatar: '../../Assets/default-avatar.png',
+                            bio: ''
+                        });
+                    }
+                }
+            }
+        } else {
+            // Obtener lista de seguidos
+            const API_BASE = window.API_BASE_URL || 'http://localhost:5000';
+            const token = localStorage.getItem("authToken");
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            
+            const response = await axios.get(`${API_BASE}/api/gateway/users/${userId}/follow`, { headers });
+            const data = response.data.Items || response.data.items || response.data || [];
+            
+            // Obtener información completa de cada usuario
+            for (const item of data) {
+                const followingId = item.FollowingId || item.followingId || item.UserId || item.userId || item.id;
+                if (followingId) {
+                    try {
+                        const userInfo = await userApi.getUserProfile(followingId);
+                        users.push({
+                            userId: followingId,
+                            username: userInfo.Username || userInfo.username || 'Usuario',
+                            avatar: userInfo.ImgProfile || userInfo.imgProfile || userInfo.avatar || '../../Assets/default-avatar.png',
+                            bio: userInfo.Bio || userInfo.bio || ''
+                        });
+                    } catch (err) {
+                        console.warn(`⚠️ Error obteniendo info del usuario ${followingId}:`, err);
+                        // Agregar usuario con datos mínimos
+                        users.push({
+                            userId: followingId,
+                            username: 'Usuario',
+                            avatar: '../../Assets/default-avatar.png',
+                            bio: ''
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Renderizar lista de usuarios
+        if (users.length === 0) {
+            followersList.innerHTML = `
+                <div class="followers-empty">
+                    <i class="fas fa-users"></i>
+                    <p>No hay ${type === 'followers' ? 'seguidores' : 'seguidos'} aún</p>
+                </div>
+            `;
+        } else {
+            followersList.innerHTML = users.map(user => `
+                <div class="follower-item" data-user-id="${user.userId}" style="cursor: pointer;">
+                    <img src="${user.avatar}" 
+                         alt="${user.username}" 
+                         class="follower-avatar"
+                         onerror="this.src='../../Assets/default-avatar.png'">
+                    <div class="follower-info">
+                        <h4 class="follower-username">${user.username}</h4>
+                        ${user.bio ? `<p class="follower-bio">${user.bio}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Agregar event listeners para navegar a perfiles
+            followersList.querySelectorAll('.follower-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const targetUserId = this.getAttribute('data-user-id');
+                    if (targetUserId && typeof window.navigateToProfile === 'function') {
+                        window.navigateToProfile(targetUserId);
+                    }
+                });
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cargando lista:', error);
+        followersList.innerHTML = `
+            <div class="followers-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar la lista</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Cierra el modal de seguidores/seguidos
+ */
+function closeFollowersModal() {
+    const modal = document.getElementById('followersModalOverlay');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Inicializa los event listeners para el modal de seguidores/seguidos
+ */
+function initializeFollowersModal() {
+    // Botón de cerrar
+    const closeBtn = document.getElementById('closeFollowersModal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeFollowersModal);
+    }
+    
+    // Cerrar al hacer clic fuera del modal
+    const modal = document.getElementById('followersModalOverlay');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeFollowersModal();
+            }
+        });
+    }
+    
+    // Botones de estadísticas (seguidores/seguidos)
+    const followersStat = document.getElementById('followers-stat');
+    const followingStat = document.getElementById('following-stat');
+    
+    if (followersStat) {
+        followersStat.addEventListener('click', function() {
+            if (profileUserId) {
+                showFollowersModal(profileUserId, 'followers');
+            }
+        });
+    }
+    
+    if (followingStat) {
+        followingStat.addEventListener('click', function() {
+            if (profileUserId) {
+                showFollowersModal(profileUserId, 'following');
+            }
+        });
     }
 }
 
@@ -2929,3 +3367,5 @@ window.showReviewDetailModal = showReviewDetailModal;
 window.initializeReviewDetailModalLogic = initializeReviewDetailModalLogic;
 window.showCreateReviewModal = showCreateReviewModal;
 window.initializeCreateReviewModal = initializeCreateReviewModal;
+window.showFollowersModal = showFollowersModal;
+window.initializeFollowersModal = initializeFollowersModal;

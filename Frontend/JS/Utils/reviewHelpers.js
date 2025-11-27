@@ -1,14 +1,9 @@
 import { getFollowing, searchUsers } from '../APIs/AmigosApi.js';
 
-// ----------------------------------------------------------------------
-// A. FUNCIONES DE UTILIDAD VISUAL
-// ----------------------------------------------------------------------
+const alertQueue = [];
+let isAlertVisible = false;
+let alertTimeout = null;
 
-/**
- * Renderiza estrellas según el rating
- * @param {number} rating - Rating de 0 a 5
- * @returns {string} HTML de las estrellas
- */
 export function renderStars(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -25,40 +20,88 @@ export function renderStars(rating) {
  * @param {string} message - Mensaje a mostrar
  * @param {string} type - Tipo de alerta (success, error, info, warning)
  */
-export function showAlert(message, type) {
-    const existingAlerts = document.querySelectorAll('.custom-alert');
-    existingAlerts.forEach(alert => alert.remove());
+
+
+function ensureAlertContainerExists() {
+    let container = document.getElementById('alertContainer');
+    
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'alertContainer';
+
+        document.body.insertBefore(container, document.body.firstChild);
+        
+        console.log("🔧 Sistema de Alertas: Contenedor creado automáticamente.");
+    }
+    return container;
+}
+
+// --- LÓGICA PRINCIPAL ---
+
+export function showAlert(message, type = 'info') {
+    ensureAlertContainerExists();
+    
+    alertQueue.push({ message, type });
+    processAlertQueue();
+}
+
+function processAlertQueue() {
+    if (isAlertVisible || alertQueue.length === 0) return;
+    isAlertVisible = true;
+
+    const nextAlert = alertQueue.shift();
+    renderAlert(nextAlert.message, nextAlert.type);
+}
+
+function renderAlert(message, type) {
+    const alertContainer = document.getElementById('alertContainer'); // Ya sabemos que existe
+
+    // Iconos
+    let iconClass = 'fa-info-circle';
+    if (type === 'success') iconClass = 'fa-check-circle';
+    if (type === 'warning') iconClass = 'fa-exclamation-triangle';
+    if (type === 'danger' || type === 'error') {
+        iconClass = 'fa-times-circle';
+        type = 'danger';
+    }
 
     const alertDiv = document.createElement('div');
     alertDiv.className = `custom-alert custom-alert-${type}`;
+    
     alertDiv.innerHTML = `
         <div class="alert-content">
-            <i class="alert-icon"></i>
+            <div class="alert-icon">
+                <i class="fas ${iconClass}"></i>
+            </div>
             <span class="alert-message">${message}</span>
-            <button type="button" class="alert-close">&times;</button>
+            <button type="button" class="alert-close">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     `;
 
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        mainContent.insertBefore(alertDiv, mainContent.firstChild);
-    } else {
-        document.body.insertBefore(alertDiv, document.body.firstChild);
-    }
+    alertContainer.innerHTML = '';
+    alertContainer.append(alertDiv);
 
+    const closeThisAlert = () => {
+        if (alertTimeout) clearTimeout(alertTimeout);
+    
+        alertDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        alertDiv.style.opacity = '0';
+        alertDiv.style.transform = 'translateY(-10px)';
+
+        setTimeout(() => {
+            if (alertDiv.parentNode) alertDiv.remove();
+            isAlertVisible = false;
+            processAlertQueue(); 
+        }, 200); 
+    };
 
     const closeBtn = alertDiv.querySelector('.alert-close');
-    closeBtn.addEventListener('click', () => {
-        alertDiv.remove();
-    });
-
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 5000);
+    closeBtn.addEventListener('click', closeThisAlert);
+    
+    alertTimeout = setTimeout(closeThisAlert, 3000);
 }
-
 /**
  * @param {Array<Object>} reviews La lista de reseñas a enriquecer.
  * @returns {Promise<Array<Object>>} La lista de reseñas con la bandera isFollowingAuthor.

@@ -131,7 +131,7 @@ export function initializeCreateReviewModal(state) {
             highlightStars(rating);
         }
             
-        stars.forEach((star) => {
+        stars.forEach((star, index) => {
             star.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -139,12 +139,17 @@ export function initializeCreateReviewModal(state) {
                 updateStarRating(rating);
             });
             star.addEventListener('mouseenter', function() {
+                // Solo resaltar esta estrella y las anteriores (hasta esta posición)
                 const rating = parseInt(this.getAttribute('data-rating')) || 0;
-                highlightStars(rating);
+                stars.forEach((s, i) => {
+                    // Solo activar las estrellas hasta la posición actual (index + 1)
+                    s.classList.toggle('active', (i + 1) <= rating);
+                });
             });
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
+            // Restaurar al rating actual cuando se sale del área
             highlightStars(state ? (state.currentRating || 0) : currentRating);
         });
     }
@@ -318,7 +323,18 @@ export function showCreateReviewModal(contentData = null, state) {
     const contentSearchDropdown = document.getElementById('contentSearchDropdown');
     
     if (!modal) return;
-    
+    const changeContentBtn = document.getElementById('changeContentBtn');
+    if (changeContentBtn) changeContentBtn.style.display = 'flex';
+
+    const modalTitle = modal.querySelector('.create-review-title');
+    const submitBtn = document.getElementById('submitCreateReviewBtn');
+    if (modalTitle) modalTitle.textContent = 'CREA UNA RESEÑA';
+    if (submitBtn) submitBtn.textContent = 'SUBIR';
+
+    clearReviewFormErrors();
+
+
+
     if (contentData && contentData.type === 'artist') {
         showAlert('No se pueden crear reseñas de artistas. Por favor, selecciona una canción o un álbum.', 'warning');
         return;
@@ -343,7 +359,7 @@ export function showCreateReviewModal(contentData = null, state) {
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
     
-    // Resetear estrellas
+    
     const stars = document.querySelectorAll('#createReviewStars .star-input');
     if (stars.length > 0) {
         stars.forEach(star => star.classList.remove('active'));
@@ -401,9 +417,7 @@ function setSelectedContent(contentData, state) {
     }
 }
     
-/**
- * Cierra y resetea el modal de "Crear Reseña".
- */
+
 function hideCreateReviewModal(state) {
     const modal = document.getElementById('createReviewModalOverlay');
     if (modal) {
@@ -419,6 +433,55 @@ function hideCreateReviewModal(state) {
     }
 }
     
+function getCurrentRating() {
+    const stars = document.querySelectorAll('#createReviewStars .star-input.active');
+    return stars.length;
+}
+
+function displayFieldError(elementId, message) {
+    const inputElement = document.getElementById(elementId);
+    if (!inputElement) return;
+
+    const isStarsInput = elementId === 'createReviewStars';
+
+    const borderElement = isStarsInput 
+        ? document.getElementById('createReviewStars').closest('.create-review-rating') 
+        : inputElement;
+
+    const errorElementId = (elementId === 'createReviewStars') 
+        ? 'createReviewRatingError' 
+        : elementId.replace('Input', 'Error');
+    const errorElement = document.getElementById(errorElementId);
+    
+    if (!borderElement) return;
+
+    if (message) {
+        borderElement.classList.add('is-invalid-custom'); 
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.add('show-error'); 
+        }
+    } else {
+        borderElement.classList.remove('is-invalid-custom');
+        if (errorElement) {
+            errorElement.textContent = '';
+            errorElement.classList.remove('show-error'); 
+        }
+    }
+}
+
+
+function clearReviewFormErrors() {
+    displayFieldError('createReviewTitleInput', null);
+    displayFieldError('createReviewTextInput', null);
+    displayFieldError('createReviewStars', null); 
+}
+
+
+
+
+
+
 /**
  * Envía la reseña (nueva o editada) al backend.
  */
@@ -437,30 +500,45 @@ async function submitCreateReview(state) {
     
     const title = titleInput ? titleInput.value.trim() : '';
     const content = textInput ? textInput.value.trim() : '';
-    
-    let rating = 0;
-    // Primero intentar obtener el rating del estado
-    if (state && state.currentRating) {
-        rating = state.currentRating;
-    } else if (createReviewStars) {
-        // Fallback: contar estrellas activas
-        const activeStars = createReviewStars.querySelectorAll('.star-input.active');
-        rating = activeStars.length;
-    }
-    
+    const rating = getCurrentRating(); 
+    const contentData = state.currentReviewData;
+
+    let hasError = false;
+
     if (!title) {
-        showAlert('Por favor, ingresa un título para la reseña', 'warning');
-        return;
+        displayFieldError('createReviewTitleInput', 'El título de la reseña es obligatorio.');
+        hasError = true;
+    } else {
+        displayFieldError('createReviewTitleInput', null);
     }
+
+    // 2. Validar Texto
     if (!content) {
-        showAlert('Por favor, escribe tu reseña', 'warning');
-        return;
+        displayFieldError('createReviewTextInput', 'El contenido de la reseña es obligatorio.');
+        hasError = true;
+    } else {
+        displayFieldError('createReviewTextInput', null);
     }
-    if (rating === 0) {
-        showAlert('Por favor, selecciona una calificación', 'warning');
-        return;
+
+    // 3. Validar Calificación
+    if (rating === 0) { 
+        displayFieldError('createReviewStars', 'Debes seleccionar una calificación (1-5 estrellas).');
+        hasError = true;
+    } else {
+        displayFieldError('createReviewStars', null); 
     }
     
+    if (hasError) {
+        return;
+    }
+    showAlert('Subiendo...', 'success');
+
+    if (!contentData || !contentData.id) {
+        console.error('❌ currentReviewData inválido (Contenido no seleccionado):', state.currentReviewData);
+        showAlert('Error: No se seleccionó contenido.', 'warning');
+        return; 
+    }
+
     const userId = localStorage.getItem('userId');
     const modal = document.getElementById('createReviewModalOverlay');
     const editReviewId = modal ? modal.getAttribute('data-edit-review-id') : null;
@@ -479,9 +557,6 @@ async function submitCreateReview(state) {
             
             await updateReview(editReviewId, reviewData, authToken);
             
-            // ============================================================
-            // === NUEVO: SINCRONIZACIÓN DE PROMEDIO AL EDITAR ===
-            // ============================================================
             if (state.currentReviewData && state.currentReviewData.id) {
                 try {
                     console.log("🔄 (Edición) Recalculando promedio para actualizar Content...");
@@ -521,7 +596,7 @@ async function submitCreateReview(state) {
                 }
             }
 
-            console.log('✅ Reseña editada exitosamente');
+            console.log(' Reseña editada exitosamente');
             
             // Recargar las reseñas si hay una función disponible
             if (state && state.loadReviews && typeof state.loadReviews === 'function') {
@@ -529,7 +604,7 @@ async function submitCreateReview(state) {
             } else if (typeof window.loadReviews === 'function') {
                 await window.loadReviews();
             }
-            showAlert('✅ Reseña editada exitosamente', 'success');
+            showAlert(' Reseña editada exitosamente', 'success');
             hideCreateReviewModal(state);
             if (modal) modal.removeAttribute('data-edit-review-id');
             if (state.loadReviews && typeof state.loadReviews === 'function') {
@@ -603,8 +678,6 @@ async function submitCreateReview(state) {
         
         const response = await createReview(reviewData, authToken);
         
-        // === NUEVO CÓDIGO: ACTUALIZACIÓN DE PROMEDIO ===
-        // === LÓGICA DE SINCRONIZACIÓN ===
         try {
             console.log("🔄 1. Iniciando cálculo de promedio...");
             
@@ -644,17 +717,62 @@ async function submitCreateReview(state) {
             const storageKey = `review_content_${reviewId}`;
             localStorage.setItem(storageKey, JSON.stringify(state.currentReviewData));
             console.log(`💾 Datos del contenido guardados en localStorage: ${storageKey}`);
+            
+            // Guardar el timestamp de creación para que aparezca primero en el filtro "recent"
+            const creationTimestampKey = `review_created_at_${reviewId}`;
+            const now = Date.now();
+            localStorage.setItem(creationTimestampKey, String(now));
+            console.log(`⏰ Timestamp de creación guardado para review ${reviewId}: ${now}`);
         }
         
-        showAlert('✅ Reseña creada y guardada exitosamente', 'success');
+        showAlert(' Reseña creada y guardada exitosamente', 'success');
         hideCreateReviewModal(state);
         
-        setReviewFilter('recent', () => {}, state.loadReviews);
-        if (typeof window.reloadCarousel === 'function') {
-            window.reloadCarousel();
-        }
+        // Esperar un momento para que el backend procese la reseña antes de recargar
+        // Aumentamos el timeout a 800ms para dar más tiempo al backend
+        setTimeout(() => {
+            if (typeof state.loadReviews === 'function') {
+                console.log('[CREATE REVIEW] ✅ Recargando reseñas con filtro "recent"...');
+                console.log('[CREATE REVIEW] 📅 ReviewId de la reseña creada:', reviewId);
+                
+                // Obtener las funciones de setCurrentFilter y getCurrentFilter si están disponibles
+                // Estas funciones deberían estar en el scope de homeAdmin.js
+                let setCurrentFilterFn = null;
+                let getCurrentFilterFn = null;
+                
+                // Intentar obtener desde window si están expuestas
+                if (typeof window.setCurrentReviewFilter === 'function') {
+                    setCurrentFilterFn = window.setCurrentReviewFilter;
+                }
+                if (typeof window.getCurrentReviewFilter === 'function') {
+                    getCurrentFilterFn = window.getCurrentReviewFilter;
+                }
+                
+                // Si tenemos setReviewFilter disponible, usarlo (es la forma correcta)
+                if (typeof setReviewFilter === 'function') {
+                    // setReviewFilter actualiza el estado y recarga las reseñas
+                    console.log('[CREATE REVIEW] 🔄 Cambiando filtro a "recent" y recargando...');
+                    setReviewFilter('recent', setCurrentFilterFn || (() => {}), state.loadReviews);
+                } else {
+                    // Fallback: cambiar UI manualmente y recargar
+                    console.log('[CREATE REVIEW] 🔄 Fallback: cambiando UI y recargando...');
+                    const filterButtons = document.querySelectorAll('.filter-btn');
+                    filterButtons.forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.filter === 'recent');
+                    });
+                    // Luego recargar las reseñas
+                    state.loadReviews();
+                }
+            } else if (typeof setReviewFilter === 'function') {
+                setReviewFilter('recent', () => {}, state.loadReviews);
+            }
+            
+            if (typeof window.reloadCarousel === 'function') {
+                window.reloadCarousel();
+            }
+        }, 800); // Esperar 800ms para que el backend procese la reseña nueva
         
-        setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 500);
+        setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 1000);
         
     } catch (error) {
         console.error('❌ Error creando reseña:', error);
@@ -676,19 +794,47 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
         console.error('Modal de crear reseña no encontrado');
         return;
     }
-    
+
+    clearReviewFormErrors();
     modal.setAttribute('data-edit-review-id', reviewId);
-    
-    const normalizedReviewId = String(reviewId).trim();
-    const storageKey = `review_content_${normalizedReviewId}`;
+
+    // 🔒 BLOQUEAR CAMBIO DE CONTENIDO (Home y Perfil)
+    const changeContentBtn = document.getElementById('changeContentBtn');
+    const contentSelector = document.getElementById('createReviewContentSelector');
+    const contentSearchInput = document.getElementById('contentSearchInput');
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+
+    // Ocultar botón "Cambiar contenido"
+    if (changeContentBtn) {
+        changeContentBtn.style.display = 'none';
+    }
+
+    // Ocultar selector
+    if (contentSelector) {
+        contentSelector.style.display = 'none';
+    }
+
+    // Deshabilitar input de búsqueda por completo
+    if (contentSearchInput) {
+        contentSearchInput.disabled = true;
+        contentSearchInput.style.pointerEvents = "none";
+    }
+
+    // Ocultar dropdown de búsqueda
+    if (contentSearchDropdown) {
+        contentSearchDropdown.style.display = 'none';
+    }
+
+    // ============================
+    // 🔄 CARGAR INFO DEL CONTENIDO
+    // ============================
+    const storageKey = `review_content_${String(reviewId).trim()}`;
     const storedContentData = localStorage.getItem(storageKey);
-    
-    console.log(`🔍 Cargando datos del contenido para edición (reviewId: ${reviewId})`);
-    
+
     if (storedContentData) {
         try {
             const contentData = JSON.parse(storedContentData);
-            
+
             state.currentReviewData = {
                 type: contentData.type,
                 id: contentData.id,
@@ -696,55 +842,47 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
                 artist: contentData.artist || '',
                 image: contentData.image || '../Assets/default-avatar.png'
             };
-            
+
+            const contentInfo = document.getElementById('createReviewContentInfo');
             const contentInfoImage = document.getElementById('contentInfoImage');
             const contentInfoName = document.getElementById('contentInfoName');
             const contentInfoType = document.getElementById('contentInfoType');
-            
+
+            if (contentInfo) contentInfo.style.display = 'flex';
             if (contentInfoImage) {
                 contentInfoImage.src = state.currentReviewData.image;
-                contentInfoImage.onerror = function() { this.src = '../Assets/default-avatar.png'; };
+                contentInfoImage.onerror = () => contentInfoImage.src = '../Assets/default-avatar.png';
             }
             if (contentInfoName) contentInfoName.textContent = state.currentReviewData.name;
-            if (contentInfoType) contentInfoType.textContent = state.currentReviewData.type === 'song' ? 'CANCIÓN' : 'ÁLBUM';
-            
-        } catch (e) {
-            console.error('❌ Error parseando datos del contenido guardados:', e);
-            showAlert('No se pudieron cargar los datos del contenido.', 'warning');
+            if (contentInfoType) contentInfoType.textContent =
+                state.currentReviewData.type === 'song' ? 'CANCIÓN' : 'ÁLBUM';
+
+        } catch (err) {
+            console.error("❌ Error al cargar contenido:", err);
         }
-    } else {
-        console.warn(`⚠️ No se encontraron datos del contenido en localStorage para review ${reviewId}`);
-        showAlert('No se encontraron los datos del contenido. La reseña se puede editar pero no se mostrará la info.', 'warning');
     }
-    
-    // Llenar los campos con los datos actuales
+
+    // ============================
+    // ✏️ CARGAR DATOS DE LA RESEÑA
+    // ============================
     const titleInput = document.getElementById('createReviewTitleInput');
     const textInput = document.getElementById('createReviewTextInput');
     const starsContainer = document.getElementById('createReviewStars');
-    
+
     if (titleInput) titleInput.value = title;
     if (textInput) textInput.value = content;
-    
+
     if (starsContainer) {
         const stars = starsContainer.querySelectorAll('.star-input');
-        stars.forEach((star) => {
+        stars.forEach(star => {
             const starRating = parseInt(star.getAttribute('data-rating'));
             star.classList.toggle('active', starRating <= rating);
         });
     }
-    
-    const modalTitle = modal.querySelector('.create-review-title');
-    if (modalTitle) modalTitle.textContent = 'Editar Reseña';
-    
-    const contentSelector = document.getElementById('createReviewContentSelector');
-    const contentInfo = document.getElementById('createReviewContentInfo');
-    
-    if (contentSelector) contentSelector.style.display = 'none';
-    if (contentInfo) contentInfo.style.display = 'block';
-    
-    // Asegurar que el modal se muestre
-    modal.style.display = 'flex';
-    
-    console.log('✅ Modal de edición abierto correctamente');
-}
 
+    const modalTitle = modal.querySelector('.create-review-title');
+    if (modalTitle) modalTitle.textContent = 'EDITAR RESEÑA';
+
+    // Mostrar modal
+    modal.style.display = 'flex';
+}

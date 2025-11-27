@@ -601,3 +601,77 @@ html, body {
 .feed-btn.liked i {
     color: #ec4899;
 }
+
+/* --- FOOTER COMPACTO --- */
+.feed-footer {
+    display: flex;
+    align-items: center; /* Centrado vertical */
+    gap: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.feed-btn {
+    /* Reset de estilos de botón nativos */
+    appearance: none;
+    -webkit-appearance: none;
+    
+    /* Layout Flexbox Robusto */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Espacio entre icono y número */
+    
+    /* Dimensiones y Estilo */
+    min-width: 60px; /* Ancho mínimo para que no se aplaste */
+    height: 36px;    /* Altura fija para alineación perfecta */
+    padding: 0 12px;
+    
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.feed-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Estilos específicos para Like activado */
+.feed-btn.liked {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: rgba(236, 72, 153, 0.3);
+    color: #fce7f3;
+}
+
+.feed-btn i {
+    font-size: 1.1rem; /* Tamaño del icono */
+    display: flex;     /* Asegura centrado del icono */
+}
+
+/* Corrección para el contador */
+.feed-btn span {
+    font-family: 'Arimo', sans-serif;
+    line-height: 1;
+    margin-top: 2px; /* Ajuste fino vertical */
+}
+
+/* Efecto Pop al dar like */
+.feed-btn.liked i {
+    color: #ec4899;
+    animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}

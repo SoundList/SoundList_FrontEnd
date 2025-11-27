@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:5000"; 
+import { API_BASE_URL } from "./configApi.js";
+//const API_BASE_URL = "http://localhost:5000"; 
 
 // Helper de Autenticación
 const getAuthHeaders = () => {

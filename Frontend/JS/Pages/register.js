@@ -1,3 +1,5 @@
+import {API_BASE_URL} from './../APIs/configApi.js';
+
 // Register Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const registerForm = document.getElementById('registerForm');
@@ -55,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showAlert('Creando cuenta...', 'info');
         
         // Usar el gateway directamente
-        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const GATEWAY_BASE_URL = API_BASE_URL;
         const registerEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/register`;
         
         axios.post(registerEndpoint, {

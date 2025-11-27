@@ -1,6 +1,7 @@
+import { API_BASE_URL } from "./configApi.js";
 (function() {
 
-    const GATEWAY_BASE_URL = "http://localhost:5000/api/gateway";
+    const GATEWAY_BASE_URL = `${API_BASE_URL}/api/gateway`;
     const API_BASE = `${GATEWAY_BASE_URL}/comments`; 
 
     function getAuthHeaders() {

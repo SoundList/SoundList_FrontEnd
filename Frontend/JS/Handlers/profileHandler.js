@@ -76,10 +76,62 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
     }
 
     // Ordenar por fecha de creación (más recientes primero)
+    // Usar la misma lógica que reviewFeed.js para manejar reseñas recién creadas
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    
+    const getTimestamp = (review) => {
+        // PRIMERO: Verificar si hay un timestamp de creación guardado en localStorage
+        // Esto es para reseñas recién creadas que aún no tienen fecha válida del backend
+        try {
+            const reviewId = review.id || review.ReviewId || review.reviewId;
+            if (reviewId) {
+                const creationTimestampKey = `review_created_at_${reviewId}`;
+                const storedTimestamp = localStorage.getItem(creationTimestampKey);
+                if (storedTimestamp) {
+                    const ts = parseInt(storedTimestamp, 10);
+                    if (!isNaN(ts) && ts > 0) {
+                        // Si es muy reciente (últimos 5 minutos), darle prioridad máxima
+                        if (ts >= fiveMinutesAgo) {
+                            return ts + 1000000000000; // Agregar 1 billón de ms para prioridad máxima
+                        }
+                        return ts;
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignorar errores de localStorage
+        }
+        
+        // SEGUNDO: Intentar desde el campo createdAt del objeto
+        let date = review.createdAt || review.CreatedAt || review.Created || review.created || review.date || review.Date;
+        
+        // Si createdAt es un Date válido
+        if (date instanceof Date) {
+            const ts = date.getTime();
+            if (!isNaN(ts) && ts > 0) {
+                return ts;
+            }
+        }
+        
+        // Si createdAt es un string o número, intentar parsearlo
+        if (date) {
+            const parsed = new Date(date);
+            const ts = parsed.getTime();
+            if (!isNaN(ts) && ts > 0 && parsed.getFullYear() > 1 && !date.toString().includes('0001-01-01')) {
+                return ts;
+            }
+        }
+        
+        // Fallback: usar índice (las reseñas más recientes suelen estar al final del array)
+        const fallbackTimestamp = (review.originalIndex !== undefined ? review.originalIndex : reviews.indexOf(review)) * 1000000;
+        return fallbackTimestamp;
+    };
+    
     const sortedReviews = [...reviews].sort((a, b) => {
-        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-        return dateB - dateA;
+        const dateA = getTimestamp(a);
+        const dateB = getTimestamp(b);
+        return dateB - dateA; // Más recientes primero (mayor timestamp primero)
     });
 
     container.innerHTML = sortedReviews.map((review) => {
@@ -619,6 +671,36 @@ async function loadUserReviews(userIdToLoad) {
     }
 }
 
+// --- FUNCIÓN AUXILIAR PARA CARGAR API ---
+async function loadUserApi() {
+    if (window.userApi && window.userApi.getUserProfile) {
+        return window.userApi;
+    }
+    
+    // Esperar un poco para que el script se cargue si es necesario
+    let attempts = 0;
+    while (attempts < 10 && (!window.userApi || !window.userApi.getUserProfile)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (window.userApi && window.userApi.getUserProfile) {
+        return window.userApi;
+    }
+    
+    // Si aún no está disponible, intentar importarlo dinámicamente
+    try {
+        await import('../APIs/userApi.js');
+        if (window.userApi && window.userApi.getUserProfile) {
+            return window.userApi;
+        }
+    } catch (e) {
+        console.warn("No se pudo importar userApi dinámicamente:", e);
+    }
+    
+    throw new Error("userApi no está disponible");
+}
+
 // --- FUNCIÓN PRINCIPAL DE CARGA DE PERFIL ---
 
 async function loadUserProfile(userIdToLoad) {
@@ -667,7 +749,9 @@ async function loadUserProfile(userIdToLoad) {
     let user = null; 
 
     try {
-        user = await window.userApi.getUserProfile(userIdToLoad); 
+        // Asegurar que userApi esté disponible antes de usarlo
+        const userApi = await loadUserApi();
+        user = await userApi.getUserProfile(userIdToLoad); 
 
         // Cargar datos del usuario desde el backend (como Spotify)
         if (userAvatarEl) {
@@ -734,8 +818,9 @@ async function loadUserProfile(userIdToLoad) {
 
 
     try {
-        const followerCount = await window.userApi.getFollowerCount(userIdToLoad);
-        const followingCount = await window.userApi.getFollowingCount(userIdToLoad);
+        const userApi = await loadUserApi();
+        const followerCount = await userApi.getFollowerCount(userIdToLoad);
+        const followingCount = await userApi.getFollowingCount(userIdToLoad);
         
         if (followerCountEl) followerCountEl.textContent = followerCount || 0;
         if (followingCountEl) followingCountEl.textContent = followingCount || 0;
@@ -852,7 +937,8 @@ async function setupFollowButton(container, targetUserId) {
     try {
         // INTENTO 1: API directa
         try {
-            isFollowing = await window.userApi.checkFollowStatus(targetUserId);
+            const userApi = await loadUserApi();
+            isFollowing = await userApi.checkFollowStatus(targetUserId);
         } catch (e) { /* Ignoramos fallo directo */ }
 
         // INTENTO 2: Fallback Manual (Descargar lista de seguidos)
@@ -903,11 +989,13 @@ async function setupFollowButton(container, targetUserId) {
         followBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         try {
+            const userApi = await loadUserApi();
+            
             if (currentState) {
                 // ---------------------------
                 // DEJAR DE SEGUIR
                 // ---------------------------
-                await window.userApi.unfollowUser(targetUserId);
+                await userApi.unfollowUser(targetUserId);
                 updateFollowBtnUI(followBtn, false);
                 updateFollowerCount(-1);
             } else {
@@ -930,7 +1018,7 @@ async function setupFollowButton(container, targetUserId) {
                 console.log("📤 Enviando Follow con datos:", { targetUserId, targetName, targetImage });
 
                 // 2. Llamar a la API con los 3 parámetros
-                await window.userApi.followUser(targetUserId, targetName, targetImage);
+                await userApi.followUser(targetUserId, targetName, targetImage);
                 
                 updateFollowBtnUI(followBtn, true);
                 updateFollowerCount(1);
@@ -2498,17 +2586,24 @@ function initializeCreateReviewModal() {
                 });
             });
             
-            star.addEventListener('mouseenter', () => {
-                const hoverRating = parseInt(star.getAttribute('data-rating'));
+            star.addEventListener('mouseenter', function() {
+                // Solo resaltar esta estrella y las anteriores (hasta esta posición)
+                const hoverRating = parseInt(this.getAttribute('data-rating')) || 0;
                 stars.forEach((s, i) => {
-                    s.style.opacity = i < hoverRating ? '1' : '0.5';
+                    // Solo activar las estrellas hasta la posición actual (i + 1 <= hoverRating)
+                    const shouldBeActive = (i + 1) <= hoverRating;
+                    s.classList.toggle('active', shouldBeActive);
+                    // No cambiar opacity, dejar que el CSS maneje el hover
                 });
             });
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
+            // Restaurar al rating actual cuando se sale del área
             stars.forEach((s, i) => {
-                s.style.opacity = i < currentRating ? '1' : '0.5';
+                const shouldBeActive = (i + 1) <= currentRating;
+                s.classList.toggle('active', shouldBeActive);
+                s.style.opacity = shouldBeActive ? '1' : '0.5';
             });
         });
     }
@@ -3024,7 +3119,8 @@ async function submitCreateReview() {
         // Guardar datos del contenido en localStorage para uso futuro
         const reviewId = response?.ReviewId || response?.reviewId || response?.Id_Review || response?.id;
         if (reviewId) {
-            const storageKey = `review_content_${String(reviewId).trim()}`;
+            const reviewIdStr = String(reviewId).trim();
+            const storageKey = `review_content_${reviewIdStr}`;
             localStorage.setItem(storageKey, JSON.stringify({
                 type: currentReviewData.type,
                 id: currentReviewData.id,
@@ -3032,6 +3128,12 @@ async function submitCreateReview() {
                 artist: currentReviewData.artist,
                 image: currentReviewData.image
             }));
+            
+            // Guardar el timestamp de creación para que aparezca primero en el filtro "recent"
+            const creationTimestampKey = `review_created_at_${reviewIdStr}`;
+            const now = Date.now();
+            localStorage.setItem(creationTimestampKey, String(now));
+            console.log(`⏰ Timestamp de creación guardado para review ${reviewIdStr}: ${now}`);
         }
         
         hideCreateReviewModal();
@@ -3042,10 +3144,13 @@ async function submitCreateReview() {
             alert(' Reseña creada exitosamente');
         }
         
-        // Recargar las reseñas del perfil
-        if (profileUserId && typeof loadUserProfile === 'function') {
-            await loadUserProfile(profileUserId);
-        }
+        // Esperar un momento para que el backend procese la reseña antes de recargar
+        setTimeout(async () => {
+            // Recargar las reseñas del perfil
+            if (profileUserId && typeof loadUserProfile === 'function') {
+                await loadUserProfile(profileUserId);
+            }
+        }, 500);
         
     } catch (error) {
         console.error('❌ Error creando reseña:', error);
@@ -3090,11 +3195,12 @@ async function showFollowersModal(userId, type) {
     `;
     
     try {
+        const userApi = await loadUserApi();
         let users = [];
         
         if (type === 'followers') {
             // Obtener lista de seguidores
-            const response = await window.userApi.getFollowerList(userId);
+            const response = await userApi.getFollowerList(userId);
             const data = response.Items || response.items || response || [];
             
             // Obtener información completa de cada usuario
@@ -3102,7 +3208,7 @@ async function showFollowersModal(userId, type) {
                 const followerId = item.FollowerId || item.followerId || item.UserId || item.userId || item.id;
                 if (followerId) {
                     try {
-                        const userInfo = await window.userApi.getUserProfile(followerId);
+                        const userInfo = await userApi.getUserProfile(followerId);
                         users.push({
                             userId: followerId,
                             username: userInfo.Username || userInfo.username || 'Usuario',
@@ -3135,7 +3241,7 @@ async function showFollowersModal(userId, type) {
                 const followingId = item.FollowingId || item.followingId || item.UserId || item.userId || item.id;
                 if (followingId) {
                     try {
-                        const userInfo = await window.userApi.getUserProfile(followingId);
+                        const userInfo = await userApi.getUserProfile(followingId);
                         users.push({
                             userId: followingId,
                             username: userInfo.Username || userInfo.username || 'Usuario',

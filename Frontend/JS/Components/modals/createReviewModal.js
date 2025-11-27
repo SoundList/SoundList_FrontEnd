@@ -131,7 +131,7 @@ export function initializeCreateReviewModal(state) {
             highlightStars(rating);
         }
             
-        stars.forEach((star) => {
+        stars.forEach((star, index) => {
             star.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -139,12 +139,17 @@ export function initializeCreateReviewModal(state) {
                 updateStarRating(rating);
             });
             star.addEventListener('mouseenter', function() {
+                // Solo resaltar esta estrella y las anteriores (hasta esta posición)
                 const rating = parseInt(this.getAttribute('data-rating')) || 0;
-                highlightStars(rating);
+                stars.forEach((s, i) => {
+                    // Solo activar las estrellas hasta la posición actual (index + 1)
+                    s.classList.toggle('active', (i + 1) <= rating);
+                });
             });
         });
         
         createReviewStars.addEventListener('mouseleave', () => {
+            // Restaurar al rating actual cuando se sale del área
             highlightStars(state ? (state.currentRating || 0) : currentRating);
         });
     }

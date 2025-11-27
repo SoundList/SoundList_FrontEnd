@@ -490,7 +490,7 @@ function renderReviews(reviews) {
                             <span class="like-count">${likesCount}</span>
                         </button>
                     </div>
-                    <button class="feed-btn comment-btn" data-review-id="${r.id}"><i class="far fa-comment"></i><span>${commentsCount}</span></button>
+                    <button class="feed-btn comment-btn" data-review-id="${r.id}"><i class="far fa-comment"></i><span class="review-comments-count">${commentsCount}</span></button>
                 </div>
             </div>
         </div>`;

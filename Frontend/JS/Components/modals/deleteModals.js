@@ -140,6 +140,25 @@ async function confirmDeleteComment(state) {
         
         hideDeleteCommentModal(state);
         
+        // Obtener la cantidad actualizada de comentarios
+        const comments = await getCommentsByReview(reviewId);
+        const newCommentsCount = comments.length;
+        
+        // Actualizar contador en el botón de comentarios de la reseña (siempre, no solo si el modal está abierto)
+        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
+        if (commentBtn) {
+            const countSpan = commentBtn.querySelector('.review-comments-count');
+            if (countSpan) {
+                countSpan.textContent = newCommentsCount;
+            } else {
+                // Si no encuentra el span con la clase, buscar cualquier span dentro del botón
+                const span = commentBtn.querySelector('span');
+                if (span) {
+                    span.textContent = newCommentsCount;
+                }
+            }
+        }
+        
         // Recargar comentarios en el modal de comentarios si está abierto
         if (commentsModal && commentsModal.style.display === 'flex') {
             const { loadCommentsIntoModal } = await import('./commentsModal.js');
@@ -149,10 +168,9 @@ async function confirmDeleteComment(state) {
         // Actualizar vista detallada si está abierta
         if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
             const { loadReviewDetailComments } = await import('./reviewDetailModal.js');
-            const comments = await getCommentsByReview(reviewId);
             await loadReviewDetailComments(reviewId, comments, state);
             const commentsCount = document.getElementById('reviewDetailCommentsCount');
-            if (commentsCount) commentsCount.textContent = comments.length;
+            if (commentsCount) commentsCount.textContent = newCommentsCount;
         }
         
         showAlert('Comentario eliminado exitosamente', 'success');

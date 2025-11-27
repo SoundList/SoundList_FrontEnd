@@ -474,8 +474,15 @@ async function handleSubmitReview() {
                 try {
                     const reviewId = review.reviewId || review.ReviewId || review.id;
                     const userId = review.userId || review.UserId;
+                    let isUserDeleted = false;
                     const [userData, likes, comments] = await Promise.all([
-                        getUser(userId).catch(e => null),
+                        getUser(userId).catch(e => {
+                            // Detectar si el usuario fue eliminado (404)
+                            if (e.response && e.response.status === 404) {
+                                isUserDeleted = true;
+                            }
+                            return null;
+                        }),
                         getReviewReactionCount(reviewId).catch(e => 0),
                         getCommentsByReview(reviewId).catch(e => [])
                     ]);
@@ -483,7 +490,7 @@ async function handleSubmitReview() {
                     const userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true';
                     return {
                         id: reviewId,
-                        username: userData?.username || userData?.Username || 'Usuario',
+                        username: userData?.username || userData?.Username || 'Usuario', // Mantener "Usuario" genérico, el badge indicará si está eliminado
                         avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
                         contentType: 'Canción',
                         song: currentSongData.title,
@@ -494,7 +501,8 @@ async function handleSubmitReview() {
                         likes: likes,
                         comments: comments.length,
                         userLiked: userLiked,
-                        userId: userId
+                        userId: userId,
+                        isUserDeleted: isUserDeleted
                     };
                 } catch (error) {
                     console.error("Error enriqueciendo reseña:", error, review);

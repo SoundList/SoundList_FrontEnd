@@ -102,8 +102,9 @@ export async function showReviewDetailModal(reviewId, state = null) {
             return;
         }
         
-        let username = `Usuario ${String(review.UserId || review.userId || '').substring(0, 8)}`;
+        let username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará si está eliminado
         let avatar = '../Assets/default-avatar.png';
+        let isUserDeleted = false;
         
         if (review.UserId || review.userId) {
             try {
@@ -112,9 +113,22 @@ export async function showReviewDetailModal(reviewId, state = null) {
                 if (userData) {
                     username = userData.Username || userData.username || username;
                     avatar = userData.imgProfile || userData.ImgProfile || avatar;
+                } else {
+                    // Si getUser devuelve null, puede ser un 404 (usuario eliminado)
+                    // Verificar si es un usuario eliminado
+                    isUserDeleted = true;
+                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                    console.debug(`Usuario eliminado detectado (getUser devolvió null): ${review.UserId || review.userId}`);
                 }
             } catch (userError) {
-                console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                // Detectar si el usuario fue eliminado (404)
+                if (userError.response && userError.response.status === 404) {
+                    isUserDeleted = true;
+                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                    console.debug(`Usuario eliminado detectado (404): ${review.UserId || review.userId}`);
+                } else {
+                    console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
+                }
             }
         }
         
@@ -185,9 +199,10 @@ export async function showReviewDetailModal(reviewId, state = null) {
             contentDiv.innerHTML = `
                 <div class="review-detail-main">
                     <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../Assets/default-avatar.png'" style="cursor: pointer;">
+                        <img src="${avatar}" alt="${username}" class="review-detail-avatar ${isUserDeleted ? '' : 'profile-navigation-trigger'}" ${isUserDeleted ? '' : `data-user-id="${reviewUserId}" style="cursor: pointer;"`} onerror="this.src='../Assets/default-avatar.png'">
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
+                            <span class="review-detail-username ${isUserDeleted ? '' : 'profile-navigation-trigger'}" ${isUserDeleted ? '' : `data-user-id="${reviewUserId}" style="cursor: pointer;"`}>${username}</span>
+                            ${isUserDeleted ? '<span class="deleted-account-badge" style="margin-left: 0.5rem;">Cuenta eliminada</span>' : ''}
                             <span class="review-detail-time">${timeAgo}</span>
                         </div>
                     </div>
@@ -340,6 +355,16 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                         };
                     }
                 } catch (error) {
+                    // Detectar si el usuario fue eliminado (404)
+                    if (error.response && error.response.status === 404) {
+                        return {
+                            ...comment,
+                            UserName: 'Usuario', // Mantener "Usuario" genérico, el badge indicará que está eliminado
+                            username: 'Usuario',
+                            isUserDeleted: true,
+                            UserProfilePicUrl: comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar || '../Assets/default-avatar.png'
+                        };
+                    }
                     console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
                 }
             }
@@ -444,10 +469,11 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                 
                 return `
                     <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="${userAvatar}" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='${fallbackAvatar}'" style="cursor: pointer;">
+                        <img src="${userAvatar}" alt="${username}" class="review-detail-comment-avatar ${isCommentUserDeleted ? '' : 'profile-navigation-trigger'}" ${isCommentUserDeleted ? '' : `data-user-id="${commentUserId}" style="cursor: pointer;"`} onerror="this.src='${fallbackAvatar}'">
                         <div class="review-detail-comment-content">
                             <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
+                                <span class="review-detail-comment-username ${isCommentUserDeleted ? '' : 'profile-navigation-trigger'}" ${isCommentUserDeleted ? '' : `data-user-id="${commentUserId}" style="cursor: pointer;"`}>${username}</span>
+                                ${isCommentUserDeleted ? '<span class="deleted-account-badge" style="margin-left: 0.5rem; font-size: 0.7rem;">Cuenta eliminada</span>' : ''}
                                 <span class="review-detail-comment-time">${timeAgo}</span>
                             </div>
                             <p class="review-detail-comment-text">${text}</p>

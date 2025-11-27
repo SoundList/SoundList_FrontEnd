@@ -89,8 +89,15 @@ async function loadPageData() {
                     const reviewId = review.reviewId || review.ReviewId || review.id;
                     const userId = review.userId || review.UserId;
                     
+                    let isUserDeleted = false;
                     const [userData, likes, comments] = await Promise.all([
-                        getUser(userId).catch(e => null),
+                        getUser(userId).catch(e => {
+                            // Detectar si el usuario fue eliminado (404)
+                            if (e.response && e.response.status === 404) {
+                                isUserDeleted = true;
+                            }
+                            return null;
+                        }),
                         getReviewReactionCount(reviewId).catch(e => 0),
                         getCommentsByReview(reviewId).catch(e => [])
                     ]);
@@ -100,7 +107,7 @@ async function loadPageData() {
 
                     return {
                         id: reviewId,
-                        username: userData?.username || userData?.Username || 'Usuario',
+                        username: userData?.username || userData?.Username || 'Usuario', // Mantener "Usuario" genérico, el badge indicará si está eliminado
                         avatar: userData?.imgProfile || userData?.ImgProfile || '../Assets/default-avatar.png',
                         contentType: 'Álbum',
                         song: albumData.title,
@@ -111,7 +118,8 @@ async function loadPageData() {
                         likes: likes,
                         comments: comments.length,
                         userLiked: userLiked,
-                        userId: userId
+                        userId: userId,
+                        isUserDeleted: isUserDeleted
                     };
                 } catch (error) {
                     return null;

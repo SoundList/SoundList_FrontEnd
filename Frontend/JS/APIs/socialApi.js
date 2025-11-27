@@ -381,8 +381,21 @@ export async function getUser(userId) {
         const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, {
              headers: getAuthHeaders() 
         });
+        
+        // Verificar si la respuesta tiene status 404 o data es null (el interceptor puede convertir el 404 en una respuesta resuelta)
+        if (response.status === 404 || !response.data || response.data === null) {
+            // Lanzar un error con status 404 para que el código que llama pueda detectarlo
+            const error = new Error('Usuario no encontrado');
+            error.response = { status: 404 };
+            throw error;
+        }
+        
         return response.data;
     } catch (error) {
+        // Si es un 404, relanzarlo para que el código que llama pueda detectarlo
+        if (error.response && error.response.status === 404) {
+            throw error;
+        }
         console.warn(`Error obteniendo usuario ${userId}`, error);
         return null;
     }

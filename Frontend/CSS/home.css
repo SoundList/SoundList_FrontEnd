@@ -48,13 +48,14 @@ body::-webkit-scrollbar {
 }
 
 .home-container {
-    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
-    min-height: 100vh;
-    max-height: 100vh; /* Limitar altura para evitar scroll del body */
-    padding-bottom: 2rem;
-    overflow: hidden; /* Evitar scroll del contenedor principal */
+background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
     background-attachment: fixed;
     background-size: cover;
+    min-height: 100vh;            
+    height: auto !important;     
+    max-height: none !important;  
+    overflow: visible !important; 
+    padding-bottom: 2rem;
 }
 
 /* Header Styles */
@@ -803,10 +804,12 @@ button.nav-btn.active:hover {
 }
 
 .carousel-container {
-    position: relative;
+position: relative;
     display: flex;
     align-items: center;
     gap: 1rem;
+    padding-bottom: 25px; 
+    margin-bottom: 2rem;
 }
 
 .carousel-nav-btn {
@@ -916,15 +919,18 @@ button.nav-btn.active:hover {
 }
 
 .carousel-indicators {
+position: relative;
     display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin: 0.5rem 0 27.5rem 0;
-    padding: 0;
+    bottom:0.1rem;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 10px; 
+    margin-bottom: 2rem;
 }
 
+
 .carousel-indicator {
-    width: 10px;
+width: 10px;
     height: 10px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.3);
@@ -933,6 +939,7 @@ button.nav-btn.active:hover {
     transition: all 0.3s ease;
     padding: 0;
     flex-shrink: 0;
+    pointer-events: auto; 
 }
 
 .carousel-indicator.active {
@@ -1484,39 +1491,46 @@ body #alertContainer .custom-alert {
 /* Mobile Large (max-width: 768px) */
 @media (max-width: 767.98px) {
     .top-header {
-        padding: 0.5rem 0.75rem;
+        padding: 0.5rem 0.5rem; /* Ajuste: Padding general del header */
         position: sticky;
         top: 0;
         z-index: 1000;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     .header-content {
+        /* Hacemos que el header-content envuelva */
+        flex-wrap: wrap; 
+        gap: 0.5rem; /* Espacio entre las filas del header */
         padding: 0;
-        gap: 0.5rem;
         align-items: center;
-        flex-wrap: nowrap;
+        justify-content: space-between; /* Distribuir elementos en la fila */
     }
     
     .header-left {
+        /* Logo a la izquierda, en la primera fila */
         flex-wrap: nowrap;
         gap: 0.5rem;
         margin-left: 0;
-        flex: 1;
+        flex: 1 1 auto; /* Permite que ocupe espacio y se encoja */
         min-width: 0;
         align-items: center;
         overflow: hidden;
+        order: 1; /* Primer elemento en la fila */
     }
     
     .logo-icon {
-        width: 32px;
-        height: 32px;
+        width: 36px; /* Logo un poco más grande para visibilidad */
+        height: 36px;
         margin-top: 0;
         flex-shrink: 0;
     }
     
     .search-container {
-        flex: 1;
+        /* La búsqueda ocupa su propia fila */
+        flex: 1 1 100%; /* Ocupa el 100% del ancho disponible */
         min-width: 0;
+        order: 3; /* Tercer elemento (segunda fila) */
     }
     
     .search-input {
@@ -1531,17 +1545,23 @@ body #alertContainer .custom-alert {
     }
     
     .header-right {
+        /* Iconos de acción a la derecha, en la primera fila */
         gap: 0.25rem;
         flex-shrink: 0;
+        order: 2; /* Segundo elemento en la fila */
     }
     
-    .icon-btn {
-        width: 36px;
-        height: 36px;
+    .icon-btn,
+    .icon-btn.profile-btn {
+        width: 36px !important; /* Iconos un poco más grandes para ser tocables */
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        padding: 0.3rem !important; /* Padding para hacerlos más fáciles de tocar */
         font-size: 1.25rem;
-        padding: 0.4rem;
     }
     
+    /* El botón del menú hamburguesa */
     .mobile-menu-toggle {
         width: 36px;
         height: 36px;
@@ -1549,6 +1569,7 @@ body #alertContainer .custom-alert {
         font-size: 1.1rem;
     }
     
+    /* --- CONTENIDO PRINCIPAL --- */
     .main-content {
         padding: 1rem;
     }
@@ -1559,7 +1580,7 @@ body #alertContainer .custom-alert {
     }
     
     .carousel-section {
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem; /* Ajuste de margen inferior */
     }
     
     .carousel-container {
@@ -1626,7 +1647,7 @@ body #alertContainer .custom-alert {
     }
     
     .reviews-section {
-        margin-top: 2rem;
+        margin-top: 1.5rem !important; /* AJUSTE: Reduce el espacio entre carrusel y reseñas */
         margin-bottom: 1.5rem;
     }
     
@@ -1666,6 +1687,16 @@ body #alertContainer .custom-alert {
         align-items: center;
         padding-top: 0.5rem;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-wrap: wrap; 
+        gap: 0.5rem;
+    }
+    
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        padding: 0.3rem 0.6rem; 
+        font-size: 0.75rem; 
+        min-height: 30px;
     }
     
     .review-rating {
@@ -1683,7 +1714,7 @@ body #alertContainer .custom-alert {
         min-height: 36px;
     }
     
-    /* Modales responsive */
+    /* --- MODALES --- */
     .comments-modal {
         width: 95%;
         max-width: 100%;
@@ -1723,158 +1754,30 @@ body #alertContainer .custom-alert {
         min-height: 44px;
     }
     
-    /* Mejorar scroll en móviles */
-    /* -webkit-overflow-scrolling: touch; removed - not supported in Safari 13+ and other modern browsers */
-    
-    /* Asegurar que los elementos interactivos sean fáciles de tocar */
     .comment-action-btn,
     .comment-like-btn {
         min-width: 44px;
         min-height: 44px;
         padding: 0.5rem;
     }
+
+    /* --- BOTONES POPULARES/RECIENTES --- */
+    .filter-buttons {
+        flex-wrap: nowrap; /* Aseguramos que no se envuelvan */
+        gap: 0.5rem;
+    }
+    .filter-btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    /* --- NOTIFICATION DROPDOWN FIX --- */
+    .notification-dropdown {
+        width: 280px; /* Ancho fijo para el desplegable de notificaciones */
+        right: 0.5rem; /* Ajustar posición */
+    }
 }
 
-/* Mobile Small (max-width: 576px) */
-@media (max-width: 575.98px) {
-    .top-header {
-        padding: 0.5rem 0.625rem;
-    }
-    
-    .header-content {
-        gap: 0.4rem;
-    }
-    
-    .header-left {
-        gap: 0.4rem;
-    }
-    
-    .logo-icon {
-        width: 28px;
-        height: 28px;
-    }
-    
-    .search-input {
-        padding: 0.45rem 0.65rem 0.45rem 2rem;
-        font-size: 0.8rem;
-    }
-    
-    .search-icon {
-        left: 0.65rem;
-        font-size: 0.85rem;
-    }
-    
-    .icon-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 1.15rem;
-        padding: 0.35rem;
-    }
-    
-    .mobile-menu-toggle {
-        width: 32px;
-        height: 32px;
-        padding: 0.35rem;
-        font-size: 1rem;
-    }
-    
-    .carousel-indicators {
-        gap: 0.3rem;
-    }
-    
-    .carousel-indicator {
-        width: 5px;
-        height: 5px;
-    }
-    
-    .main-content {
-        padding: 0.75rem;
-    }
-    
-    .section-title {
-        font-size: 1.15rem;
-        margin-bottom: 0.875rem;
-    }
-    
-    .carousel-wrapper {
-        height: 220px;
-    }
-    
-    .carousel-nav-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-    
-    .carousel-card {
-        padding: 1rem;
-    }
-    
-    .album-image {
-        width: 120px;
-        height: 120px;
-    }
-    
-    .carousel-title {
-        font-size: 1.35rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .carousel-description {
-        font-size: 0.9rem;
-    }
-    
-    .carousel-text {
-        font-size: 0.85rem;
-    }
-    
-    .review-item {
-        padding: 0.875rem;
-    }
-    
-    .review-avatar {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .review-header {
-        font-size: 0.85rem;
-    }
-    
-    .review-comment {
-        font-size: 0.85rem;
-    }
-    
-    .comment-btn,
-    .like-btn {
-        padding: 0.45rem 0.875rem;
-        font-size: 0.8rem;
-        min-height: 32px;
-    }
-    
-    .comments-modal {
-        width: 100%;
-        max-height: 100vh;
-        border-radius: 0;
-        margin: 0;
-    }
-    
-    .comments-modal-header {
-        padding: 0.875rem 1rem;
-    }
-    
-    .comments-modal-title {
-        font-size: 1.15rem;
-    }
-    
-    .comments-list-container {
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .comments-input-container {
-        padding: 0.875rem;
-    }
-}
 
 /* Extra Small Mobile (max-width: 400px) */
 @media (max-width: 400px) {
@@ -4237,31 +4140,10 @@ body #alertContainer .custom-alert {
     border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Logout Modal Responsive - Mobile Small */
-@media (max-width: 575.98px) {
-    .logout-modal {
-        width: 95%;
-        max-width: 350px;
-    }
-    
-    .logout-modal-content {
-        padding: 1.5rem;
-    }
-    
-    .logout-modal-title {
-        font-size: 1.25rem;
-    }
-    
-    .logout-logo-img {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .action-btn {
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-    }
-}
+
+
+
+
 
 /* =========================================
    ESTILOS DE VALIDACIÓN DEL MODAL "CREAR RESEÑA"
@@ -4314,4 +4196,689 @@ body #alertContainer .custom-alert {
 /* Quitar el margen inferior al último elemento dentro de .create-review-form */
 .create-review-form > *:last-child {
     margin-bottom: 0;
+}
+
+
+/* --- 1. RANGO ESPECÍFICO: Notebookes (992px a 1400px) --- */
+@media (min-width: 992px) and (max-width: 1400px) {
+    
+    .header-content {
+        /* Reducción de gaps y compresión forzada */
+        gap: 0.5rem; 
+        justify-content: space-between;
+    }
+
+    /* Limpieza de márgenes negativos en esta franja */
+    .header-left {
+        /* ¡ELIMINAMOS EL MARGEN NEGATIVO AQUÍ! */
+        margin-left: 0 !important; 
+        flex: 0 0 auto;
+    }
+    
+    .logo-icon {
+        /* Reducimos el logo en notebook para ahorrar espacio */
+        width: 60px;
+        height: 50px;
+    }
+
+    .search-container {
+        flex: 2; /* Prioridad a la búsqueda */
+        min-width: 200px; 
+        max-width: 350px; 
+    }
+
+    /* Botones: Espacios mínimos */
+    .header-center {
+        /* Reducimos el gap de 7rem a 1rem */
+        gap: 1rem !important; 
+        /* ¡ELIMINAMOS EL MARGEN NEGATIVO AQUÍ! */
+        margin-right: 0 !important; 
+    }
+    
+    .nav-btn {
+        /* Reducimos el padding horizontal de 3.5rem a 1.5rem */
+        padding: 0.75rem 1.5rem !important; 
+        font-size: 0.9rem !important;
+    }
+
+    /* Iconos derecha */
+    .header-right {
+        /* ¡ELIMINAMOS EL MARGEN NEGATIVO AQUÍ! */
+        margin-right: 0 !important;
+        flex: 0 0 auto;
+        gap: 0.5rem;
+    }
+    
+    .icon-btn,
+    /* Aplicamos la misma regla al contenedor de la imagen del perfil */
+    .icon-btn.profile-btn {
+        /* Tamaño más compacto */
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        /* Eliminamos cualquier padding o margen que pueda desbordar */
+        padding: 0 !important; 
+        margin: 0 !important;
+        flex-shrink: 0;
+    }
+
+    /* Si estás usando el .profile-icon para el audífono/avatar, también lo ajustamos */
+    .profile-icon {
+        width: 36px !important;
+        height: 36px !important;
+        max-width: 36px !important;
+        max-height: 36px !important;
+    }
+
+
+    .reviews-section {
+        margin-top: 2rem !important;
+        margin-bottom: 2rem !important;
+    }
+}
+
+
+/* --- 2. RESTAURACIÓN: PC de Escritorio Grande (1401px y más) --- */
+@media (min-width: 1401px) {
+    
+    .header-content {
+        gap: 2rem !important;
+    }
+
+    /* Restaurar Márgenes y Flexibilidad Originales */
+    .header-left {
+        margin-left: -12rem !important; 
+        flex: 1 !important;
+    }
+    
+    .logo-icon {
+        width: 100px !important;
+        height: 90px !important;
+    }
+
+    .search-container {
+        flex: 1 !important;
+        max-width: 400px !important;
+    }
+
+    .header-center {
+        gap: 7rem !important; 
+        margin-right: -13rem !important;
+        flex: 1 !important; 
+    }
+    
+    .nav-btn {
+        padding: 0.75rem 3.5rem !important; 
+        font-size: 0.95rem !important;
+    }
+
+    .header-right {
+        margin-right: -8rem !important; 
+        flex: 1 !important;
+    }
+    
+    .icon-btn,
+    .icon-btn.profile-btn {
+        width: 50px !important;
+        height: 50px !important;
+        min-width: 50px !important;
+        min-height: 50px !important;
+    }
+}
+
+
+/* --- Extra Small Mobile (max-width: 575.98px) --- */
+@media (max-width: 575.98px) {
+    
+    /* =======================================================
+       4. CORRECCIÓN CRÍTICA: VISIBILIDAD Y POSICIÓN DEL DESPLEGABLE
+       ======================================================= */
+    
+    /* CRÍTICO 1: Asegurar que el contenedor padre no corte el desplegable */
+    .header-left {
+        overflow: visible !important; /* Permite que el desplegable se extienda */
+        position: relative !important; /* Por si las moscas */
+        z-index: 1000 !important; /* Necesario para que el header-left esté sobre el contenido */
+    }
+    
+    /* CRÍTICO 2: Asegurar la base de posicionamiento del desplegable */
+    .search-container {
+        position: relative !important; /* Necesario para que el desplegable ABSOLUTO se base en esto */
+        /* Eliminamos flex: 0 1 auto !important; temporalmente, para que no fuerce el ancho si es un problema de espacio */
+        flex: 1 1 auto !important; /* Revertimos al flex: 1 1 auto para que use el espacio disponible */
+    }
+
+    /* CRÍTICO 3: Asegurar que el desplegable está encima de todo */
+    .search-dropdown {
+        z-index: 10005 !important; 
+        /* La altura será automática por el contenido */
+        max-height: 200px !important; 
+    }
+    
+    /* =======================================================
+       CORRECCIÓN CRÍTICA DE ALTURA Y SCROLL CON FLEXBOX
+       ======================================================= */
+    html {
+        height: 100% !important;
+    }
+    
+    body {
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: visible !important;
+    }
+    .home-container {
+    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
+        background-attachment: fixed;
+        background-size: cover;
+        min-height: 100vh;        
+        height: auto !important;      
+        max-height: none !important;  
+        overflow: visible !important; 
+        padding-bottom: 2rem;
+    }
+
+    .reviews-list {
+        max-height: none !important; 
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* =======================================================
+       1. CORRECCIÓN: AUMENTO DEL TAMAÑO DE ICONOS
+       ======================================================= */
+    
+    /* AUMENTO: Ajustamos los botones de notificaciones, perfil y añadir reseña a 36px */
+    .icon-btn,
+    .icon-btn.profile-btn,
+    .add-review-btn {
+        width: 36px !important; 
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        font-size: 1rem !important;
+    }
+    
+    .header-right {
+        gap: 0.5rem !important; 
+    }
+    
+    .profile-icon {
+        width: 36px !important; 
+        height: 36px !important;
+    }
+
+    /* =======================================================
+       3. CORRECCIÓN: TAMAÑO DEL BADGE DE NOTIFICACIONES (1)
+       ======================================================= */
+    .notification-badge {
+        font-size: 0.55rem !important; 
+        width: 14px !important; 
+        height: 14px !important;
+        top: 2px !important;
+        right: 2px !important;
+    }
+
+    .notification-badge span {
+        font-size: 0.55rem !important; 
+    }
+    
+    /* --- AJUSTES GLOBALES Y DE CONTENIDO --- */
+    .top-header {
+        padding: 0.3rem 0.3rem !important; 
+    }
+
+    .main-content {
+        padding: 0.4rem !important; 
+    }
+
+    .section-title {
+        font-size: 1rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    
+    .reviews-section {
+        margin-top: 1rem !important; 
+        margin-bottom: 1rem !important;
+    }
+    
+    /* =======================================================
+       2. CORRECCIÓN: CONSISTENCIA EN EL TAMAÑO DE RESEÑAS
+       (SIN LINE-CLAMP)
+       ======================================================= */
+    
+    .review-item {
+        min-height: 120px !important; 
+        padding: 0.6rem !important;
+        gap: 0.6rem !important;
+        flex-direction: column !important; 
+        align-items: flex-start !important;
+        overflow: hidden !important; 
+    }
+
+    .review-user {
+        width: 100% !important;
+        order: 1 !important;
+    }
+
+    .review-info {
+        width: 100% !important;
+        order: 2 !important; 
+        max-height: 70px; 
+        overflow: hidden !important;
+    }
+    
+    .review-title {
+        white-space: normal !important;
+        word-break: break-word; 
+        display: block !important; 
+        overflow: visible !important;
+    }
+
+    .review-comment {
+        max-height: 3.8em !important; 
+        overflow: hidden !important;
+        text-overflow: ellipsis; 
+        white-space: normal !important;
+        font-size: 0.75rem !important;
+        line-height: 1.25em !important; 
+    }
+
+    .review-actions {
+        width: 100% !important;
+        order: 3 !important; 
+        justify-content: space-between !important; 
+        padding-top: 0.5rem !important;
+    }
+
+    
+    /* --- RESTO DE AJUSTES DE CONFORMIDAD Y COMPRESIÓN --- */
+    .header-content {
+        justify-content: space-between !important; 
+        gap: 0.15rem !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .header-left {
+        flex: 0 0 auto !important; 
+        gap: 0.3rem !important;
+    }
+    
+    .logo-icon {
+        width: 28px !important;
+        height: 28px !important;
+    }
+    
+    .search-input {
+        padding: 0.3rem 0.5rem 0.3rem 1.6rem !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .search-icon {
+        left: 0.4rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+
+    .header-center {
+        gap: 0.3rem !important;
+        margin-top: 0.3rem !important;
+    }
+    .nav-btn {
+        padding: 0.4rem 0.6rem !important; 
+        font-size: 0.75rem !important;
+        border-radius: 15px !important; 
+    }
+    
+    .carousel-wrapper {
+        height: 200px !important; 
+    }
+    
+    .carousel-card {
+        padding: 0.7rem !important;
+        gap: 0.5rem !important;
+    }
+    
+    .album-image {
+        width: 80px !important;
+        height: 80px !important;
+    }
+
+    .carousel-indicators {
+        display: none !important; 
+    }
+
+    .reviews-list::-webkit-scrollbar {
+        width: 6px !important; 
+    }
+    .reviews-list::-webkit-scrollbar-thumb {
+        background: rgba(124, 58, 237, 0.5) !important;
+        border-radius: 3px !important;
+    }
+    
+    .reviews-header .reviews-filter {
+        margin-left: 0 !important; 
+        flex-wrap: nowrap !important;
+        padding: 0.1rem !important;
+        gap: 0.1rem !important;
+    }
+    .filter-btn {
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .review-avatar {
+        width: 30px !important;
+        height: 30px !important;
+    } 
+    
+    .review-comment {
+        font-size: 0.75rem !important;
+    }
+
+    .review-actions {
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+        gap: 0.1rem !important;
+    }
+    
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        width: auto !important;
+        height: auto !important;
+        padding: 0.2rem 0.3rem !important; 
+        margin: 0 0.1rem !important;
+        font-size: 0.8rem !important;
+        min-height: 24px !important;
+        min-width: 24px !important;
+        border-radius: 50% !important; 
+    }
+    
+    .review-rating {
+        display: flex !important;
+        align-items: center !important;
+        font-size: 0.8rem !important;
+        margin-right: auto !important;
+    }
+
+    .review-stars {
+        font-size: 0.8rem !important;
+    }
+
+    .notifications-dropdown {
+        max-width: 240px !important;
+        min-width: 240px !important;
+        right: 0.2rem !important; 
+    }
+    .notifications-dropdown-header {
+        padding: 0.6rem !important;
+    }
+    .notification-item {
+        padding: 0.5rem !important;
+    }
+    .notification-text {
+        font-size: 0.75rem !important;
+    }
+    
+    .comments-modal {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+
+    .mobile-menu-toggle {
+        width: 32px; height: 32px; padding: 0.35rem; font-size: 1rem;
+    }
+    .logout-modal { max-width: 350px; }
+    .logout-modal-content { padding: 1.5rem; }
+    .logout-modal-title { font-size: 1.25rem; }
+    .logout-logo-img { width: 60px; height: 60px; }
+    .action-btn { padding: 0.75rem 1rem; font-size: 0.9rem; }
+    .login-required-modal { max-width: 90%; }
+    .delete-comment-modal { max-width: 90%; }
+    .comments-modal-header { padding: 0.6rem 0.7rem; }
+}
+
+
+/* --- Extra Small Mobile EXTREMO (max-width: 390px) --- */
+@media (max-width: 390px) {
+    .review-item {
+    /* Fijamos una altura para que todas las tarjetas sean uniformes */
+    height: 160px !important; /* Altura fija (ajusta si 160px es mucho o poco) */
+    min-height: 160px !important;
+    overflow: hidden !important; /* El scroll lo maneja el hijo */
+}
+
+.review-info {
+    /* Definimos una altura MÁXIMA fija para la sección de texto (titulo + comentario) */
+    max-height: 90px !important; /* Altura fija para el texto */
+    overflow-y: auto !important; /* CRÍTICO: Agrega la barra de scroll */
+    overflow-x: hidden !important;
+}
+
+.review-comment {
+    /* Deshacemos cualquier truncamiento de texto */
+    max-height: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+    /* =======================================================
+       6. COMPRESIÓN MÁXIMA EN EL HEADER
+       ======================================================= */
+       
+    /* Reducimos el padding lateral del header al mínimo absoluto */
+    .top-header {
+        padding: 0.1rem 0.1rem !important; 
+    }
+    
+    /* Reducimos el espacio entre los bloques (logo+search y iconos) */
+    .header-content {
+        gap: 0.05rem !important; 
+    }
+    
+    /* Reducimos el tamaño de los iconos de la derecha (Campana, Perfil, +) */
+    .icon-btn,
+    .icon-btn.profile-btn,
+    .add-review-btn {
+        width: 32px !important; /* Reducido de 36px a 32px */
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        font-size: 0.9rem !important; /* Icono más pequeño */
+    }
+    
+    .profile-icon {
+        width: 32px !important; 
+        height: 32px !important;
+    }
+    
+    .header-right {
+        gap: 0.1rem !important; /* Espacio mínimo entre los iconos */
+    }
+    
+    /* Forzamos el logo a ser muy pequeño */
+    .logo-icon {
+        width: 24px !important;
+        height: 24px !important;
+    }
+    
+    /* Ajustamos el tamaño del texto del input para ganar espacio */
+    .search-input {
+        padding: 0.3rem 0.5rem 0.3rem 1.4rem !important;
+        font-size: 0.65rem !important;
+    }
+    
+    .search-icon {
+        left: 0.35rem !important;
+        font-size: 0.7rem !important;
+    }
+
+    /* --- Contenido principal (Opcional, si se desborda) --- */
+    .main-content {
+        padding: 0.2rem !important; 
+    }
+    
+    .section-title {
+        font-size: 0.9rem !important;
+    }
+
+    /* Reducimos el tamaño de las estrellas de reseña */
+    .review-stars {
+        font-size: 0.7rem !important;
+    }
+    
+    /* Reducimos el tamaño de la fuente de los botones de reseña */
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        font-size: 0.7rem !important;
+        min-height: 20px !important;
+        min-width: 20px !important;
+    }
+}
+
+
+
+/* --- Extra Small Mobile ULTRAPRIME (max-width: 344px) --- */
+@media (max-width: 344px) {
+
+    .review-item {
+    height: 150px !important; /* Un poco más pequeña para ahorrar espacio */
+    min-height: 150px !important;
+    overflow: hidden !important;
+}
+
+.review-info {
+    max-height: 80px !important; /* Ajustamos la altura del texto a 80px */
+    overflow-y: auto !important; /* CRÍTICO: Agrega la barra de scroll */
+    overflow-x: hidden !important;
+}
+
+.review-comment {
+    max-height: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+    /* Reducción al límite del padding lateral del header */
+    .top-header {
+        padding: 0.05rem 0.05rem !important; 
+    }
+    
+    /* Reducción al límite del espacio entre bloques y elementos */
+    .header-content {
+        gap: 0.05rem !important; 
+    }
+    
+    /* Iconos de la derecha: Reducción final a 30px */
+    .icon-btn,
+    .icon-btn.profile-btn,
+    .add-review-btn {
+        width: 30px !important; /* De 32px a 30px */
+        height: 30px !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
+        font-size: 0.85rem !important; 
+    }
+    
+    .profile-icon {
+        width: 30px !important; 
+        height: 30px !important;
+    }
+    
+    .header-right {
+        gap: 0 !important; /* Eliminar el espacio entre los iconos de la derecha */
+    }
+    
+    /* Forzar el buscador a un tamaño aún más pequeño */
+    .search-container {
+        min-width: 60px !important; /* Min-width absoluto más bajo */
+    }
+    
+    /* Ajustamos el tamaño del texto del input y padding para liberar espacio */
+    .search-input {
+        padding: 0.2rem 0.4rem 0.2rem 1.3rem !important;
+        font-size: 0.6rem !important;
+        margin-left: 4px;
+    }
+    
+    .search-icon {
+        left: 0.3rem !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Ajuste para que el desplegable fijo se alinee con el nuevo padding del header */
+    .search-dropdown {
+        top: 50px !important; 
+        left: 0.05rem !important;
+        right: 0.05rem !important;
+    }
+    
+    .main-content {
+        padding: 0.1rem !important; 
+    }
+    
+    .section-title {
+        font-size: 0.85rem !important;
+    }
+
+    .review-comment {
+        font-size: 0.7rem !important;
+        line-height: 1.2em !important; 
+    }
+
+    .review-btn,
+    .review-btn.btn-like,
+    .review-btn.comment-btn {
+        font-size: 0.65rem !important;
+        min-height: 18px !important;
+        min-width: 18px !important;
+    }
+}
+.custom-loader-container {
+
+    position: fixed !important;
+    top: 85px !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: calc(100% - 85px) !important;
+    z-index: 900 !important;
+    background: rgba(13, 17, 32, 0.95) !important;
+
+}
+
+.music-waves {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 80px;
+}
+
+.wave-bar {
+    width: 14px;
+    background: linear-gradient(to top, #7C3AED, #EC4899);
+    border-radius: 8px;
+    animation: wave-animation 1s ease-in-out infinite;
+}
+
+
+.wave-bar:nth-child(1) { height: 55px; animation-delay: 0s; }
+.wave-bar:nth-child(2) { height: 75px; animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { height: 110px; animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { height: 70px; animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { height: 90px; animation-delay: 0.4s; }
+
+@keyframes wave-animation {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.4); }
 }

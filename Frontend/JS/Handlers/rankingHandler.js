@@ -1,4 +1,3 @@
-
 import { fetchRankings } from '../APIs/rankingAPI.js';
 import { getAllReviews } from '../APIs/socialApi.js';
 import { 
@@ -18,63 +17,99 @@ let currentState = {
 
 // --- SELECTORES DE ELEMENTOS ---
 const categoryButtons = document.querySelectorAll('.filter-category-btn');
-// Botones de los menús
 const tipoBtn = document.getElementById('tipoFilterBtn');
 const anoBtn = document.getElementById('anoFilterBtn');
-// Menús desplegables
 const tipoDropdown = document.getElementById('tipoFilterDropdown');
 const anoDropdown = document.getElementById('anoFilterDropdown');
 
 /**
- * Función principal. Llama a la API, cuenta reseñas y renderiza.
- */
-/**
- * Función principal. Llama a la API, cuenta reseñas y renderiza.
+ * Función principal. 
+ * ESTRATEGIA: Pedimos siempre los más reseñados al backend para asegurar que nos traiga todo,
+ * y luego ordenamos por rating en el frontend.
  */
 async function loadRankings() {
     console.log("Cargando rankings con el estado:", currentState);
     showLoading(); 
     updateTitlesAndTags();
 
-    // Eliminamos el alert de 'masResenados' y dejamos que el flujo continúe.
-    // El filtro 'masResenados' no envía el parámetro 'orden' al backend, 
-    // por lo que nos dará la lista sin ordenar por calificación.
-
     try {
-        // 1. Obtener ítems de Content
-        let items = await fetchRankings(currentState);
+        // 1. TRUCO: Siempre pedimos 'masResenados' al backend.
+        // ¿Por qué? Porque si pedimos 'mejores' y el backend tiene la calificacion en 0, no nos devuelve el item.
+        // Al pedir 'masResenados', nos aseguramos de recibir los items que tienen actividad, y nosotros arreglamos el rating aquí.
+        const fetchState = { ...currentState, categoria: 'masResenados' };
+        
+        // Obtener ítems de Content Service
+        let items = await fetchRankings(fetchState);
 
-        // 2. Obtener TODAS las reseñas del Social Service
+        // 2. Obtener TODAS las reseñas del Social Service (Datos frescos)
         const allReviews = await getAllReviews();
-        const itemTypeKey = currentState.tipo === 'canciones' ? 'songId' : 'albumId';
+        
+        const isSong = currentState.tipo === 'canciones';
 
-        // 3. Contar las reseñas por ID local (GUID)
-        const reviewSummary = {}; // { GUID_Local: count }
+        // 3. Calcular CONTEO y PROMEDIO en tiempo real
+        const statsMap = {}; 
+        
         allReviews.forEach(review => {
-            const id = review[itemTypeKey] || review[itemTypeKey.charAt(0).toUpperCase() + itemTypeKey.slice(1)];
+            // Normalización agresiva de IDs
+            let id = isSong ? (review.songId || review.SongId) : (review.albumId || review.AlbumId);
+            const rating = Number(review.rating || review.Rating || 0);
+            
             if (id) {
-                reviewSummary[id] = (reviewSummary[id] || 0) + 1;
+                const cleanId = String(id).trim().toLowerCase();
+                if (!statsMap[cleanId]) {
+                    statsMap[cleanId] = { count: 0, totalRating: 0 };
+                }
+                statsMap[cleanId].count += 1;
+                statsMap[cleanId].totalRating += rating;
             }
         });
 
-        // 4. Enriquecer los ítems con el conteo de reseñas
+        // 4. Enriquecer los ítems con los datos calculados
         let rankedItems = items
             .map(item => {
-                const localId = item.songId || item.albumId; // GUID local
-                item.reviewCount = reviewSummary[localId] || 0;
+                const localId = item.songId || item.albumId || item.id; 
+                const cleanId = String(localId).trim().toLowerCase();
+                
+                const stats = statsMap[cleanId] || { count: 0, totalRating: 0 };
+                
+                // Pisar datos del backend con los reales calculados
+                item.reviewCount = stats.count;
+                
+                if (stats.count > 0) {
+                    item.calification = stats.totalRating / stats.count; 
+                } else {
+                    // Si no tiene reviews en el social, confiamos en lo que diga el content o 0
+                    // Pero generalmente será 0 si stats.count es 0
+                    item.calification = 0;
+                }
+
                 return item;
             })
-            // 5. FILTRADO ESTRICTO: Solo ítems que tienen al menos una reseña (reviewCount > 0)
+            // 5. FILTRADO: Solo mostrar items con reseñas
             .filter(item => item.reviewCount > 0); 
             
         // -----------------------------------------------------------------
-        // 6. NUEVO: Lógica de Ordenamiento por Conteo de Reseñas (JS Sort)
+        // 6. ORDENAMIENTO FRONTEND (Aquí aplicamos lo que el usuario pidió)
         // -----------------------------------------------------------------
         if (currentState.categoria === 'masResenados') {
-            // Ordenamos de mayor a menor reviewCount
+            // Usuario pidió: MÁS RESEÑADOS
             rankedItems.sort((a, b) => b.reviewCount - a.reviewCount);
+            
+        } else if (currentState.categoria === 'peores') {
+            // Usuario pidió: MENOS RATING
+            rankedItems.sort((a, b) => {
+                // Si el rating es igual, desempatar por cantidad de reviews
+                if (a.calification !== b.calification) return a.calification - b.calification;
+                return b.reviewCount - a.reviewCount;
+            });
+            
+        } else {
+            // Usuario pidió: MAS RATING (Default 'mejores')
+            rankedItems.sort((a, b) => {
+                if (b.calification !== a.calification) return b.calification - a.calification;
+                return b.reviewCount - a.reviewCount;
+            });
         }
-        // Si no es 'masResenados', la lista ya viene ordenada por el ContentAPI (por Calificación)
 
         renderRankingList(rankedItems, currentState.tipo);
     } catch (error) {
@@ -82,8 +117,9 @@ async function loadRankings() {
         showEmptyState();
     }
 }
+
 /**
- * Actualiza el H2 y los tags de filtro (ej. "TODOS – CANCIONES")
+ * Actualiza el H2 y los tags de filtro
  */
 function updateTitlesAndTags() {
     const tipoTexto = currentState.tipo === 'canciones' ? 'CANCIONES' : 'ÁLBUMES';
@@ -101,36 +137,21 @@ function updateTitlesAndTags() {
     updateActiveFiltersTags(`${anoTexto} – ${tipoTexto}`);
 }
 
-/**
- * Función genérica para inicializar un menú desplegable.
- * Se encarga de abrir/cerrar y cerrar al hacer clic fuera.
- */
 function initializeDropdown(button, dropdown) {
     button.addEventListener('click', (e) => {
-        e.stopPropagation(); // Evita que el clic se propague al 'document'
-        // Cierra otros menús que estén abiertos
-        if (dropdown === tipoDropdown) {
-            anoDropdown.style.display = 'none';
-        } else {
-            tipoDropdown.style.display = 'none';
-        }
-        // Muestra u oculta el menú actual
+        e.stopPropagation(); 
+        if (dropdown === tipoDropdown) anoDropdown.style.display = 'none';
+        else tipoDropdown.style.display = 'none';
+        
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
     });
 }
 
-/**
- * Genera dinámicamente la lista de años para el dropdown.
- */
 function populateYearDropdown() {
     const currentYear = new Date().getFullYear();
-    
-    // CAMBIO: Definimos el límite de años a generar (Ejemplo: 40 años atrás)
     const yearLimit = 40; 
-    
     let yearsHTML = `<a href="#" class="filter-dropdown-item" data-value="null">TODOS (Año)</a>`;
     
-    // Genera los últimos 40 años
     for (let i = 0; i < yearLimit; i++) {
         const year = currentYear - i;
         yearsHTML += `<a href="#" class="filter-dropdown-item" data-value="${year}">${year}</a>`;
@@ -138,7 +159,6 @@ function populateYearDropdown() {
     
     anoDropdown.innerHTML = yearsHTML;
 
-    // Añade listeners a los nuevos items de año
     anoDropdown.querySelectorAll('.filter-dropdown-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
@@ -152,25 +172,19 @@ function populateYearDropdown() {
                 anoBtn.innerHTML = `${value} <i class="fas fa-chevron-down"></i>`;
             }
 
-            anoDropdown.style.display = 'none'; // Cierra el menú
-            loadRankings(); // Recarga
+            anoDropdown.style.display = 'none'; 
+            loadRankings(); 
         });
     });
 }
 
-
-/**
- * Inicializa todos los event listeners de la página.
- */
 export function initializeRankingHandlers() {
-    
-    // --- FILTROS DE CATEGORÍA (Sidebar) ---
     categoryButtons.forEach(button => {
         button.addEventListener('click', () => {
             const buttonText = button.textContent.trim().toUpperCase();
             if (buttonText === 'MENOS RATING') {
                 currentState.categoria = 'peores';
-            } else if (buttonText === 'MAS RESEÑADOS') {
+            } else if (buttonText.includes('RESEÑADOS') || buttonText.includes('RESENADOS')) {
                 currentState.categoria = 'masResenados';
             } else {
                 currentState.categoria = 'mejores';
@@ -182,34 +196,26 @@ export function initializeRankingHandlers() {
         });
     });
 
-    // --- INICIALIZA LOS NUEVOS DROPDOWNS ---
     initializeDropdown(tipoBtn, tipoDropdown);
     initializeDropdown(anoBtn, anoDropdown);
 
-    // --- LÓGICA PARA EL DROPDOWN DE TIPO ---
     tipoDropdown.querySelectorAll('.filter-dropdown-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const value = e.target.getAttribute('data-value'); // 'canciones' o 'albumes'
+            const value = e.target.getAttribute('data-value'); 
             currentState.tipo = value;
-            
-            // Actualiza el texto del botón
             tipoBtn.innerHTML = `${e.target.textContent.toUpperCase()} <i class="fas fa-chevron-down"></i>`;
-            
-            tipoDropdown.style.display = 'none'; // Cierra el menú
-            loadRankings(); // Recarga
+            tipoDropdown.style.display = 'none'; 
+            loadRankings(); 
         });
     });
 
-    populateYearDropdown(); // Crea los items de año (2025, 2024, etc.)
+    populateYearDropdown(); 
 
     document.addEventListener('click', (e) => {
-        if (!tipoBtn.contains(e.target) && !tipoDropdown.contains(e.target)) {
-            tipoDropdown.style.display = 'none';
-        }
-        if (!anoBtn.contains(e.target) && !anoDropdown.contains(e.target)) {
-            anoDropdown.style.display = 'none';
-        }
+        if (!tipoBtn.contains(e.target) && !tipoDropdown.contains(e.target)) tipoDropdown.style.display = 'none';
+        if (!anoBtn.contains(e.target) && !anoDropdown.contains(e.target)) anoDropdown.style.display = 'none';
     });
+    
     loadRankings();
 }

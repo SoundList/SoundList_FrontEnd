@@ -405,10 +405,6 @@ function navigateToContentView(type, id) {
     window.location.href = destinationUrl;
 }
 
-/**
- * Navega al perfil de un usuario
- * @param {string} userId - ID del usuario
- */
 function navigateToProfile(userId) {
     if (!userId || typeof userId !== 'string' || userId.trim() === '') {
         console.error('Error: El ID del usuario está vacío o es inválido.', { userId });
@@ -1052,37 +1048,46 @@ function renderNotifications() {
     
     if (!notifications || notifications.length === 0) {
         notificationsList.innerHTML = `
-            <div class="notification-empty">
-                <i class="fas fa-bell-slash"></i>
-                <p>No tienes notificaciones</p>
+            <div class="notification-empty" style="padding: 20px; text-align: center; color: #666;">
+                <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 10px; opacity: 0.5;"></i>
+                <p style="margin: 0; font-size: 0.9rem;">No tienes notificaciones</p>
             </div>
         `;
         return;
     }
-    
+
     // Generamos el HTML
     notificationsList.innerHTML = notifications.map(n => {
-        const icon = getNotificationIcon(n.type);
+        const iconClass = getNotificationIcon(n.type);
         const time = formatNotificationTime(n.date);
         
-        // LÓGICA DE ESTADO VISUAL
-        // Si leído: Fondo negro (#121212) y texto gris (#b3b3b3)
-        // Si no leído: Fondo gris oscuro (#2a2a2a) y texto blanco brillante (#fff)
-        const bgStyle = n.read ? '#121212' : '#2a2a2a';
-        const textStyle = n.read ? 'color: #b3b3b3;' : 'color: #fff;';
+        // --- ESTILOS VISUALES (El toque "Premium") ---
         
-        // Preparamos el HTML del mensaje. 
-        // Como n.messageHtml ya trae el <span class="username">Nombre</span>, 
-        // solo ajustamos el color de ese span dinámicamente.
+        // Fondo: Si es nueva, un negro un poco más claro (#252525). Si es vista, negro profundo (#121212).
+        const bgStyle = n.read ? '#121212' : '#222';
+        
+        // Borde lateral: Si es nueva, una línea morada a la izquierda.
+        const borderStyle = n.read ? 'border-left: 3px solid transparent;' : 'border-left: 3px solid #8B5CF6;';
+        
+        // Color del nombre: Magenta si es nueva, Gris si es vieja
+        const nameColor = n.read ? '#888' : '#EC4899';
+        
+        // Color del texto: Blanco si es nueva, Gris oscuro si es vieja
+        const textColor = n.read ? '#666' : '#eee';
+
+        // Preparamos el HTML del mensaje
         let displayHtml = n.messageHtml;
-        if(n.read) {
-            // Si está leído, forzamos que el nombre también se vea gris
-            displayHtml = displayHtml.replace('class="notification-username"', 'style="color: #b3b3b3; font-weight: bold;"');
-        } else {
-             displayHtml = displayHtml.replace('class="notification-username"', 'style="color: #fff; font-weight: bold;"');
+        
+        // Forzamos el color del nombre usando replace para no depender de clases externas
+        // Buscamos el span del username y le inyectamos el color correcto
+        displayHtml = displayHtml.replace(/style="[^"]*"/, '').replace('class="notification-username"', `style="color: ${nameColor}; font-weight: 600;"`);
+        
+        // Si el mensaje no tiene el span (por alguna razón), lo envolvemos
+        if (!displayHtml.includes('style=')) {
+             displayHtml = displayHtml.replace(n.username, `<span style="color: ${nameColor}; font-weight: 600;">${n.username}</span>`);
         }
 
-        // Calcular referencia segura para el dataset
+        // Referencia segura
         const refValue = n.reviewId || n.userId || '';
 
         return `
@@ -1090,25 +1095,23 @@ function renderNotifications() {
                  data-id="${n.id}" 
                  data-type="${n.type}" 
                  data-ref="${refValue}" 
-                 style="cursor: pointer; padding: 10px; border-bottom: 1px solid #333; display:flex; align-items:center; gap:10px; background-color: ${bgStyle};">
+                 style="cursor: pointer; padding: 12px 15px; border-bottom: 1px solid #1f1f1f; display:flex; align-items:center; gap:15px; background-color: ${bgStyle}; ${borderStyle} transition: background 0.2s;">
                 
-                <div class="notification-icon">
-                    <i class="${icon}" style="color: ${n.type.includes('Reaction') ? '#EC4899' : '#1DB954'}"></i>
+                <div style="width: 42px; height: 42px; min-width: 42px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #ec4899); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                    <i class="${iconClass}" style="color: #fff; font-size: 1.1rem;"></i>
                 </div>
                 
                 <div class="notification-content" style="flex:1;">
-                    <div class="notification-text" style="${textStyle} font-size: 0.9rem;">
+                    <div class="notification-text" style="color: ${textColor}; font-size: 0.9rem; line-height: 1.4;">
                         ${displayHtml}
                     </div>
-                    <div class="notification-time" style="color: #666; font-size: 0.75rem;">${time}</div>
+                    <div class="notification-time" style="color: #666; font-size: 0.75rem; margin-top: 4px;">${time}</div>
                 </div>
-
-                ${!n.read ? '<div style="width: 8px; height: 8px; background-color: #1DB954; border-radius: 50%;"></div>' : ''}
             </div>
         `;
     }).join('');
 
-    // Re-asignar listeners
+    // Re-asignar listeners (Lógica intacta)
     const items = notificationsList.querySelectorAll('.js-notification-item');
     items.forEach(item => {
         item.addEventListener('click', function() {
@@ -1119,7 +1122,6 @@ function renderNotifications() {
             const dropdown = document.getElementById('notificationsDropdown');
             if(dropdown) dropdown.style.display = 'none';
 
-            // Pasamos 'this' (el elemento HTML) para cambio visual instantáneo
             handleNotificationClick(type, ref, id, this);
         });
     });
@@ -1676,45 +1678,132 @@ function hideLoginRequiredModal() {
 
 function createToastNotification(messageHtml, image, type, referenceId) {
     const alertDiv = document.createElement('div');
-    alertDiv.className = 'custom-alert notification-toast';
+    // Clase extra para especificidad si hace falta
+    alertDiv.className = 'custom-alert notification-toast toast-replica';
     
-    // Agregamos cursor pointer
+    // Configuración de ícono derecho
+    let rightIconClass = 'fas fa-bell';
+    let rightIconColor = '#fff';
+
+    if (type.includes('Like') || type.includes('Reaction')) {
+        rightIconClass = 'fas fa-heart';
+        rightIconColor = '#EC4899'; 
+    } else if (type.includes('Comment')) {
+        rightIconClass = 'fas fa-comment';
+        rightIconColor = '#A855F7'; 
+    } else if (type.includes('Follow')) {
+        rightIconClass = 'fas fa-user-plus';
+        rightIconColor = '#3B82F6'; 
+    }
+
+    // ESTILOS FORZADOS (!important) para igualar la captura
     alertDiv.style.cssText = `
-        position: fixed; top: 20px; right: 20px; z-index: 9999;
-        background: #1e1e1e; border: 1px solid #333; border-left: 4px solid #EC4899;
-        color: white; padding: 15px; border-radius: 8px;
-        display: flex; align-items: center; gap: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        animation: slideIn 0.3s ease-out;
-        min-width: 300px;
-        cursor: pointer; 
+        position: fixed !important; 
+        top: 85px !important; 
+        right: 20px !important; 
+        z-index: 99999 !important;
+        
+        /* Fondo gris oscuro (no negro total) */
+        background-color: #222 !important; 
+        background-image: none !important;
+        
+        /* Sombra suave */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+        
+        /* Bordes: Borde rosa a la izquierda, sin borde alrededor */
+        border: none !important;
+        border-left: 5px solid #EC4899 !important; 
+        border-radius: 4px !important; 
+        
+        /* Dimensiones y Layout */
+        min-width: 320px !important;
+        max-width: 420px !important;
+        padding: 14px 18px !important;
+        margin: 0 !important;
+        
+        /* Alineación perfecta al centro */
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: space-between !important;
+        gap: 15px !important;
+        
+        /* Texto */
+        color: #fff !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        cursor: pointer !important; 
+        
+        /* Animación */
+        opacity: 0; 
+        transform: translateX(20px); 
+        transition: opacity 0.3s ease, transform 0.3s ease !important;
     `;
 
-    const iconClass = type === 'NewFollower' ? 'fa-user-plus' : (type.includes('Reaction') ? 'fa-heart' : 'fa-bell');
-    const iconColor = type.includes('Reaction') ? '#EC4899' : '#fff';
+    // Limpieza de texto: Quitamos HTML previo y la fecha
+    // En la captura el nombre es Bold y el resto normal, todo blanco/gris claro.
+    const cleanText = messageHtml.replace(/<[^>]*>?/gm, '').trim();
+    
+    // Reconstrucción del mensaje: Nombre en Bold
+    let finalMessageHtml = `<span style="font-weight: 600 !important; color: #fff !important; font-size: 0.95rem !important;">${cleanText}</span>`;
+    
+    // Intentamos separar el nombre para ponerlo en bold (heurística simple: primera palabra o hasta el primer espacio)
+    // Si prefieres usar el HTML que ya traía el nombre separado, podemos usarlo, pero limpiando estilos.
+    // Usaremos una estrategia segura: Si el mensaje original tenía tags, extraemos el nombre.
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = messageHtml;
+    const nameSpan = tempDiv.querySelector('.notification-username') || tempDiv.querySelector('strong');
+    
+    if (nameSpan) {
+        const name = nameSpan.textContent;
+        const rest = tempDiv.textContent.replace(name, '');
+        finalMessageHtml = `
+            <span style="font-weight: 700 !important; color: #fff !important; font-size: 0.95rem !important;">${name}</span>
+            <span style="font-weight: 400 !important; color: #e0e0e0 !important; font-size: 0.95rem !important;">${rest}</span>
+        `;
+    }
 
+    // HTML INTERNO (Sin la fecha "Ahora")
     alertDiv.innerHTML = `
-        <img src="${image}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
-        <div style="flex:1; font-size: 0.9rem;">${messageHtml}</div>
-        <i class="fas ${iconClass}" style="color: ${iconColor};"></i>
+        <div style="display: flex !important; align-items: center !important; gap: 12px !important; flex: 1 !important;">
+            <img src="${image}" 
+                 style="width: 28px !important; height: 28px !important; min-width: 28px !important; border-radius: 50% !important; object-fit: cover !important; background: #333 !important;" 
+                 onerror="this.src='../Assets/default-avatar.png'">
+            
+            <div style="line-height: 1.2 !important; text-align: left !important;">
+                ${finalMessageHtml}
+            </div>
+        </div>
+
+        <div style="margin-left: 10px !important; display: flex !important; align-items: center !important;">
+            <i class="${rightIconClass}" style="color: ${rightIconColor} !important; font-size: 1.1rem !important;"></i>
+        </div>
     `;
 
-    // AGREGAMOS EL CLICK AL TOAST
+    // Click
     alertDiv.addEventListener('click', () => {
-        // Si no pasamos referenceId directo, intentamos inferirlo del contexto global o pasarlo como argumento extra
-        // NOTA: Necesitamos actualizar 'showNotificationAlert' para pasar el referenceId aquí.
         handleNotificationClick(type, referenceId);
-        alertDiv.remove();
+        removeToast(alertDiv);
     });
 
     document.body.appendChild(alertDiv);
 
+    // Animación de Entrada
+    requestAnimationFrame(() => {
+        alertDiv.style.opacity = '1';
+        alertDiv.style.transform = 'translateX(0)';
+    });
+
+    // Auto-cierre
     setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.style.opacity = '0';
-            setTimeout(() => alertDiv.remove(), 500);
-        }
-    }, 5000); // 5 segundos
+        removeToast(alertDiv);
+    }, 5000); 
+}
+
+function removeToast(element) {
+    if (element && element.parentNode) {
+        element.style.opacity = '0';
+        element.style.transform = 'translateX(20px)';
+        setTimeout(() => element.remove(), 300);
+    }
 }
 
 async function handleNotificationClick(type, referenceId, notificationId, element) {
@@ -1723,12 +1812,27 @@ async function handleNotificationClick(type, referenceId, notificationId, elemen
     // 1. MARCAR COMO LEÍDA
     if (notificationId && notificationId !== 'undefined') {
         if (element) {
-            element.classList.remove('unread');
-            element.classList.add('read');
-            element.style.backgroundColor = '#121212';
-            const dot = element.querySelector('div[style*="background-color: #1DB954"]');
-            if(dot) dot.remove();
+        // Fondo y Borde
+        element.classList.remove('unread');
+        element.classList.add('read');
+        element.style.backgroundColor = '#121212';
+        element.style.borderLeft = '3px solid transparent'; // Quita la línea morada
+        
+        // Texto principal
+        const textDiv = element.querySelector('.notification-text');
+        if (textDiv) textDiv.style.color = '#666';
+
+        // Nombre de usuario (De magenta a gris)
+        const usernameSpan = element.querySelector('span[style*="color"]');
+        if (usernameSpan) {
+            usernameSpan.style.color = '#888'; 
+            usernameSpan.style.fontWeight = 'normal';
         }
+        
+        // Ocultar cualquier dot residual
+        const dot = element.querySelector('.unread-dot');
+        if(dot) dot.remove();
+    }
         
         // Actualizar estado local
         const notifIndex = notifications.findIndex(n => n.id === notificationId);
@@ -1787,132 +1891,214 @@ async function handleNotificationClick(type, referenceId, notificationId, elemen
 // 2. FUNCIÓN AUXILIAR: POBLAR Y MOSTRAR EL MODAL
 // =========================================================================
 async function openReviewModal(review, user, content) {
-    // A. Referencias al DOM
     const modalOverlay = document.getElementById('reviewDetailModalOverlay');
     const closeBtn = document.getElementById('closeReviewDetailModal');
+    const contentDiv = document.getElementById('reviewDetailContent'); 
 
-    if (!modalOverlay) {
-        console.error("⚠️ No se encontró el modal.");
-        return;
-    }
+    // Si no existe el modal en el HTML, salimos
+    if (!modalOverlay) return;
 
-    // --- B. NORMALIZACIÓN DE DATOS ---
-    const reviewId = review.reviewId || review.Id_Review || review.id; // IMPORTANTE: Obtener ID
+    // --- A. PREPARACIÓN DE DATOS (Sin Fechas) ---
+    const reviewId = review.reviewId || review.Id_Review || review.id;
     const ratingVal = review.rating || review.Rating || 0;
-    const reviewBody = review.content || review.Content || review.text || review.Text || "Sin contenido";
-    const reviewTitle = review.title || review.Title || "Reseña";
-    const userId = review.userId || review.UserId || (user ? (user.userId || user.UserId) : null);
+    const reviewBody = review.content || review.Content || review.text || review.Text || "";
+    const reviewTitle = review.title || review.Title || "";
     
-    // IDs de contenido
-    const songId = review.songId || review.SongId;
-    const albumId = review.albumId || review.AlbumId;
+    // Usuario
+    let username = "Usuario";
+    let avatar = "../Assets/default-avatar.png";
+    const userId = review.userId || review.UserId || (user ? (user.userId || user.UserId) : null);
 
-    // --- C. LLENADO INICIAL (Síncrono) ---
-    const titleEl = document.getElementById('modalReviewTitle');
-    if (titleEl) titleEl.textContent = reviewTitle;
-
-    const contentEl = document.getElementById('reviewDetailContent');
-    if (contentEl) contentEl.textContent = reviewBody;
-
-    const ratingEl = document.getElementById('modalReviewRating');
-    if (ratingEl) ratingEl.textContent = `⭐ ${ratingVal}/5`;
-
-    const userEl = document.getElementById('modalReviewUser');
-    if (userEl) userEl.textContent = user ? (user.username || user.Username) : "Cargando usuario...";
-
-    const imgEl = document.getElementById('modalReviewImage');
-    if (imgEl) { imgEl.style.display = 'none'; imgEl.src = ''; }
-
-    // --- D. CARGA ASÍNCRONA DE DATOS FALTANTES ---
-
-    // D1. Usuario
-    if (!user && userId && userEl) {
-        getUser(userId).then(uData => {
-            const uObj = uData.result || uData.data || uData;
-            if (uObj) userEl.textContent = uObj.username || uObj.Username || uObj.Name;
-        }).catch(() => userEl.textContent = "Usuario");
+    if (user) {
+        username = user.username || user.Username || username;
+        avatar = user.imgProfile || user.ImgProfile || user.avatar || user.image || avatar;
+    } else if (userId) {
+        try {
+            if(typeof getUser !== 'undefined'){
+                 const uData = await getUser(userId);
+                 if(uData) {
+                    const uObj = uData.result || uData.data || uData;
+                    username = uObj.Username || uObj.username || username;
+                    avatar = uObj.imgProfile || uObj.ImgProfile || uObj.avatar || avatar;
+                 }
+            }
+        } catch(e) {}
     }
 
-    // D2. Canción/Álbum (Usando getOrCreateSong importado o fallback)
-    if (!content && (songId || albumId)) {
-        // Usamos la función que tengas disponible (getOrCreateSong o getSongDataFallback)
-        // Asegúrate de que esta función exista en tu archivo o esté importada
-        const fetchPromise = (typeof getOrCreateSong !== 'undefined') 
-            ? getOrCreateSong(songId) 
-            : (typeof getSongDataFallback !== 'undefined' ? getSongDataFallback(songId) : null);
-        
-        if (fetchPromise) {
-            fetchPromise.then(cData => {
-                if (cData) {
-                    if (titleEl) titleEl.textContent = cData.Title || cData.name || reviewTitle;
-                    if (imgEl && (cData.CoverImage || cData.image)) {
-                        imgEl.src = cData.CoverImage || cData.image;
-                        imgEl.style.display = 'block';
-                    }
-                }
-            });
+    // Contenido
+    let contentName = "Contenido";
+    let artistName = "Artista";
+    let contentImage = "../Assets/default-avatar.png";
+    let contentType = "song";
+
+    if (content) {
+        contentName = content.Title || content.title || content.name || contentName;
+        artistName = content.ArtistName || content.artistName || content.artist || artistName;
+        contentImage = content.CoverImage || content.coverImage || content.Image || content.image || contentImage;
+        if(content.AlbumId || content.apiAlbumId) contentType = "album";
+    } 
+    else if (review.song || review.Song) {
+        const s = review.song || review.Song;
+        contentName = s.Title || s.title || contentName;
+        artistName = s.ArtistName || s.artistName || artistName;
+        contentImage = s.Image || s.image || contentImage;
+    } 
+    else if (review.album || review.Album) {
+        contentType = "album";
+        const a = review.album || review.Album;
+        contentName = a.Title || a.title || contentName;
+        artistName = a.ArtistName || a.artistName || artistName;
+        contentImage = a.Image || a.image || contentImage;
+    }
+    else {
+        if (review.SongTitle || review.songTitle) {
+            contentName = review.SongTitle || review.songTitle;
+            artistName = review.ArtistName || review.artistName || "Artista";
+            contentImage = review.SongImage || review.songImage || contentImage;
+        } else if (review.AlbumTitle || review.albumTitle) {
+            contentType = "album";
+            contentName = review.AlbumTitle || review.albumTitle;
+            artistName = review.ArtistName || review.artistName || "Artista";
+            contentImage = review.AlbumImage || review.albumImage || contentImage;
         }
     }
 
-    // --- E. MOSTRAR EL MODAL ---
-    modalOverlay.style.display = 'flex';
+    const isDeepPath = window.location.pathname.includes('/Pages/');
+    const defaultAvatarPath = isDeepPath ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
+    if (avatar.includes('default-avatar')) avatar = defaultAvatarPath;
+    if (contentImage.includes('default-avatar')) contentImage = defaultAvatarPath;
 
-    // F. Configurar eventos de cierre
-    if (closeBtn) closeBtn.onclick = () => modalOverlay.style.display = 'none';
-    modalOverlay.onclick = (e) => {
-        if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+    const likesCount = review.likes || review.Likes || 0;
+    const commentsCount = review.comments || review.Comments || 0;
+
+    const renderStarsLocal = (rating) => {
+        let stars = '';
+        for (let i = 0; i < 5; i++) {
+            stars += `<span style="color: ${i < rating ? '#fbbf24' : '#4b5563'}; font-size: 1rem; margin-right: 2px;">★</span>`;
+        }
+        return stars;
     };
 
-    // =========================================================
-    // 🚨 G. CARGAR COMENTARIOS Y LIKES (NUEVO) 🚨
-    // =========================================================
-    if (reviewId) {
-        console.log(`📥 Cargando comentarios para la reseña ${reviewId}...`);
-        
-        // 1. Limpiar lista anterior
-        const commentsList = document.getElementById('reviewDetailCommentsList');
-        const commentsCount = document.getElementById('reviewDetailCommentsCount');
-        if (commentsList) commentsList.innerHTML = '<p style="text-align:center; color:#888;">Cargando comentarios...</p>';
-        
-        // 2. Llamar a la API de Comentarios (getCommentsByReview)
-        // Asegúrate de importar o tener esta función disponible desde socialApi.js
-        try {
-            // Si no tienes getCommentsByReview importado, usa una llamada directa fetch como fallback
-            const comments = await fetchCommentsFallback(reviewId); 
-            
-            if (comments && comments.length > 0) {
-                renderCommentsInModal(comments); // Función auxiliar para renderizar HTML
-                if (commentsCount) commentsCount.textContent = comments.length;
-            } else {
-                if (commentsList) commentsList.innerHTML = '<p style="text-align:center; color:#888;">No hay comentarios aún. ¡Sé el primero!</p>';
-                if (commentsCount) commentsCount.textContent = '0';
-            }
-        } catch (error) {
-            console.error("Error cargando comentarios:", error);
-            if (commentsList) commentsList.innerHTML = '<p style="text-align:center; color:red;">Error al cargar comentarios.</p>';
-        }
+    // --- B. RENDERIZADO HTML ---
+    if (contentDiv) {
+        contentDiv.innerHTML = `
+            <div class="review-detail-main" style="padding: 1.5rem; padding-bottom: 50px; color: white;">
+                
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
+                    <img src="${avatar}" 
+                         style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1px solid #333;"
+                         onerror="this.src='${defaultAvatarPath}'">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: #fff;">${username}</div>
+                    </div>
+                </div>
+
+                <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
+                    <img src="${contentImage}" 
+                         style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover;"
+                         onerror="this.src='${defaultAvatarPath}'">
+                    <div style="flex: 1; overflow: hidden;">
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${contentName}</h4>
+                        <p style="margin: 4px 0 0; font-size: 0.8rem; color: #ccc;">${artistName} • ${contentType === 'song' ? 'Canción' : 'Álbum'}</p>
+                    </div>
+                </div>
+
+                ${reviewTitle ? `<h2 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 700; color: #fff;">${reviewTitle}</h2>` : ''}
+                
+                <p style="color: #e0e0e0; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+                    ${reviewBody}
+                </p>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    ${renderStarsLocal(ratingVal)}
+                </div>
+
+                <div style="border-top: 1px solid #333; padding-top: 1rem; display: flex; gap: 20px; border-bottom: 1px solid #333; padding-bottom: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #ccc; font-size: 0.9rem;">
+                        <i class="fas fa-heart"></i> <span id="modalLikeCount">${likesCount}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; color: #ccc; font-size: 0.9rem;">
+                        <i class="fas fa-comment"></i> <span id="modalCommentCount">${commentsCount}</span>
+                    </div>
+                </div>
+
+                <div id="reviewDetailCommentsList">
+                    <p style="color: #888; text-align: center; padding: 10px;">Cargando comentarios...</p>
+                </div>
+            </div>
+        `;
     }
 
-    if (reviewId) {
-        const likesCountEl = document.getElementById('modalReviewLikesCount');
-        if (likesCountEl) likesCountEl.textContent = "..."; // Loading state
+    // --- C. ABRIR MODAL (Prioridad Máxima) ---
+    modalOverlay.style.display = 'flex';
 
+    if (closeBtn) closeBtn.onclick = () => modalOverlay.style.display = 'none';
+    modalOverlay.onclick = (e) => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; };
+
+
+    // --- D. OCULTAR INPUT Y TÍTULOS (Ahora que ya está abierto) ---
+    // Lo hacemos dentro de un try/catch para que NUNCA rompa el modal si no encuentra el elemento
+    try {
+        // 1. Buscar el input de "Escribe un comentario..." y ocultar su padre (la barra inferior)
+        const inputs = modalOverlay.querySelectorAll('input');
+        inputs.forEach(inp => {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('comentario')) {
+                // Subimos al padre (el div flex que contiene avatar + input + boton)
+                if(inp.parentElement) inp.parentElement.style.display = 'none';
+                // Ocultamos el input mismo por si acaso
+                inp.style.display = 'none';
+            }
+        });
+
+        // 2. Buscar botones de enviar (avión de papel)
+        const sendBtns = modalOverlay.querySelectorAll('button');
+        sendBtns.forEach(btn => {
+            if (btn.innerHTML.includes('fa-paper-plane') || btn.querySelector('i.fa-paper-plane')) {
+                btn.style.display = 'none';
+            }
+        });
+
+        // 3. Buscar el texto "Comentarios 0" (Headers sobrantes)
+        const headers = modalOverlay.querySelectorAll('h3, h4');
+        headers.forEach(h => {
+            if (h.innerText.includes('Comentarios') && !h.closest('#reviewDetailContent')) {
+                h.style.display = 'none';
+            }
+        });
+
+    } catch (err) {
+        console.warn("No se pudo ocultar el input de comentarios (no es crítico)", err);
+    }
+
+
+    // --- E. CARGA ASÍNCRONA DE DATOS ---
+    if (reviewId) {
         try {
-            // Llamada al endpoint de conteo (ajusta puerto si es necesario)
+            const comments = await fetchCommentsFallback(reviewId);
+            if (comments && comments.length > 0) {
+                renderCommentsInModal(comments); 
+            } else {
+                const list = document.getElementById('reviewDetailCommentsList');
+                if(list) list.innerHTML = '<p style="text-align:center; color:#888; padding: 1rem;">No hay comentarios aún.</p>';
+            }
+            const countSpan = document.getElementById('modalCommentCount');
+            if(countSpan) countSpan.textContent = comments ? comments.length : 0;
+        } catch (error) {
+            console.warn("Error comentarios:", error);
+        }
+    }
+    
+    // Likes
+    if (reviewId) {
+        try {
             const response = await fetch(`http://localhost:5000/api/gateway/reviews/${reviewId}/reactions/count`);
-            
             if (response.ok) {
                 const count = await response.json();
-                if (likesCountEl) likesCountEl.textContent = count;
-            } else {
-                if (likesCountEl) likesCountEl.textContent = "0";
+                const likeSpan = document.getElementById('modalLikeCount');
+                if(likeSpan) likeSpan.textContent = count;
             }
-        } catch (e) {
-            console.warn("Error cargando likes:", e);
-            if (likesCountEl) likesCountEl.textContent = "-";
-        }
+        } catch(e) {}
     }
-
 }
 
 // =========================================================
@@ -1936,70 +2122,60 @@ async function fetchCommentsFallback(reviewId) {
 function renderCommentsInModal(comments) {
     const list = document.getElementById('reviewDetailCommentsList');
     if (!list) return;
-    list.innerHTML = ''; // Limpiar lista anterior
+    list.innerHTML = ''; 
+
+    const isDeepPath = window.location.pathname.includes('/Pages/');
+    const defaultAvatarPath = isDeepPath ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
 
     comments.forEach(comment => {
-        // 1. Normalizar propiedades
         const text = comment.text || comment.Text || comment.content || comment.Content || "";
+        const displayName = comment.username || comment.Username || "Usuario";
         
-        // 2. EXTRAER LIKES (Nueva lógica)
-        // Buscamos la propiedad en mayúscula o minúscula
-        const likesCount = comment.Likes || comment.likes || 0;
-
-        // Buscamos el ID del usuario
-        const userId = comment.userId || comment.UserId || comment.idUser || comment.IdUser;
-        let displayName = comment.username || comment.Username || "Usuario";
-
-        // 3. Crear el contenedor del comentario
-        const item = document.createElement('div');
-        // Mantenemos tu estilo original
-        item.style.cssText = "padding: 10px; border-bottom: 1px solid #333; margin-bottom: 5px;";
+        let userAvatar = comment.UserProfilePicUrl || comment.userProfilePicUrl || comment.avatar || comment.imgProfile || comment.image;
+        if (!userAvatar || userAvatar.includes('default-avatar')) {
+            userAvatar = defaultAvatarPath;
+        }
 
         const uniqueNameId = `comment-author-${Math.random().toString(36).substr(2, 9)}`;
 
-        // 4. Inyectamos el HTML (Agregamos la sección de Likes al final)
+        const item = document.createElement('div');
+        item.style.cssText = "padding: 12px 0; border-bottom: 1px solid #333; display: flex; gap: 12px;";
+
         item.innerHTML = `
-            <div id="${uniqueNameId}" style="font-weight: bold; color: #fff; font-size: 0.9rem; margin-bottom: 4px;">
-                ${displayName} <span style="font-weight:normal; color:#666; font-size:0.8rem;">(Cargando...)</span>
-            </div>
-            <div style="color: #ddd; font-size: 0.95rem; margin-bottom: 6px;">${text}</div>
+            <img src="${userAvatar}" 
+                 style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #333; flex-shrink: 0;"
+                 onerror="this.src='${defaultAvatarPath}'">
             
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <i class="fas fa-heart" style="color: #666; font-size: 0.8rem;"></i>
-                <span style="color: #888; font-size: 0.8rem;">${likesCount}</span>
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                    <span id="${uniqueNameId}" style="font-weight: 700; color: #fff; font-size: 0.9rem;">
+                        ${displayName}
+                    </span>
+                </div>
+                <div style="color: #ddd; font-size: 0.9rem; line-height: 1.4;">${text}</div>
             </div>
         `;
-        
         list.appendChild(item);
 
-        // 5. HIDRATACIÓN (Tu lógica original intacta para corregir el nombre)
+        // Hidratación
+        const userId = comment.userId || comment.UserId || comment.idUser || comment.IdUser;
         if ((displayName === "Usuario") && userId) {
-            const updateNameInDom = (userData) => {
-                const uObj = userData.result || userData.data || userData;
-                const realName = uObj.username || uObj.Username || uObj.Name;
-                
-                if (realName) {
-                    const nameEl = document.getElementById(uniqueNameId);
-                    if (nameEl) {
-                        nameEl.textContent = realName;
-                        setTimeout(() => nameEl.style.color = "#fff", 1000);
-                    }
-                }
-            };
-
             if (typeof getUser !== 'undefined') {
-                getUser(userId)
-                    .then(updateNameInDom)
-                    .catch(err => console.warn("Fallo hidratación usuario:", err));
-            } else {
-                fetch(`${API_BASE_URL}/api/gateway/users/${userId}`)
-                    .then(res => res.json())
-                    .then(updateNameInDom)
-                    .catch(err => console.warn("Fallo fetch usuario:", err));
+                getUser(userId).then(uData => {
+                    const uObj = uData.result || uData.data || uData;
+                    const realName = uObj.username || uObj.Username || uObj.Name;
+                    const realImg = uObj.imgProfile || uObj.ImgProfile || uObj.avatar;
+                    
+                    if (realName) {
+                        const nameEl = document.getElementById(uniqueNameId);
+                        if(nameEl) nameEl.textContent = realName;
+                    }
+                    if (realImg) {
+                        const imgEl = item.querySelector('img');
+                        if(imgEl) imgEl.src = realImg;
+                    }
+                }).catch(() => {});
             }
-        } else {
-            const nameEl = document.getElementById(uniqueNameId);
-            if (nameEl) nameEl.textContent = displayName;
         }
     });
 }

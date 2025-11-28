@@ -4,17 +4,14 @@ getArtistByApiId,
 getArtistTopTracksByApiId,
 getArtistAlbumsByApiId
 }  from  './../APIs/contentApi.js';
-import  {  createSongListItem,  createStarRating,  createAlbumListItem  }  from  './../Components/renderContent.js';  //  (Asegúrate  de  que  'renderContent.js'  exista  y  exporte  estas  funciones)
+import  {  createSongListItem,  createStarRating,  createAlbumListItem  }  from  './../Components/renderContent.js';  
 import  {  initializeTabNavigation  }  from  './../Handlers/albumHandler.js'; 
 import { showAlert } from '../Utils/reviewHelpers.js';
 
 //  ---  3.  PUNTO  DE  ENTRADA  (LLAMADO  POR  MAIN.JS)  ---
 export  function  initializeArtistPage()  {
-        //  Le  decimos  al  script  que  ESPERE  a  que  el  HTML  esté  listo
                 console.log("DOM  de  Artista  cargado.  Inicializando  lógica...");
-                //  Ahora  que  el  DOM  está  listo,  podemos  llamar  a  las  funciones
                 initializeTabNavigation();
-                //  Deshabilitar  el  botón  de  reseña
         const  btnAgregar  =  document.getElementById('btnAgregarResena');
         if  (btnAgregar)  {
                 btnAgregar.disabled  =  true;
@@ -22,7 +19,6 @@ export  function  initializeArtistPage()  {
                 btnAgregar.style.cursor  =  'not-allowed';
                 btnAgregar.title  =  'No  se  pueden  crear  reseñas  de  artistas';
         }
-            //  ¡Empezar  a  cargar  los  datos!
         loadPageData();
 
 }
@@ -36,11 +32,10 @@ async  function  loadPageData()  {
                 const  params  =  new  URLSearchParams(window.location.search);
                 const  apiArtistId  =  params.get('id');
                         
-                        // Validación más estricta del ID
                         if (!apiArtistId || apiArtistId.trim() === '' || 
-                                apiArtistId === 'undefined' || apiArtistId === 'null' ||
-                                apiArtistId.toLowerCase() === 'album' || apiArtistId.toLowerCase() === 'artist' || apiArtistId.toLowerCase() === 'song') {
-                                throw new Error("ID de artista inválido en la URL. Por favor, busca el artista nuevamente.");
+                        apiArtistId === 'undefined' || apiArtistId === 'null' ||
+                        apiArtistId.toLowerCase() === 'album' || apiArtistId.toLowerCase() === 'artist' || apiArtistId.toLowerCase() === 'song') {
+                        throw new Error("ID de artista inválido en la URL. Por favor, busca el artista nuevamente.");
                         }
                         
                         console.log(`Cargando artista con ID: ${apiArtistId}`);
@@ -62,7 +57,10 @@ async  function  loadPageData()  {
                 //  4.  Renderizar  listas  y  tabs
                 renderTopTracks(topTracks);
                 renderAlbums(albums);
+                
+                // AQUÍ LLAMAMOS A LA FUNCIÓN DE DETALLES CORREGIDA
                 renderArtistDetails(artistData);
+                
                 contentEl.style.display  =  'block';
         }  catch  (error)  {
                 console.error("Error  fatal  al  cargar  página  de  artista:",  error);
@@ -81,13 +79,12 @@ async  function  loadPageData()  {
         const coverEl = document.getElementById('artistCover');
         const nameEl = document.getElementById('artistName');
         
-        // Prueba de depuración:
         console.log("artistCover:", coverEl);
         console.log("artistName:", nameEl); 
         if (!coverEl || !nameEl ) {
                 console.error("¡ERROR DE DOM! No se encontraron los elementos del header.");
                 console.error("Asegúrate de que 'artist.html' tiene los IDs: artistCover, artistName");
-                return; // Detener la función para evitar el error
+                return; 
         }
         coverEl.src = artist.imagen || './../Assets/default-avatar.png';
         nameEl.textContent = artist.name;
@@ -101,7 +98,7 @@ async  function  loadPageData()  {
                 if  (!listEl)  return;
         listEl.innerHTML  =  tracks.map((track,  index)  =>  createSongListItem({
                 ...track,  
-                artistName:  ""  //  Ocultamos  el  artista  ya  que  estamos  en  su  página
+                artistName:  ""  
         },  index)).join('');
         }
 
@@ -114,12 +111,27 @@ async  function  loadPageData()  {
                 return;
                 }
 
-        // Usamos el nuevo componente createAlbumListItem
         listEl.innerHTML = albums.map((album, index) => createAlbumListItem(album, index)).join('');
         }
-        function  renderArtistDetails(artist)  {
-        //  TODO:  El  API  de  Artista  no  devuelve  estos  datos.
-        document.getElementById('detailRealName').textContent  =  artist.realName  ||  '-';
-        document.getElementById('detailStageName').textContent  =  artist.name  ||  '-';
-        document.getElementById('detailGenre').textContent  =  artist.genre  ||  '-';
-        }
+
+        function renderArtistDetails(artist) {
+                const stageNameEl = document.getElementById('detailStageName');
+                if (stageNameEl) {
+                        stageNameEl.textContent = artist.name || '-';
+                }
+
+
+                const idsToHide = ['detailRealName', 'detailGenre', 'detailBirthDate'];
+
+                idsToHide.forEach(id => {
+                        const element = document.getElementById(id);
+                        if (element) {
+
+                        if (element.parentElement) {
+                                element.parentElement.style.display = 'none';
+                        } else {
+                                element.style.display = 'none';
+                        }
+                        }
+                });
+                }

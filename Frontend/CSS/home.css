@@ -1145,6 +1145,14 @@ width: 10px;
     color: rgba(255, 255, 255, 0.9);
     margin: 0;
     font-size: 0.95rem;
+
+    /* --- CÓDIGO NUEVO PARA EVITAR DESBORDAMIENTO --- */
+    white-space: pre-wrap;       /* Mantiene los saltos de línea que ponga el usuario */
+    word-wrap: break-word;       /* Rompe palabras largas si es necesario */
+    overflow-wrap: break-word;   /* Estándar moderno para romper palabras */
+    word-break: break-word;      /* Asegura que no se salga del contenedor */
+    overflow: hidden;            /* Oculta cualquier exceso por seguridad */
+    max-width: 100%;             /* Asegura que no exceda el ancho del padre */
 }
 
 .review-actions {
@@ -1153,6 +1161,7 @@ width: 10px;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+
 }
 
 .review-rating {

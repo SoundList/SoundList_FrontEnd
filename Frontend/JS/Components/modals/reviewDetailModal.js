@@ -595,9 +595,47 @@ async function deleteCommentInDetail(commentId, reviewId, state) {
     try {
         const { deleteComment } = await import('../../APIs/socialApi.js');
         await deleteComment(commentId, authToken);
-        await loadReviewDetailComments(reviewId, null, state);
+        
+        // Obtener el nuevo número de comentarios
+        const comments = await getCommentsByReview(reviewId);
+        const newCommentsCount = comments.length;
+        
+        // Recargar comentarios en el modal de detalle
+        await loadReviewDetailComments(reviewId, comments, state);
+        
+        // Actualizar contador en el botón de comentarios de la reseña (igual que en deleteModals)
+        // Buscar en todas las páginas (home, perfil, canciones, álbum)
+        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
+        commentBtns.forEach(commentBtn => {
+            const countSpan = commentBtn.querySelector('.review-comments-count');
+            if (countSpan) {
+                countSpan.textContent = newCommentsCount;
+            } else {
+                // Fallback: buscar cualquier span dentro del botón
+                const span = commentBtn.querySelector('span');
+                if (span) {
+                    span.textContent = newCommentsCount;
+                }
+            }
+        });
+        
+        // Actualizar contador en el modal de comentarios si está abierto
+        const commentsModal = document.getElementById('commentsModalOverlay');
+        if (commentsModal && commentsModal.style.display === 'flex') {
+            const commentsCount = document.getElementById('commentsCount');
+            if (commentsCount) {
+                commentsCount.textContent = newCommentsCount;
+            }
+            // Recargar comentarios en el modal de comentarios
+            const { loadCommentsIntoModal } = await import('./commentsModal.js');
+            await loadCommentsIntoModal(reviewId, state);
+        }
+        
         showAlert('Comentario eliminado', 'success');
-    } catch (e) { showAlert('Error al eliminar', 'danger'); }
+    } catch (e) { 
+        console.error('Error al eliminar:', e);
+        showAlert('Error al eliminar', 'danger'); 
+    }
 }
 
 async function submitReviewDetailComment(state) {
@@ -612,9 +650,44 @@ async function submitReviewDetailComment(state) {
     try {
         await createComment(reviewId, text);
         input.value = '';
-        await loadReviewDetailComments(reviewId, null, state);
+        
+        // Obtener el nuevo número de comentarios
+        const comments = await getCommentsByReview(reviewId);
+        const newCommentsCount = comments.length;
+        
+        // Recargar comentarios en el modal de detalle
+        await loadReviewDetailComments(reviewId, comments, state);
+        
+        // Actualizar contador en el botón de comentarios de la reseña (igual que en commentsModal)
+        // Buscar en todas las páginas (home, perfil, canciones, álbum)
+        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
+        commentBtns.forEach(commentBtn => {
+            const countSpan = commentBtn.querySelector('.review-comments-count');
+            if (countSpan) {
+                countSpan.textContent = newCommentsCount;
+            } else {
+                // Fallback: buscar cualquier span dentro del botón
+                const span = commentBtn.querySelector('span');
+                if (span) {
+                    span.textContent = newCommentsCount;
+                }
+            }
+        });
+        
+        // Actualizar contador en el modal de comentarios si está abierto
+        const commentsModal = document.getElementById('commentsModalOverlay');
+        if (commentsModal && commentsModal.style.display === 'flex') {
+            const commentsCount = document.getElementById('commentsCount');
+            if (commentsCount) {
+                commentsCount.textContent = newCommentsCount;
+            }
+        }
+        
         showAlert('Comentario agregado', 'success');
-    } catch (e) { showAlert('Error al comentar', 'danger'); }
+    } catch (e) { 
+        console.error('Error al comentar:', e);
+        showAlert('Error al comentar', 'danger'); 
+    }
 }
 
 function hideReviewDetailModal() {

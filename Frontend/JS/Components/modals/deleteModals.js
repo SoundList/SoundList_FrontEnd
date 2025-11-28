@@ -145,8 +145,9 @@ async function confirmDeleteComment(state) {
         const newCommentsCount = comments.length;
         
         // Actualizar contador en el botón de comentarios de la reseña (siempre, no solo si el modal está abierto)
-        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
-        if (commentBtn) {
+        // Buscar en todas las páginas (home, perfil, canciones, álbum)
+        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
+        commentBtns.forEach(commentBtn => {
             const countSpan = commentBtn.querySelector('.review-comments-count');
             if (countSpan) {
                 countSpan.textContent = newCommentsCount;
@@ -157,7 +158,7 @@ async function confirmDeleteComment(state) {
                     span.textContent = newCommentsCount;
                 }
             }
-        }
+        });
         
         // Recargar comentarios en el modal de comentarios si está abierto
         if (commentsModal && commentsModal.style.display === 'flex') {

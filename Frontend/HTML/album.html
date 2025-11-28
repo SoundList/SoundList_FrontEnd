@@ -179,49 +179,186 @@
 
             </div> </main>
     </div>
-    <div class="review-modal-overlay" id="createReviewModalOverlay" style="display: none;">
-            <div class="review-modal">
-        <div class="review-modal-header">
-            <h2 class="review-modal-title">CREA UNA RESEÑA</h2>
-            <button class="review-modal-close" id="closeCreateReviewModal">&times;</button>
-        </div>
-        <div class="review-modal-content">
-            <div class="review-song-info">
-            <img src="./../Assets/logo_perfil.png" alt="Portada" class="review-song-cover" id="modalAlbumCover">
-            <div class="review-song-text">
-                <h3 class="review-song-title" id="modalAlbumTitle">-</h3>
-                <p class="review-song-artist" id="modalAlbumArtist">-</p>
-            </div>
-            </div>
-            
-            <div class="review-rating-input">
-                <label for="reviewStars" class="form-label">Calificación</label>
-                <div class="stars-input" id="starsRatingInput">
-                    <i class="far fa-star" data-value="1"></i>
-                    <i class="far fa-star" data-value="2"></i>
-                    <i class="far fa-star" data-value="3"></i>
-                    <i class="far fa-star" data-value="4"></i>
-                    <i class="far fa-star" data-value="5"></i>
+    <!-- Create Review Modal (mismo diseño que home) -->
+    <div class="create-review-modal-overlay" id="createReviewModalOverlay" style="display: none;">
+        <div class="create-review-modal">
+            <div class="create-review-modal-content">
+                <div class="create-review-header">
+                    <h2 class="create-review-title">CREA UNA RESEÑA</h2>
+                    <button class="create-review-close" id="closeCreateReviewModal">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="invalid-feedback-custom" id="reviewRatingError"></div>
-            </div>
+                <div class="create-review-content-selector" id="createReviewContentSelector" style="display: none;">
+                    <div class="content-search-container">
+                        <input type="text" 
+                            class="content-search-input" 
+                            id="contentSearchInput" 
+                            placeholder="Buscar canción o álbum..."
+                            autocomplete="off">
+                        <div class="content-search-dropdown" id="contentSearchDropdown" style="display: none;">
+                            </div>
+                    </div>
+                </div>
+                <div class="create-review-content-info" id="createReviewContentInfo" style="display: block;">
+                    <div class="content-info-image">
+                        <img src="../Assets/default-avatar.png" alt="Content" id="contentInfoImage">
+                    </div>
+                    <div class="content-info-text">
+                        <span class="content-info-name" id="contentInfoName">-</span>
+                        <span class="content-info-type" id="contentInfoType">ÁLBUM</span>
+                    </div>
+                    <button class="content-info-change-btn" id="changeContentBtn" title="Cambiar contenido" style="display: none;">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                
+                <div class="create-review-rating">
+                    <label class="rating-label">Calificación</label>
+                    <div class="rating-stars" id="createReviewStars">
+                        <span class="star-input" data-rating="1">★</span>
+                        <span class="star-input" data-rating="2">★</span>
+                        <span class="star-input" data-rating="3">★</span>
+                        <span class="star-input" data-rating="4">★</span>
+                        <span class="star-input" data-rating="5">★</span>
+                    </div>
+                    <div class="invalid-feedback-custom" id="createReviewRatingError"></div> 
+                </div>
 
-            <div class="mb-3">
-                <label for="reviewTitleInput" class="form-label">Título de la reseña</label>
-                <input type="text" class="form-control" id="reviewTitleInput" placeholder="Título de la reseña">
-                <div class="invalid-feedback-custom" id="reviewTitleError"></div>
-            </div>
+                <div class="create-review-form">
+                    <input type="text" 
+                        class="create-review-title-input" 
+                        id="createReviewTitleInput" 
+                        placeholder="Titulo de la reseña"
+                        maxlength="100">
+                    <div class="invalid-feedback-custom" id="createReviewTitleError"></div>
 
-            <div class="mb-3">
-                <label for="reviewTextInput" class="form-label">Escribe tu reseña</label>
-                <textarea class="form-control" id="reviewTextInput" rows="4" placeholder="Escribe tu reseña"></textarea>
-                <div class="invalid-feedback-custom" id="reviewTextError"></div>
+                    <textarea class="create-review-text-input" 
+                            id="createReviewTextInput" 
+                            placeholder="Escribe tu reseña"
+                            maxlength="1000"></textarea>
+                    <div class="invalid-feedback-custom" id="createReviewTextError"></div>
+                </div>
+                <button class="create-review-submit-btn" id="submitCreateReviewBtn">
+                    SUBIR
+                </button>
             </div>
-
-            <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">SUBIR</button>
         </div>
     </div>
-</div>
+
+    <!-- Review Detail Modal -->
+    <div class="review-detail-modal-overlay" id="reviewDetailModalOverlay" style="display: none;">
+        <div class="review-detail-modal">
+            <div class="review-detail-modal-content">
+                <div class="review-detail-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #333;">
+                    <div class="review-detail-meta" style="display: flex; gap: 15px; align-items: center;">
+                        <img id="modalReviewImage" src="../Assets/default-avatar.png" style="width: 50px; height: 50px; border-radius: 5px; object-fit: cover; display: none;">
+                        <div style="display: flex; flex-direction: column;">
+                            <h3 id="modalReviewTitle" style="margin: 0; font-size: 1.2rem; color: #fff;">Título</h3>
+                            <div style="display: flex; gap: 10px; font-size: 0.9rem;">
+                                <span id="modalReviewUser" style="color: #bbb;">Usuario</span>
+                                <span id="modalReviewRating" style="color: #ffc107;">⭐ 5/5</span>
+                                <span id="modalReviewLikes" style="color: #ff4081; display: flex; align-items: center; gap: 4px;">
+                                    <i class="far fa-heart"></i> <span id="modalReviewLikesCount">0</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="review-detail-close" id="closeReviewDetailModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="review-detail-scrollable">
+                    <div class="review-detail-content" id="reviewDetailContent" style="margin-top: 15px; font-size: 1rem; line-height: 1.5;">
+                    </div>
+                    <div class="review-detail-comments-section">
+                        <div class="review-detail-comments-header">
+                            <h3 class="review-detail-comments-title">Comentarios <span id="reviewDetailCommentsCount">0</span></h3>
+                        </div>
+                        <div class="review-detail-comments-list" id="reviewDetailCommentsList">
+                        </div>
+                    </div>
+                </div>
+                <div class="review-detail-input-container">
+                    <div class="review-detail-input-wrapper">
+                        <img src="../Assets/default-avatar.png" alt="Avatar" class="review-detail-input-avatar" id="reviewDetailInputAvatar">
+                        <input type="text" 
+                            class="review-detail-input" 
+                            id="reviewDetailCommentInput" 
+                            placeholder="Escribe un comentario..."
+                            maxlength="500">
+                        <button class="review-detail-send-btn" id="reviewDetailSubmitCommentBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Modal -->
+    <div class="comments-modal-overlay" id="commentsModalOverlay" style="display: none;">
+        <div class="comments-modal">
+            <div class="comments-modal-content">
+                <div class="comments-modal-header">
+                    <h2 class="comments-modal-title">Comentarios <span id="commentsCount">0</span></h2>
+                    <button class="comments-modal-close" id="closeCommentsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="comments-list-container" id="commentsList">
+                    <!-- Comments will be populated here -->
+                </div>
+                <div class="comments-input-container">
+                    <div class="comments-input-wrapper">
+                        <img src="../Assets/default-avatar.png" alt="Avatar" class="comments-input-avatar" id="commentsModalAvatar">
+                        <input type="text" 
+                               class="comments-input" 
+                               id="commentInput" 
+                               placeholder="Escribe un comentario..."
+                               maxlength="500">
+                        <button class="comments-send-btn" id="submitCommentBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Comment Modal -->
+    <div class="delete-comment-modal-overlay" id="deleteCommentModalOverlay" style="display: none;">
+        <div class="delete-comment-modal">
+            <div class="delete-comment-modal-content">
+                <div class="delete-comment-icon">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h2 class="delete-comment-title">Eliminar comentario</h2>
+                <p class="delete-comment-message">¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.</p>
+                <div class="delete-comment-buttons">
+                    <button class="delete-comment-btn delete-comment-cancel" id="cancelDeleteCommentBtn">Cancelar</button>
+                    <button class="delete-comment-btn delete-comment-confirm" id="confirmDeleteCommentBtn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Review Modal -->
+    <div class="delete-review-modal-overlay" id="deleteReviewModalOverlay" style="display: none;">
+        <div class="delete-review-modal">
+            <div class="delete-review-modal-content">
+                <div class="delete-review-icon">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h2 class="delete-review-title">Eliminar reseña</h2>
+                <p class="delete-review-message" id="deleteReviewMessage">¿Estás seguro de que quieres eliminar esta reseña? Esta acción no se puede deshacer.</p>
+                <div class="delete-review-buttons">
+                    <button class="delete-review-btn delete-review-cancel" id="cancelDeleteReviewBtn">Cancelar</button>
+                    <button class="delete-review-btn delete-review-confirm" id="confirmDeleteReviewBtn">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="logout-modal-overlay" id="logoutModalOverlay" style="display: none;">
         <div class="logout-modal">

@@ -1,4 +1,5 @@
-import { createAudioPlayer } from './audioPlayer.js'; 
+import { createAudioPlayer } from './audioPlayer.js';
+import { renderStars } from '../Utils/reviewHelpers.js';
 
 export function createSongListItem(song, index) {
     // 1. Normalización de datos (Evita errores de undefined)
@@ -39,40 +40,102 @@ export function createSongListItem(song, index) {
 }
 
 export function createReviewCard(review) {
-    const title = review.itemTitle || review.song || review.title || review.Title || review.album;
-    const artist =review.artistName || review.artist || review.ArtistName;
-    const type = review.contentType || review.type;
-    const username = review.username || "Usuario";
-    const avatar = review.avatar || "../Assets/default-avatar.png";
-    const comment = review.comment || "";
-    const rating = review.rating || 0;
+    const currentUserId = localStorage.getItem('userId');
+    const isLoggedIn = currentUserId !== null;
+    let reviewId = review.id || review.ReviewId || review.reviewId;
 
-    const starsHtml = typeof createStarRating === 'function' ? createStarRating(rating, false) : `${rating}/5 ⭐`;
+    if (reviewId) {
+        reviewId = String(reviewId).trim();
+        if (!reviewId || reviewId === 'null' || reviewId === 'undefined') {
+            console.warn('Reseña con ID inválido en createReviewCard, omitiendo:', { review, reviewId });
+            return '';
+        }
+    } else {
+        console.warn(' Reseña sin ID en createReviewCard, omitiendo:', review);
+        return '';
+    }
+
+    const isLiked = review.userLiked || false;
+    const likeCount = (typeof review.likes === 'number' && !isNaN(review.likes) && review.likes >= 0)
+        ? Math.floor(review.likes)
+        : (typeof review.likes === 'string' ? Math.max(0, parseInt(review.likes, 10) || 0) : 0);
+    const commentCount = (typeof review.comments === 'number' && !isNaN(review.comments) && review.comments >= 0)
+        ? Math.floor(review.comments)
+        : (typeof review.comments === 'string' ? Math.max(0, parseInt(review.comments, 10) || 0) : 0);
+    const defaultAvatar = '../Assets/default-avatar.png';
+    const reviewUserId = review.userId || review.UserId || '';
+    const isOwnReview = currentUserId && (reviewUserId === currentUserId || reviewUserId.toString() === currentUserId.toString());
+
+    // --- LÓGICA RECUPERADA: Ocultar botón editar si tiene likes ---
+    const editButtonStyle = (likeCount > 0) ? 'display: none !important;' : '';
 
     return `
-    <div class="review-item" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1rem 0;">
-        <div class="review-user">
-            <img src="${avatar}" alt="${username}" class="review-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
-            <div class="review-info ms-3">
-                <div style="font-size: 0.8rem; margin-bottom: 4px; color: #aaa; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-                    <span style="color: #fff; font-weight: 700;">${username}</span>
-                    <span>•</span>
-                    <span style="color: #7C3AED; font-weight: 600; text-transform: uppercase; font-size: 0.7rem;">${type}</span>
-                    <span>-</span>
-                    <span style="color: #fff; font-weight: 600;">${title}</span>
-                    <span>-</span>
-                    <span>${artist}</span>
+    <div class="review-item" data-review-id="${reviewId}">
+        <div class="review-user review-clickable" data-review-id="${reviewId}" style="cursor: pointer;">
+                <img src="${review.avatar || defaultAvatar}"
+                        alt="${review.username}"
+                        class="review-avatar profile-navigation-trigger"
+                        data-user-id="${reviewUserId}"
+                        onerror="this.src='${defaultAvatar}'"
+                        style="cursor: pointer;">
+                <div class="review-info">
+                    <div class="review-header">
+                            <span class="review-username profile-navigation-trigger"
+                                  data-user-id="${reviewUserId}"
+                                  style="cursor: pointer;">${review.username}</span>
+                            ${review.isUserDeleted ? '<span class="deleted-account-badge">Cuenta eliminada</span>' : ''}
+                            <span class="review-separator">-</span>
+                            <span class="review-content-type">${review.contentType === 'song' ? 'Canción' : 'Álbum'}</span>
+                            <span class="review-separator">-</span>
+                            <span class="review-song">${review.song}</span>
+                            <span class="review-separator">-</span>
+                            <span class="review-artist">${review.artist}</span>
+                    </div>
+                    ${review.title ? `<h4 class="review-title">${review.title}</h4>` : ''}
+                    <p class="review-comment">${review.comment}</p>
                 </div>
-                <strong style="display:block; color: #fff; margin-bottom: 2px;">${review.title || ''}</strong>
-                <p class="review-comment" style="margin: 0; color: rgba(255,255,255,0.9); font-size: 0.95rem;">${comment}</p>
-            </div>
         </div>
         <div class="review-actions">
-            <div class="review-rating" style="color: #FFD700; font-size: 0.9rem;">
-                ${starsHtml}
-            </div>
+                <div class="review-rating">
+                    <div class="review-stars">
+                            ${renderStars(review.rating)}
+                    </div>
+                </div>
+                <div class="review-interactions">
+                    ${isLoggedIn && isOwnReview ? `
+                    <button class="review-btn btn-edit"
+                            data-review-id="${reviewId}"
+                                data-review-title="${review.title || ''}"
+                                data-review-content="${review.comment || ''}"
+                                data-review-rating="${review.rating || 0}"
+                                title="Editar reseña"
+                                style="${editButtonStyle}">
+                                <i class="fas fa-pencil"></i>
+                    </button>
+                    <button class="review-btn btn-delete"
+                                data-review-id="${reviewId}"
+                                title="Eliminar reseña">
+                                <i class="fas fa-trash"></i>
+                    </button>
+                    ` : ''}
+                    <div class="review-likes-container">
+                            <span class="review-likes-count">${likeCount || 0}</span>
+                            <button class="review-btn btn-like ${isLiked ? 'liked' : ''}"
+                                        data-review-id="${reviewId}"
+                                        title="${!isLoggedIn ? 'Inicia sesión para dar Me Gusta' : ''}">
+                                        <i class="fas fa-heart" style="color: ${isLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'};"></i>
+                            </button>
+                    </div>
+                    <button class="review-btn comment-btn"
+                                data-review-id="${reviewId}"
+                                title="Ver comentarios">
+                            <i class="fas fa-comment"></i>
+                            <span class="review-comments-count">${commentCount || 0}</span>
+                    </button>
+                </div>
         </div>
-    </div>`;
+    </div>
+    `;
 }
 
 

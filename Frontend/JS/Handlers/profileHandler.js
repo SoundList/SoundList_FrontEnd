@@ -55,9 +55,8 @@ function renderStars(rating) {
 
 /**
  * Renderiza las reseñas del perfil usando el mismo formato que homeAdmin.js
- * @param {Array} reviews - Array de reseñas procesadas
- * @param {string} containerId - ID del contenedor donde renderizar
- * @param {boolean} isOwnProfile - Si es true, muestra botones de editar/eliminar. Si es false, muestra botón de reportar.
+ * FIX: Eliminado el ordenamiento forzoso por fecha. Ahora respeta el orden
+ * que le envía loadUserProfile (sea por likes o por fecha).
  */
 function renderProfileReviews(reviews, containerId, isOwnProfile) {
     const container = document.getElementById(containerId);
@@ -75,38 +74,26 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
         return;
     }
 
-    // Ordenar por fecha de creación (más recientes primero)
-    const sortedReviews = [...reviews].sort((a, b) => {
-        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-        return dateB - dateA;
-    });
-
-    container.innerHTML = sortedReviews.map((review) => {
-        // Asegurar que siempre tengamos un ID válido (igual que en homeAdmin.js)
+    // ❌ BLOQUE ELIMINADO: const sortedReviews = [...reviews].sort(...) 
+    // Ahora usamos 'reviews' directamente.
+    
+    container.innerHTML = reviews.map((review) => {
+        // Asegurar que siempre tengamos un ID válido
         let reviewId = review.id || review.ReviewId || review.reviewId;
         
-        // Normalizar el reviewId (convertir a string y limpiar)
         if (reviewId) {
             reviewId = String(reviewId).trim();
-            // Si después de normalizar está vacío o es "null" o "undefined", rechazar
             if (!reviewId || reviewId === 'null' || reviewId === 'undefined') {
-                console.warn('⚠️ Reseña con ID inválido en renderProfileReviews, omitiendo:', { review, reviewId });
                 return '';
             }
         } else {
-            console.warn('⚠️ Reseña sin ID en renderProfileReviews, omitiendo:', review);
             return '';
         }
 
-        // El isLiked viene del procesamiento de la reseña (userLiked calculado desde localStorage)
-        // NO usar review.userLiked del backend directamente porque puede estar desactualizado
-        // Si userLiked es explícitamente true, usarlo; si es false o undefined, usar false
         const isLiked = review.userLiked === true;
         const likeCount = review.likes || 0;
         const commentCount = review.comments || 0;
 
-        // Formato EXACTO igual que renderReviews de homeAdmin.js
         return `
             <div class="review-item" data-review-id="${reviewId}">
                 <div class="review-user review-clickable" data-review-id="${reviewId}" style="cursor: pointer;">
@@ -170,7 +157,6 @@ function renderProfileReviews(reviews, containerId, isOwnProfile) {
             `;
     }).join('');
 
-    // Adjuntar listeners después de renderizar
     attachProfileReviewListeners(container, isOwnProfile);
 }
 
@@ -346,15 +332,13 @@ function attachProfileReviewListeners(container, isOwnProfile) {
 
 /**
  * Carga y procesa las reseñas de un usuario específico
- * FIX: Ahora guarda los metadatos en localStorage para que el modal de detalle
- * pueda renderizar la "Music Pill" (Imagen y Link) correctamente.
+ * FIX: Se eliminó el "new Date()" por defecto. Ahora si no hay fecha,
+ * se asigna la fecha 0 (1970) para que no aparezcan como recientes.
  */
 async function loadUserReviews(userIdToLoad) {
     try {
-        // Obtener todas las reseñas
+        // Obtener reseñas (sin cambios en la lógica de obtención)
         let allReviews = [];
-        
-        // Estrategias de obtención (igual que antes)
         if (typeof window.reviewApi !== 'undefined' && window.reviewApi.getReviewsByUser) {
             allReviews = await window.reviewApi.getReviewsByUser(userIdToLoad);
         } else if (typeof window.socialApi !== 'undefined' && window.socialApi.getReviews) {
@@ -370,7 +354,7 @@ async function loadUserReviews(userIdToLoad) {
                 return String(reviewUserId).trim() === String(userIdToLoad).trim();
             });
         } else {
-             // Fallback import dinámico
+            // Fallback import
             try {
                 const socialApiModule = await import('../../APIs/socialApi.js');
                 if (socialApiModule && socialApiModule.getReviews) {
@@ -379,63 +363,47 @@ async function loadUserReviews(userIdToLoad) {
                         const reviewUserId = review.UserId || review.userId;
                         return String(reviewUserId).trim() === String(userIdToLoad).trim();
                     });
-                } else {
-                    return [];
-                }
-            } catch (importError) {
-                return [];
-            }
+                } else { return []; }
+            } catch (e) { return []; }
         }
         
-        if (!allReviews || allReviews.length === 0) {
-            return [];
-        }
+        if (!allReviews || allReviews.length === 0) return [];
 
-        // Procesar cada reseña
+        // Procesar reseñas
         const processedReviews = await Promise.all(
             allReviews.map(async (review) => {
                 try {
                     let reviewId = review.ReviewId || review.reviewId || review.id || review.Id_Review;
                     if (!reviewId) return null;
-                    
                     reviewId = String(reviewId).trim();
 
-                    // --- INICIO LÓGICA DE USUARIO ---
+                    // --- USUARIO ---
                     const userIdStr = review.UserId ? String(review.UserId) : 'unknown';
                     let username = `Usuario ${userIdStr.substring(0, 8)}`;
                     let avatar = '../../Assets/default-avatar.png';
-                    
                     try {
                         const userId = review.UserId || review.userId;
-                        if (typeof getUser === 'function') {
-                            const userData = await getUser(userId);
-                            if (userData) {
-                                username = userData.Username || userData.username || username;
-                                avatar = userData.imgProfile || userData.ImgProfile || avatar;
-                            }
-                        } else if (typeof window.userApi !== 'undefined' && window.userApi.getUserProfile) {
+                        if (typeof window.userApi !== 'undefined' && window.userApi.getUserProfile) {
                             const userData = await window.userApi.getUserProfile(userId);
                             if (userData) {
                                 username = userData.Username || userData.username || username;
                                 avatar = userData.imgProfile || userData.ImgProfile || avatar;
                             }
                         }
-                    } catch (e) { /* ignore */ }
-                    // --- FIN LÓGICA DE USUARIO ---
+                    } catch (e) { }
 
-                    // --- INICIO LÓGICA DE CONTENIDO (FIX APLICADO AQUÍ) ---
+                    // --- CONTENIDO (Song/Album) ---
                     let songName = review.SongId ? 'Canción' : 'Álbum';
                     let albumName = 'Álbum';
                     let artistName = 'Artista';
                     let contentType = review.SongId ? 'song' : 'album';
-                    let contentImage = '../../Assets/default-avatar.png'; // Variable para la imagen
-                    let contentApiId = ''; // ID externo para navegación (Spotify ID)
+                    let contentImage = '../../Assets/default-avatar.png';
+                    let contentApiId = '';
 
-                    // 1. Verificar si ya está en localStorage (Optimización)
+                    // 1. LocalStorage
                     const storageKey = `review_content_${reviewId}`;
                     const storedContentData = localStorage.getItem(storageKey);
                     let contentData = null;
-                    
                     if (storedContentData) {
                         try {
                             contentData = JSON.parse(storedContentData);
@@ -452,58 +420,37 @@ async function loadUserReviews(userIdToLoad) {
                         } catch (e) { }
                     }
 
-                    // 2. Si no está en storage, buscar en Content API y GUARDAR
+                    // 2. API Fallback
                     if (!contentData || (!songName || songName === 'Canción') && (!albumName || albumName === 'Álbum')) {
                         if (review.SongId && typeof getSongByApiId === 'function') {
                             try {
                                 const songData = await getSongByApiId(String(review.SongId).trim());
                                 if (songData) {
-                                    songName = songData.Title || songData.title || songData.Name || songName;
-                                    artistName = songData.ArtistName || songData.artistName || songData.Artist || artistName;
+                                    songName = songData.Title || songData.title || songName;
+                                    artistName = songData.ArtistName || songData.artistName || artistName;
                                     contentImage = songData.Image || songData.image || contentImage;
-                                    contentApiId = songData.APISongId || songData.apiSongId || songData.Id || songData.id;
-
-                                    // GUARDAR EN LOCALSTORAGE (CRÍTICO PARA EL MODAL)
-                                    const cacheData = {
-                                        type: 'song',
-                                        id: contentApiId,
-                                        name: songName,
-                                        artist: artistName,
-                                        image: contentImage
-                                    };
+                                    contentApiId = songData.APISongId || songData.apiSongId || songData.Id;
+                                    
+                                    const cacheData = { type: 'song', id: contentApiId, name: songName, artist: artistName, image: contentImage };
                                     localStorage.setItem(storageKey, JSON.stringify(cacheData));
                                 }
-                            } catch (e) { console.debug('No se pudo obtener canción:', e); }
+                            } catch (e) { }
                         } else if (review.AlbumId && typeof getAlbumByApiId === 'function') {
                             try {
                                 const albumData = await getAlbumByApiId(String(review.AlbumId).trim());
                                 if (albumData) {
-                                    albumName = albumData.Title || albumData.title || albumData.Name || albumName;
+                                    albumName = albumData.Title || albumData.title || albumName;
                                     contentImage = albumData.Image || albumData.image || contentImage;
-                                    contentApiId = albumData.APIAlbumId || albumData.apiAlbumId || albumData.Id || albumData.id;
-
-                                    if (albumData.Songs && albumData.Songs.length > 0) {
-                                        artistName = albumData.Songs[0].ArtistName || albumData.Songs[0].artistName || artistName;
-                                    }
-                                    
-                                    // GUARDAR EN LOCALSTORAGE (CRÍTICO PARA EL MODAL)
-                                    const cacheData = {
-                                        type: 'album',
-                                        id: contentApiId,
-                                        name: albumName,
-                                        artist: artistName,
-                                        image: contentImage
-                                    };
+                                    contentApiId = albumData.APIAlbumId || albumData.apiAlbumId || albumData.Id;
+                                    const cacheData = { type: 'album', id: contentApiId, name: albumName, artist: artistName, image: contentImage };
                                     localStorage.setItem(storageKey, JSON.stringify(cacheData));
                                 }
-                            } catch (e) { console.debug('No se pudo obtener álbum:', e); }
+                            } catch (e) { }
                         }
                     }
-                    // --- FIN LÓGICA DE CONTENIDO ---
 
-                    // Resto de la lógica (Likes, Comentarios, Fechas)...
+                    // --- LIKES ---
                     let likes = 0;
-                    let comments = [];
                     const likesCacheKey = `review_likes_${reviewId}`;
                     let cachedLikes = null;
                     try {
@@ -517,20 +464,30 @@ async function loadUserReviews(userIdToLoad) {
                     if (likesFromBackend > 0) localStorage.setItem(likesCacheKey, String(likesFromBackend));
                     likes = cachedLikes !== null ? Math.max(cachedLikes, likesFromBackend) : likesFromBackend;
 
-                    // User Liked logic...
+                    // User Liked
                     const currentUserId = localStorage.getItem('userId');
                     let userLiked = false;
                     if (currentUserId) {
-                        const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
                         const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-                        userLiked = (storedReactionId !== null && storedReactionId !== 'null') || localLike === 'true';
+                        userLiked = localLike === 'true';
                     }
 
                     const contentName = contentType === 'song' ? songName : albumName;
                     
-                    // Manejo de fecha
-                    const createdAtRaw = review.CreatedAt || review.Created || review.createdAt || new Date();
-                    let createdAtDate = (createdAtRaw instanceof Date) ? createdAtRaw : new Date(createdAtRaw);
+                    // --- FECHA (EL FIX CRÍTICO ESTÁ AQUÍ) ---
+                    // Eliminamos el '|| new Date()' del final.
+                    const createdAtRaw = review.CreatedAt || review.Created || review.createdAt || review.date;
+                    
+                    // Si hay fecha, la parseamos. Si no, usamos fecha 0 (1970).
+                    let createdAtDate = new Date(0); 
+                    
+                    if (createdAtRaw) {
+                        const parsed = new Date(createdAtRaw);
+                        // Validar que no sea '0001-01-01' o inválida
+                        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
+                            createdAtDate = parsed;
+                        }
+                    }
 
                     return {
                         id: reviewId,
@@ -542,14 +499,13 @@ async function loadUserReviews(userIdToLoad) {
                         comment: review.Content || review.content || 'Sin contenido',
                         rating: review.Rating || review.rating || 0,
                         likes: likes,
-                        comments: 0, // Se cargan asíncronamente en el render si es necesario
+                        comments: 0,
                         userLiked: userLiked,
                         avatar: avatar,
                         userId: review.UserId || review.userId,
-                        createdAt: createdAtDate
+                        createdAt: createdAtDate // Ahora enviamos la fecha correcta (o 1970)
                     };
                 } catch (error) {
-                    console.error(`Error procesando review:`, error);
                     return null;
                 }
             })
@@ -557,17 +513,14 @@ async function loadUserReviews(userIdToLoad) {
 
         return processedReviews.filter(r => r !== null);
     } catch (error) {
-        console.error('Error cargando reseñas del usuario:', error);
+        console.error('Error cargando reseñas:', error);
         return [];
     }
 }
-
 // --- FUNCIÓN PRINCIPAL DE CARGA DE PERFIL ---
 
 async function loadUserProfile(userIdToLoad) {
-
     const loggedInUserId = localStorage.getItem("userId"); 
-    
     console.log(`👤 Cargando perfil para ID: ${userIdToLoad}...`);
 
     profileUserId = userIdToLoad; 
@@ -584,19 +537,16 @@ async function loadUserProfile(userIdToLoad) {
 
     // 1. Manejo de Botones (Editar vs Seguir)
     const btnContainer = document.querySelector(".btn-container");
-    const editBtn = document.querySelector(".btn-edit"); // El botón original del HTML
+    const editBtn = document.querySelector(".btn-edit"); 
 
-    // Limpiamos botones previos dinámicos si existen
     const existingFollowBtn = document.getElementById("profile-follow-btn");
     if (existingFollowBtn) existingFollowBtn.remove();
 
     if (editBtn) {
         if (isOwnProfile) {
-            // CASO 1: TU PERFIL -> Mostrar botón Editar
             editBtn.style.display = 'block';
             editBtn.onclick = () => window.location.href = 'editProfile.html';
         } else {
-            // CASO 2: PERFIL AJENO -> Ocultar Editar e inyectar Seguir
             editBtn.style.display = 'none';
             if (btnContainer && loggedInUserId) {
                 await setupFollowButton(btnContainer, userIdToLoad);
@@ -607,175 +557,132 @@ async function loadUserProfile(userIdToLoad) {
     const recentContainer = document.getElementById(recentContainerId);
     if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>Cargando reseñas...</p>";
 
-    let user = null; 
-
+    // --- CARGA DE DATOS DE USUARIO ---
     try {
-        user = await window.userApi.getUserProfile(userIdToLoad); 
-
-        // Cargar datos del usuario desde el backend (como Spotify)
+        const user = await window.userApi.getUserProfile(userIdToLoad); 
         if (userAvatarEl) {
             userAvatarEl.src = user.imgProfile || user.Image || user.image || defaultAvatar;
             userAvatarEl.onerror = function() { this.src = defaultAvatar; };
         }
-        
-        // Usar el nombre de usuario del backend (Username, UserName, o name)
         const username = user.Username || user.UserName || user.username || user.name || "Usuario";
-        if (userNameEl) {
-            userNameEl.textContent = username;
-        }
+        if (userNameEl) userNameEl.textContent = username;
         
-        // Mostrar la bio/descripción del usuario
-        // Log completo del objeto usuario para ver todos los campos disponibles
-        console.log("📋 Objeto usuario completo:", user);
-        console.log("📋 Todas las claves del usuario:", Object.keys(user));
-        
-        // El backend devuelve 'bio', no 'userQuote'
-        const bio = user.bio || user.Bio || user.userQuote || user.quote || user.description || user.Description || user.UserQuote || "";
-        console.log("📝 Bio encontrada:", bio);
-        console.log("📝 userQuoteEl:", userQuoteEl);
-        console.log("📝 Campos del usuario:", {
-            userQuote: user.userQuote,
-            UserQuote: user.UserQuote,
-            quote: user.quote,
-            Bio: user.Bio,
-            bio: user.bio,
-            description: user.description,
-            Description: user.Description
-        });
-        
+        const bio = user.bio || user.Bio || user.userQuote || user.quote || user.description || "";
         if (userQuoteEl) {
             if (bio && bio.trim() !== "") {
                 userQuoteEl.textContent = bio;
                 userQuoteEl.style.display = "block";
-                userQuoteEl.style.visibility = "visible";
-                console.log("✅ Descripción mostrada:", bio);
             } else {
-                userQuoteEl.textContent = "";
                 userQuoteEl.style.display = "none";
-                console.log("⚠️ Descripción vacía, ocultando elemento");
             }
-        } else {
-            console.error("❌ Elemento user-quote no encontrado en el DOM");
-        }
-        
-        console.log("✅ Perfil principal cargado:", user);
-
-        const isOwner = (loggedInUserId === userIdToLoad);
-        if (isOwner && editBtn) {
-            editBtn.style.display = 'block';
-            editBtn.onclick = () => window.location.href = 'editProfile.html';
         }
     } catch (error) {
         console.error("❌ Error al cargar el perfil principal:", error);
-
         if (userAvatarEl) userAvatarEl.src = defaultAvatar;
         if (userNameEl) userNameEl.textContent = "Error al cargar";
-        if (userQuoteEl) userQuoteEl.textContent = "No disponible";
-        return; 
     }
 
-
-
+    // --- CARGA DE ESTADÍSTICAS ---
     try {
         const followerCount = await window.userApi.getFollowerCount(userIdToLoad);
         const followingCount = await window.userApi.getFollowingCount(userIdToLoad);
-        
         if (followerCountEl) followerCountEl.textContent = followerCount || 0;
         if (followingCountEl) followingCountEl.textContent = followingCount || 0;
-        
-    } catch (followError) {
-        console.warn("⚠️ Fallo al cargar contadores de Follows (esperado si no hay mock):", followError.message);
-        if (followerCountEl) followerCountEl.textContent = 0;
-        if (followingCountEl) followingCountEl.textContent = 0;
-    }
+    } catch (e) { /* ignore */ }
 
 
-    // Cargar y renderizar reseñas del usuario con el formato de home
+    // --- CARGA Y ORDENAMIENTO DE RESEÑAS (AQUÍ ESTÁ LA MAGIA) ---
     try {
         const userReviews = await loadUserReviews(userIdToLoad);
         
-        if (recentContainer) {
-            if (userReviews && userReviews.length > 0) {
-                // Ordenar por fecha de creación: más recientes primero
-                const sortedByRecent = [...userReviews].sort((a, b) => {
-                    const getTimestamp = (date) => {
-                        if (date instanceof Date) {
-                            const ts = date.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (date) {
-                            const parsed = new Date(date);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        return 0;
-                    };
+        if (reviewCountEl) reviewCountEl.textContent = userReviews.length || 0;
 
-                    const dateA = getTimestamp(a.createdAt);
-                    const dateB = getTimestamp(b.createdAt);
-                    return dateB - dateA; // Más recientes primero
+        if (userReviews && userReviews.length > 0) {
+            
+            // Helper para obtener fecha segura (Fix 0001-01-01 y LocalStorage)
+            // Helper para obtener fecha segura (Fix 0001-01-01 y LocalStorage)
+            // Helper ESTRICTO para fechas
+            const getSafeTimestamp = (review) => {
+                // 1. Prioridad: LocalStorage (SOLO SI ES RECIENTE Y VÁLIDO)
+                // Usamos un prefijo único para evitar colisiones viejas
+                const storageKey = `review_created_at_${review.id}`;
+                const localTs = localStorage.getItem(storageKey);
+                
+                if (localTs) {
+                    const parsedTs = parseInt(localTs, 10);
+                    // Validar que sea una fecha razonable (año > 2023 para estar seguros)
+                    // 1672531200000 = 1 Enero 2023
+                    if (!isNaN(parsedTs) && parsedTs > 1672531200000) {
+                        return parsedTs;
+                    } else {
+                        // Si es vieja o rara, la borramos para no contaminar
+                        localStorage.removeItem(storageKey);
+                    }
+                }
+
+                // 2. Fecha del objeto (backend)
+                // Intentamos parsear cualquier cosa que parezca fecha
+                const rawDate = review.createdAt || review.CreatedAt || review.date || review.Date;
+                
+                if (rawDate) {
+                    const dateObj = new Date(rawDate);
+                    const ts = dateObj.getTime();
+                    // Solo aceptar fechas mayores al año 2000
+                    if (!isNaN(ts) && dateObj.getFullYear() > 2000) {
+                        return ts;
+                    }
+                }
+                
+                // 3. CASTIGO EXTREMO: Si no tiene fecha válida, devolvemos un número muy negativo
+                // Esto asegura que siempre queden al final de un sort descendente.
+                return -9999999999999; 
+            };
+
+            // --- LÓGICA 1: RESEÑAS RECIENTES (Por fecha desc) ---
+            if (recentContainer) {
+                const sortedByRecent = [...userReviews].sort((a, b) => {
+                    return getSafeTimestamp(b) - getSafeTimestamp(a);
+                });
+                renderProfileReviews(sortedByRecent, recentContainerId, isOwnProfile);
+            }
+
+            // --- LÓGICA 2: RESEÑAS DESTACADAS (Por Likes desc, luego fecha) ---
+            const featuredContainer = document.getElementById('featured-reviews-list-best');
+            if (featuredContainer) {
+                const bestReviews = [...userReviews].sort((a, b) => {
+                    const likesA = Number(a.likes) || 0;
+                    const likesB = Number(b.likes) || 0;
+                    
+                    // Si tienen distintos likes, gana el que tiene más
+                    if (likesB !== likesA) {
+                        return likesB - likesA;
+                    }
+                    
+                    // Si tienen mismos likes, desempata por fecha (más reciente primero)
+                    return getSafeTimestamp(b) - getSafeTimestamp(a);
                 });
 
-                renderProfileReviews(sortedByRecent, recentContainerId, isOwnProfile);
-            } else {
-                recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas recientes de este usuario.</p>";
-            }
-        }
-        if (reviewCountEl) reviewCountEl.textContent = userReviews.length || 0;
-        
-        // Cargar mejores reseñas (ordenadas por likes, igual que populares)
-        const featuredContainer = document.getElementById('featured-reviews-list-best');
-        if (featuredContainer && userReviews && userReviews.length > 0) {
-            // Ordenar por likes (más populares primero) - igual que en homeAdmin.js
-            const bestReviews = [...userReviews].sort((a, b) => {
-                const likesA = Number(a.likes) || Number(a.Likes) || 0;
-                const likesB = Number(b.likes) || Number(b.Likes) || 0;
-                // Si tienen los mismos likes, ordenar por fecha (más recientes primero)
-                if (likesB === likesA) {
-                    const getTimestamp = (date, fallback) => {
-                        if (date instanceof Date) {
-                            const ts = date.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (date) {
-                            const parsed = new Date(date);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        if (fallback) {
-                            const parsed = new Date(fallback);
-                            const ts = parsed.getTime();
-                            return isNaN(ts) ? 0 : ts;
-                        }
-                        return 0;
-                    };
-
-                    const dateA = getTimestamp(a.createdAt, a.CreatedAt);
-                    const dateB = getTimestamp(b.createdAt, b.CreatedAt);
-                    return dateB - dateA;
+                // Tomamos solo las top 5
+                const topReviews = bestReviews.slice(0, 5);
+                
+                if (topReviews.length > 0) {
+                    renderProfileReviews(topReviews, 'featured-reviews-list-best', isOwnProfile);
+                } else {
+                    featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas.</p>";
                 }
-                return likesB - likesA; // Más likes primero
-            });
-            
-            console.log('📊 Reseñas ordenadas por likes:', bestReviews.map(r => ({ id: r.id, likes: r.likes, title: r.title })));
-            
-            // Mostrar las top 5 reseñas con más likes
-            const topReviews = bestReviews.slice(0, 5);
-            
-            if (topReviews.length > 0) {
-                renderProfileReviews(topReviews, 'featured-reviews-list-best', isOwnProfile);
-            } else {
-                featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas.</p>";
             }
+
+        } else {
+            if (recentContainer) recentContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas recientes de este usuario.</p>";
+            const featuredContainer = document.getElementById('featured-reviews-list-best');
+            if (featuredContainer) featuredContainer.innerHTML = "<p class='text-muted p-4 text-center'>No hay reseñas destacadas.</p>";
         }
         
     } catch (reviewError) {
         console.error("❌ Error al cargar reseñas:", reviewError);
         if (recentContainer) recentContainer.innerHTML = "<p class='text-danger p-4 text-center'>Error al cargar reseñas.</p>";
-        if (reviewCountEl) reviewCountEl.textContent = 0;
     }
 
-    // Hacer el avatar clickeable solo si es el perfil propio
     setupAvatarClickability(isOwnProfile);
 }
 

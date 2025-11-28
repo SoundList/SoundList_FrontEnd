@@ -1,3 +1,5 @@
+import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
+
 async function reloadProfileReviews() {
     await loadAllFeaturedLists();
     if (typeof loadRecentReviews === 'function' && window.currentProfileUserId) {
@@ -59,12 +61,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-
     window.currentProfileUserId = userIdToLoad;
     if (window.modalsState) {
         window.modalsState.loadReviews = reloadProfileReviews;
     }
 
+    // --- INICIALIZACIÓN DEL MODAL DE DETALLE (NUEVO) ---
+    // Pasamos un estado básico o el global si existe
+    const modalState = window.modalsState || {};
+    initializeReviewDetailModalLogic(modalState);
+
+    // Exponer la función globalmente para que los onclicks del HTML funcionen
+    window.showReviewDetailModal = showReviewDetailModal;
 
     if (typeof loadUserProfile === 'function') {
         loadUserProfile(userIdToLoad);

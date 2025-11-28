@@ -171,13 +171,15 @@ export async function showReviewDetailModal(reviewId, state = null) {
         let cursorStyle = 'default';
         
         if (contentApiId) {
-             cursorStyle = 'pointer';
-             // Usamos ruta relativa ./ para mayor compatibilidad
-             if (contentType === 'album') {
-                 navUrl = `./album.html?id=${contentApiId}`;
-             } else {
-                 navUrl = `./song.html?id=${contentApiId}`;
-             }
+                cursorStyle = 'pointer';
+                
+                // CORRECCIÓN: Usamos ruta absoluta desde la raíz (/Frontend/HTML/)
+                // Esto evita que falle si estamos dentro de /Pages/ (como en profile.html)
+                if (contentType === 'album') {
+                    navUrl = `/Frontend/HTML/album.html?id=${contentApiId}`;
+                } else {
+                    navUrl = `/Frontend/HTML/song.html?id=${contentApiId}`;
+                }
         } else {
             console.warn("⚠️ No se encontró ID para redirigir al contenido.");
         }

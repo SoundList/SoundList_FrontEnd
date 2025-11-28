@@ -1,4 +1,4 @@
-// --- IMPORTS Y VARIABLES GLOBALES ---
+
 // Variable global para almacenar el userId del perfil que se está viendo
 let profileUserId = null;
 
@@ -202,93 +202,52 @@ function attachProfileReviewListeners(container, isOwnProfile) {
             setTimeout(() => { this.style.transform = ''; }, 200);
 
             if (isLiked) {
-                // Quitar like (Optimistic Update)
+                // Quitar like (Optimistic)
                 this.classList.remove('liked');
                 icon.style.color = 'rgba(255,255,255,0.7)';
                 const currentLikes = parseInt(likesSpan.textContent) || 0;
                 const newLikesCount = Math.max(0, currentLikes - 1);
                 likesSpan.textContent = newLikesCount;
                 
-                // Actualizar cache
                 const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) { /* ignore */ }
-                
-                // Eliminar del localStorage INMEDIATAMENTE (antes de llamar al backend)
-                // Esto asegura que al recargar, el estado sea correcto
+                localStorage.setItem(likesCacheKey, String(newLikesCount));
                 localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
                 localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
                 
                 const deleteReviewReactionFn = window.socialApi?.deleteReviewReaction || (typeof deleteReviewReaction !== 'undefined' ? deleteReviewReaction : null);
                 if (deleteReviewReactionFn) {
-                    // La función ahora solo acepta reviewId (usa JWT)
-                    deleteReviewReactionFn(reviewId)
-                        .then(() => {
-                            // Mantener cache actualizado
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        })
-                        .catch(err => {
-                            console.warn('No se pudo eliminar like del backend:', err);
-                            // NO revertir el cambio visual si el backend falla
-                            // El localStorage ya fue limpiado, así que el estado es correcto
-                            // Solo actualizar el cache de likes
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
-                        });
-                } else {
-                    // Si no hay función disponible, al menos actualizar el cache
-                    try {
-                        localStorage.setItem(likesCacheKey, String(newLikesCount));
-                    } catch (e) { /* ignore */ }
+                    deleteReviewReactionFn(reviewId).catch(e => console.warn(e));
                 }
             } else {
-                // Agregar like (Optimistic Update)
+                // Agregar like (Optimistic)
                 this.classList.add('liked');
                 icon.style.color = 'var(--magenta, #EC4899)';
                 const currentLikes = parseInt(likesSpan.textContent) || 0;
                 const newLikesCount = currentLikes + 1;
                 likesSpan.textContent = newLikesCount;
                 
-                // Actualizar cache
                 const likesCacheKey = `review_likes_${reviewId}`;
-                try {
-                    localStorage.setItem(likesCacheKey, String(newLikesCount));
-                } catch (e) { /* ignore */ }
-                
+                localStorage.setItem(likesCacheKey, String(newLikesCount));
                 localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
+                
                 if (typeof addReviewReaction === 'function') {
                     addReviewReaction(reviewId, currentUserId, authToken)
                         .then(data => {
                             const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-                            if (reactionId) {
-                                localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
-                            }
-                            // Mantener cache actualizado
-                            try {
-                                localStorage.setItem(likesCacheKey, String(newLikesCount));
-                            } catch (e) { /* ignore */ }
+                            if (reactionId) localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
                         })
-                        .catch(err => {
-                            console.warn('No se pudo guardar like:', err);
-                            // Revertir cambio si falla
+                        .catch(e => {
+                            // Revertir si falla
                             this.classList.remove('liked');
                             icon.style.color = 'rgba(255,255,255,0.7)';
                             likesSpan.textContent = currentLikes;
-                            localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-                            try {
-                                localStorage.setItem(likesCacheKey, String(currentLikes));
-                            } catch (e) { /* ignore */ }
                         });
                 }
             }
         });
     });
 
-    // Editar (solo si es tu propio perfil)
+    // Editar y Eliminar (solo si es tu propio perfil)
     if (isOwnProfile) {
         container.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', function(e) {
@@ -300,69 +259,86 @@ function attachProfileReviewListeners(container, isOwnProfile) {
                 
                 if (typeof showEditReviewModal === 'function') {
                     showEditReviewModal(reviewId, title, content, rating);
-                } else {
-                    console.warn('showEditReviewModal no está disponible');
                 }
             });
         });
 
-        // Eliminar (solo si es tu propio perfil)
         container.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const reviewId = this.getAttribute('data-review-id');
                 const reviewTitle = this.closest('.review-item')?.querySelector('.review-title')?.textContent || 'esta reseña';
                 
-                // Usar siempre la versión del módulo deleteModals (igual que en home)
                 if (window.modalsState && typeof window.showDeleteReviewModalFromModule === 'function') {
                     window.showDeleteReviewModalFromModule(reviewId, reviewTitle);
                 } else if (typeof showDeleteReviewModal === 'function') {
-                    // Fallback a la función local si por alguna razón no está el módulo
                     showDeleteReviewModal(reviewId, reviewTitle);
-                } else {
-                    console.warn('showDeleteReviewModal no está disponible');
-                }
-        });
-    });
-
-        // Click en la reseña para ver detalles (también en propio perfil)
-        container.querySelectorAll('.review-clickable').forEach(element => {
-            element.addEventListener('click', function(e) {
-                if (e.target.closest('.review-actions') || 
-                    e.target.closest('.btn-edit') || 
-                    e.target.closest('.btn-delete') || 
-                    e.target.closest('.btn-like') || 
-                    e.target.closest('.comment-btn')) {
-                    return;
-                }
-                
-                const reviewId = this.getAttribute('data-review-id');
-                if (reviewId && typeof window.showReviewDetailModal === 'function') {
-                    window.showReviewDetailModal(reviewId);
                 }
             });
         });
     }
-    
-    // Comentarios (funciona tanto en perfil propio como ajeno)
-    container.querySelectorAll('.comment-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                if (typeof showLoginRequiredModal === 'function') {
-                    showLoginRequiredModal();
-                }
+
+    // --- FIX CRÍTICO AQUÍ: CLICK EN TARJETA ---
+    container.querySelectorAll('.review-clickable').forEach(element => {
+        element.addEventListener('click', async function(e) {
+            // Evitar conflictos con botones
+            if (e.target.closest('.review-actions') || 
+                e.target.closest('.btn-edit') || 
+                e.target.closest('.btn-delete') || 
+                e.target.closest('.btn-like') || 
+                e.target.closest('.comment-btn')) {
                 return;
             }
             
             const reviewId = this.getAttribute('data-review-id');
-            if (typeof window.showCommentsModal === 'function') {
-                window.showCommentsModal(reviewId);
-            } else if (typeof showCommentsModal === 'function') {
-                showCommentsModal(reviewId);
-            } else {
-                console.warn('showCommentsModal no está disponible');
+            if (!reviewId) return;
+
+            // PLAN A: Función global
+            if (typeof window.showReviewDetailModal === 'function') {
+                window.showReviewDetailModal(reviewId);
+                return;
+            } 
+
+            // PLAN B: Importación Dinámica con RUTA CORREGIDA
+            console.warn("⚠️ Importando modal dinámicamente...");
+            try {
+                // RUTA CORREGIDA: Agregamos /JS/ porque estamos en HTML/Pages/
+                const module = await import('../../JS/Components/modals/reviewDetailModal.js');
+                
+                if (module && module.showReviewDetailModal) {
+                    window.showReviewDetailModal = module.showReviewDetailModal;
+                    if (module.initializeReviewDetailModalLogic) {
+                        module.initializeReviewDetailModalLogic(window.modalsState || {});
+                    }
+                    module.showReviewDetailModal(reviewId);
+                }
+            } catch (err) {
+                console.error("❌ Error ruta modal:", err);
+            }
+        });
+    });
+    
+    // Comentarios
+    container.querySelectorAll('.comment-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const reviewId = this.getAttribute('data-review-id');
+            
+            if (reviewId) {
+                // Intentar usar el modal de detalle primero
+                if (typeof window.showReviewDetailModal === 'function') {
+                    window.showReviewDetailModal(reviewId);
+                } else {
+                    // Fallback misma lógica dinámica
+                     try {
+                        const module = await import('../../JS/Components/modals/reviewDetailModal.js');
+                        if (module && module.showReviewDetailModal) {
+                            window.showReviewDetailModal = module.showReviewDetailModal;
+                            module.initializeReviewDetailModalLogic(window.modalsState || {});
+                            module.showReviewDetailModal(reviewId);
+                        }
+                    } catch (e) { console.error(e); }
+                }
             }
         });
     });
@@ -370,36 +346,31 @@ function attachProfileReviewListeners(container, isOwnProfile) {
 
 /**
  * Carga y procesa las reseñas de un usuario específico
+ * FIX: Ahora guarda los metadatos en localStorage para que el modal de detalle
+ * pueda renderizar la "Music Pill" (Imagen y Link) correctamente.
  */
 async function loadUserReviews(userIdToLoad) {
     try {
         // Obtener todas las reseñas
         let allReviews = [];
         
-        // Intentar primero con reviewApi
+        // Estrategias de obtención (igual que antes)
         if (typeof window.reviewApi !== 'undefined' && window.reviewApi.getReviewsByUser) {
             allReviews = await window.reviewApi.getReviewsByUser(userIdToLoad);
-        } 
-        // Fallback: usar socialApi.getReviews y filtrar
-        else if (typeof window.socialApi !== 'undefined' && window.socialApi.getReviews) {
+        } else if (typeof window.socialApi !== 'undefined' && window.socialApi.getReviews) {
             const allReviewsData = await window.socialApi.getReviews();
-            // Filtrar solo las reseñas del usuario
             allReviews = allReviewsData.filter(review => {
                 const reviewUserId = review.UserId || review.userId;
                 return String(reviewUserId).trim() === String(userIdToLoad).trim();
             });
-        } 
-        // Fallback: usar función global getReviews si está disponible
-        else if (typeof getReviews === 'function') {
+        } else if (typeof getReviews === 'function') {
             const allReviewsData = await getReviews();
-            // Filtrar solo las reseñas del usuario
             allReviews = allReviewsData.filter(review => {
                 const reviewUserId = review.UserId || review.userId;
                 return String(reviewUserId).trim() === String(userIdToLoad).trim();
             });
-        } 
-        // Último fallback: intentar importar dinámicamente
-        else {
+        } else {
+             // Fallback import dinámico
             try {
                 const socialApiModule = await import('../../APIs/socialApi.js');
                 if (socialApiModule && socialApiModule.getReviews) {
@@ -409,11 +380,9 @@ async function loadUserReviews(userIdToLoad) {
                         return String(reviewUserId).trim() === String(userIdToLoad).trim();
                     });
                 } else {
-                    console.warn('No se encontró método para obtener reseñas');
                     return [];
                 }
             } catch (importError) {
-                console.error('Error importando socialApi:', importError);
                 return [];
             }
         }
@@ -422,26 +391,20 @@ async function loadUserReviews(userIdToLoad) {
             return [];
         }
 
-        // Procesar cada reseña para obtener detalles completos
+        // Procesar cada reseña
         const processedReviews = await Promise.all(
             allReviews.map(async (review) => {
                 try {
-                    let reviewId = review.ReviewId || review.reviewId || review.id || 
-                                review.Id_Review || review.id_Review;
-                    
+                    let reviewId = review.ReviewId || review.reviewId || review.id || review.Id_Review;
                     if (!reviewId) return null;
                     
                     reviewId = String(reviewId).trim();
-                    if (!reviewId || reviewId === 'null' || reviewId === 'undefined') {
-                        return null;
-                    }
 
-                    const currentUserId = localStorage.getItem('userId');
-                    const userIdStr = review.UserId ? (review.UserId.toString ? review.UserId.toString() : String(review.UserId)) : 'unknown';
+                    // --- INICIO LÓGICA DE USUARIO ---
+                    const userIdStr = review.UserId ? String(review.UserId) : 'unknown';
                     let username = `Usuario ${userIdStr.substring(0, 8)}`;
                     let avatar = '../../Assets/default-avatar.png';
                     
-                    // Obtener datos del usuario
                     try {
                         const userId = review.UserId || review.userId;
                         if (typeof getUser === 'function') {
@@ -457,94 +420,18 @@ async function loadUserReviews(userIdToLoad) {
                                 avatar = userData.imgProfile || userData.ImgProfile || avatar;
                             }
                         }
-                    } catch (e) {
-                        console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
-                    }
-
-                    // Obtener likes y comentarios
-                    let likes = 0;
-                    let comments = [];
-                    
-                    // Intentar obtener likes desde cache primero (igual que en reviewFeed.js)
-                    const likesCacheKey = `review_likes_${reviewId}`;
-                    let cachedLikes = null;
-                    try {
-                        const cached = localStorage.getItem(likesCacheKey);
-                        if (cached !== null) {
-                            cachedLikes = parseInt(cached, 10);
-                            if (isNaN(cachedLikes)) cachedLikes = null;
-                        }
                     } catch (e) { /* ignore */ }
-                    
-                    // Intentar obtener likes desde diferentes fuentes
-                    const getReviewReactionCountFn = typeof getReviewReactionCount === 'function'
-                        ? getReviewReactionCount
-                        : (window.socialApi?.getReviewReactionCount || window.reviewApi?.getReviewReactionCount || (() => Promise.resolve(0)));
-                    
-                    let likesFromBackend = 0;
-                    if (getReviewReactionCountFn) {
-                        likesFromBackend = await getReviewReactionCountFn(reviewId)
-                            .then((count) => {
-                                // Guardar en cache cuando se obtiene correctamente
-                                if (typeof count === 'number' && !isNaN(count) && count >= 0) {
-                                    try {
-                                        // Si hay cache y es diferente, usar el mayor (para evitar perder likes)
-                                        if (cachedLikes !== null && cachedLikes !== count) {
-                                            const finalCount = Math.max(cachedLikes, count);
-                                            localStorage.setItem(likesCacheKey, String(finalCount));
-                                            return finalCount;
-                                        } else {
-                                            localStorage.setItem(likesCacheKey, String(count));
-                                            return count;
-                                        }
-                                    } catch (e) { /* ignore */ }
-                                }
-                                return count;
-                            })
-                            .catch(() => cachedLikes !== null ? cachedLikes : 0);
-                    }
-                    
-                    // Usar cache como valor inicial si está disponible, sino usar backend
-                    likes = cachedLikes !== null ? cachedLikes : likesFromBackend;
-                    
-                    // Intentar obtener comentarios desde diferentes fuentes
-                    if (typeof window.socialApi !== 'undefined' && window.socialApi.getCommentsByReview) {
-                        comments = await window.socialApi.getCommentsByReview(reviewId).catch(() => []);
-                    } else if (typeof getCommentsByReview === 'function') {
-                        comments = await getCommentsByReview(reviewId).catch(() => []);
-                    }
+                    // --- FIN LÓGICA DE USUARIO ---
 
-                    // Verificar si el usuario actual dio like (igual que en home/reviewFeed.js)
-                    // IMPORTANTE: localStorage es la fuente de verdad inicial
-                    let userLiked = false;
-                    
-                    if (currentUserId) {
-                        // Verificar localStorage PRIMERO (fuente de verdad)
-                        const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-                        const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-                        
-                        // Solo marcar como liked si AMBOS están presentes o si localLike es explícitamente 'true'
-                        // Si alguno está null o undefined, significa que NO hay like
-                        if (storedReactionId !== null && storedReactionId !== 'null' && storedReactionId !== 'undefined') {
-                            userLiked = true;
-                        } else if (localLike === 'true') {
-                            userLiked = true;
-                        } else {
-                            // Si no hay en localStorage (null, undefined, o cualquier otro valor), NO hay like
-                            userLiked = false;
-                        }
-                        
-                        // NUNCA usar review.userLiked del backend aquí porque puede estar desactualizado
-                        // El localStorage es la única fuente de verdad
-                    }
-
-                    // Obtener datos del contenido
+                    // --- INICIO LÓGICA DE CONTENIDO (FIX APLICADO AQUÍ) ---
                     let songName = review.SongId ? 'Canción' : 'Álbum';
                     let albumName = 'Álbum';
                     let artistName = 'Artista';
                     let contentType = review.SongId ? 'song' : 'album';
+                    let contentImage = '../../Assets/default-avatar.png'; // Variable para la imagen
+                    let contentApiId = ''; // ID externo para navegación (Spotify ID)
 
-                    // Intentar desde localStorage primero
+                    // 1. Verificar si ya está en localStorage (Optimización)
                     const storageKey = `review_content_${reviewId}`;
                     const storedContentData = localStorage.getItem(storageKey);
                     let contentData = null;
@@ -552,22 +439,20 @@ async function loadUserReviews(userIdToLoad) {
                     if (storedContentData) {
                         try {
                             contentData = JSON.parse(storedContentData);
-                            if (contentData && contentData.name && contentData.name !== 'Canción' && contentData.name !== 'Álbum') {
+                            if (contentData && contentData.name) {
                                 if (contentData.type === 'song') {
                                     songName = contentData.name;
                                     artistName = contentData.artist || artistName;
-                                } else if (contentData.type === 'album') {
+                                } else {
                                     albumName = contentData.name;
                                     artistName = contentData.artist || artistName;
                                 }
                                 contentType = contentData.type;
                             }
-                        } catch (e) {
-                            console.debug('Error parseando datos de contenido:', e);
-                        }
+                        } catch (e) { }
                     }
 
-                    // Si no hay datos en localStorage, intentar desde Content Service
+                    // 2. Si no está en storage, buscar en Content API y GUARDAR
                     if (!contentData || (!songName || songName === 'Canción') && (!albumName || albumName === 'Álbum')) {
                         if (review.SongId && typeof getSongByApiId === 'function') {
                             try {
@@ -575,47 +460,77 @@ async function loadUserReviews(userIdToLoad) {
                                 if (songData) {
                                     songName = songData.Title || songData.title || songData.Name || songName;
                                     artistName = songData.ArtistName || songData.artistName || songData.Artist || artistName;
+                                    contentImage = songData.Image || songData.image || contentImage;
+                                    contentApiId = songData.APISongId || songData.apiSongId || songData.Id || songData.id;
+
+                                    // GUARDAR EN LOCALSTORAGE (CRÍTICO PARA EL MODAL)
+                                    const cacheData = {
+                                        type: 'song',
+                                        id: contentApiId,
+                                        name: songName,
+                                        artist: artistName,
+                                        image: contentImage
+                                    };
+                                    localStorage.setItem(storageKey, JSON.stringify(cacheData));
                                 }
-                            } catch (e) {
-                                console.debug('No se pudo obtener canción:', e);
-                            }
+                            } catch (e) { console.debug('No se pudo obtener canción:', e); }
                         } else if (review.AlbumId && typeof getAlbumByApiId === 'function') {
                             try {
                                 const albumData = await getAlbumByApiId(String(review.AlbumId).trim());
                                 if (albumData) {
                                     albumName = albumData.Title || albumData.title || albumData.Name || albumName;
+                                    contentImage = albumData.Image || albumData.image || contentImage;
+                                    contentApiId = albumData.APIAlbumId || albumData.apiAlbumId || albumData.Id || albumData.id;
+
                                     if (albumData.Songs && albumData.Songs.length > 0) {
                                         artistName = albumData.Songs[0].ArtistName || albumData.Songs[0].artistName || artistName;
                                     }
+                                    
+                                    // GUARDAR EN LOCALSTORAGE (CRÍTICO PARA EL MODAL)
+                                    const cacheData = {
+                                        type: 'album',
+                                        id: contentApiId,
+                                        name: albumName,
+                                        artist: artistName,
+                                        image: contentImage
+                                    };
+                                    localStorage.setItem(storageKey, JSON.stringify(cacheData));
                                 }
-                            } catch (e) {
-                                console.debug('No se pudo obtener álbum:', e);
-                            }
+                            } catch (e) { console.debug('No se pudo obtener álbum:', e); }
                         }
+                    }
+                    // --- FIN LÓGICA DE CONTENIDO ---
+
+                    // Resto de la lógica (Likes, Comentarios, Fechas)...
+                    let likes = 0;
+                    let comments = [];
+                    const likesCacheKey = `review_likes_${reviewId}`;
+                    let cachedLikes = null;
+                    try {
+                        const cached = localStorage.getItem(likesCacheKey);
+                        if (cached !== null) cachedLikes = parseInt(cached, 10);
+                    } catch (e) { }
+
+                    const getReviewReactionCountFn = typeof getReviewReactionCount === 'function' ? getReviewReactionCount : (window.socialApi?.getReviewReactionCount || (() => Promise.resolve(0)));
+                    let likesFromBackend = await getReviewReactionCountFn(reviewId).catch(() => 0);
+                    
+                    if (likesFromBackend > 0) localStorage.setItem(likesCacheKey, String(likesFromBackend));
+                    likes = cachedLikes !== null ? Math.max(cachedLikes, likesFromBackend) : likesFromBackend;
+
+                    // User Liked logic...
+                    const currentUserId = localStorage.getItem('userId');
+                    let userLiked = false;
+                    if (currentUserId) {
+                        const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
+                        const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
+                        userLiked = (storedReactionId !== null && storedReactionId !== 'null') || localLike === 'true';
                     }
 
                     const contentName = contentType === 'song' ? songName : albumName;
-
-                    // Normalizar fecha de creación (misma lógica robusta que en reviewFeed.js)
-                    const createdAtRaw =
-                        review.CreatedAt ||
-                        review.Created ||
-                        review.createdAt ||
-                        review.DateCreated ||
-                        review.dateCreated ||
-                        review.CreatedDate ||
-                        review.createdDate;
-
-                    let createdAtDate;
-                    if (createdAtRaw instanceof Date) {
-                        createdAtDate = createdAtRaw;
-                    } else if (createdAtRaw) {
-                        const parsedDate = new Date(createdAtRaw);
-                        createdAtDate = isNaN(parsedDate.getTime()) ? new Date(0) : parsedDate;
-                    } else {
-                        // Si no viene fecha del backend, usar una fecha muy antigua
-                        createdAtDate = new Date(0);
-                    }
+                    
+                    // Manejo de fecha
+                    const createdAtRaw = review.CreatedAt || review.Created || review.createdAt || new Date();
+                    let createdAtDate = (createdAtRaw instanceof Date) ? createdAtRaw : new Date(createdAtRaw);
 
                     return {
                         id: reviewId,
@@ -627,14 +542,14 @@ async function loadUserReviews(userIdToLoad) {
                         comment: review.Content || review.content || 'Sin contenido',
                         rating: review.Rating || review.rating || 0,
                         likes: likes,
-                        comments: Array.isArray(comments) ? comments.length : 0,
+                        comments: 0, // Se cargan asíncronamente en el render si es necesario
                         userLiked: userLiked,
                         avatar: avatar,
                         userId: review.UserId || review.userId,
                         createdAt: createdAtDate
                     };
                 } catch (error) {
-                    console.error(`Error procesando review ${review.ReviewId || review.reviewId}:`, error);
+                    console.error(`Error procesando review:`, error);
                     return null;
                 }
             })
@@ -1280,9 +1195,10 @@ async function deleteReviewLogic(reviewId) {
  * Muestra el modal de comentarios (igual que en home)
  */
 async function showCommentsModal(reviewId) {
-    // Intentar usar el modal de comentarios del módulo (igual que en home)
+    // Intentar usar el modal de comentarios del módulo
     try {
-        const { showCommentsModal: showCommentsModalFromModule } = await import('../../Components/modals/commentsModal.js');
+        // RUTA CORREGIDA: ../../JS/Components...
+        const { showCommentsModal: showCommentsModalFromModule } = await import('../../JS/Components/modals/commentsModal.js');
         if (showCommentsModalFromModule) {
             await showCommentsModalFromModule(reviewId, profileCommentsModalState);
             
@@ -1297,978 +1213,20 @@ async function showCommentsModal(reviewId) {
         console.warn('No se pudo importar showCommentsModal del módulo:', importError);
     }
     
-    // Fallback: usar el modal directamente si existe
+    // Fallback: usar el modal directamente si existe en el DOM (Legacy)
     const modal = document.getElementById('commentsModalOverlay');
     if (modal) {
         modal.setAttribute('data-review-id', reviewId);
         modal.style.display = 'flex';
         
-        // Intentar cargar comentarios
         try {
-            const { loadCommentsIntoModal } = await import('../../Components/modals/commentsModal.js');
+            // RUTA CORREGIDA AQUÍ TAMBIÉN
+            const { loadCommentsIntoModal } = await import('../../JS/Components/modals/commentsModal.js');
             if (loadCommentsIntoModal) {
                 await loadCommentsIntoModal(reviewId, profileCommentsModalState);
             }
-        } catch (loadError) {
-            console.warn('No se pudieron cargar los comentarios:', loadError);
-        }
-    } else {
-        console.warn('Modal de comentarios no disponible');
+        } catch (loadError) { console.warn(loadError); }
     }
-}
-
-/**
- * Muestra el modal de vista detallada de reseña (igual que en home)
- */
-async function showReviewDetailModal(reviewId) {
-    const modal = document.getElementById('reviewDetailModalOverlay');
-    if (!modal) return;
-    
-    // Establecer el reviewId en el modal para que submitReviewDetailComment pueda obtenerlo
-        modal.setAttribute('data-review-id', reviewId);
-        modal.style.display = 'flex';
-    const contentDiv = document.getElementById('reviewDetailContent');
-    if (contentDiv) {
-        contentDiv.innerHTML = '<div class="review-detail-loading">Cargando reseña...</div>';
-    }
-    
-    try {
-        // Obtener funciones de API disponibles
-        const getReviewsByUserFn = window.reviewApi?.getReviewsByUser || window.socialApi?.getReviewsByUser;
-        const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
-        const getReviewReactionCountFn = window.socialApi?.getReviewReactionCount || window.reviewApi?.getReviewReactionCount || (() => Promise.resolve(0));
-        const getUserFn = window.userApi?.getUserProfile || window.userApi?.getUser || (() => Promise.resolve(null));
-        const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
-        
-        // Primero intentar obtener la reseña de las reseñas del usuario del perfil
-        let review = null;
-        let allReviews = [];
-        
-        if (profileUserId && getReviewsByUserFn) {
-            try {
-                allReviews = await getReviewsByUserFn(profileUserId);
-                if (allReviews && allReviews.length > 0) {
-                    review = allReviews.find(r => {
-                        const rId = r.ReviewId || r.reviewId || r.id || r.Id_Review;
-                        return String(rId).trim() === String(reviewId).trim();
-                    });
-                }
-            } catch (err) {
-                console.debug('Error obteniendo reseñas del usuario:', err);
-            }
-        }
-        
-        // Si no encontramos la reseña, intentar obtener todas las reseñas
-        if (!review) {
-            const getReviewsFn = window.socialApi?.getReviews || window.reviewApi?.getReviews || (() => Promise.resolve([]));
-            try {
-                allReviews = await getReviewsFn();
-                if (allReviews && allReviews.length > 0) {
-                    review = allReviews.find(r => {
-                        const rId = r.ReviewId || r.reviewId || r.id || r.Id_Review;
-                        return String(rId).trim() === String(reviewId).trim();
-                    });
-                }
-            } catch (err) {
-                console.debug('Error obteniendo todas las reseñas:', err);
-            }
-        }
-        
-        // Si aún no encontramos la reseña, mostrar error
-        if (!review) {
-            console.warn('⚠️ No se pudo obtener la reseña con ID:', reviewId, '- Puede que la reseña haya sido eliminada o no exista.');
-            if (contentDiv) {
-                contentDiv.innerHTML = '<div class="review-detail-loading" style="color: #ff6b6b; padding: 2rem; text-align: center;">No se pudo cargar la reseña. Puede que haya sido eliminada.</div>';
-            }
-            return;
-        }
-        
-        // Verificar likes desde cache primero (igual que en reviewDetailModal.js)
-        const reviewLikesCacheKey = `review_likes_${reviewId}`;
-        let cachedReviewLikes = null;
-        try {
-            const cached = localStorage.getItem(reviewLikesCacheKey);
-            if (cached !== null) {
-                cachedReviewLikes = parseInt(cached, 10);
-                if (isNaN(cachedReviewLikes)) cachedReviewLikes = null;
-            }
-        } catch (e) { /* ignore */ }
-        
-        // Obtener comentarios y likes
-        const [commentsResult, likesResult] = await Promise.allSettled([
-            getCommentsByReviewFn(reviewId).catch(err => {
-                console.warn('Error obteniendo comentarios:', err);
-                return [];
-            }),
-            getReviewReactionCountFn(reviewId)
-                .then((count) => {
-                    // Sincronizar con backend, pero solo actualizar cache si es diferente
-                    if (typeof count === 'number' && !isNaN(count) && count >= 0) {
-                        try {
-                            // Si hay cache y es diferente, usar el mayor (para evitar perder likes)
-                            if (cachedReviewLikes !== null && cachedReviewLikes !== count) {
-                                const finalCount = Math.max(cachedReviewLikes, count);
-                                localStorage.setItem(reviewLikesCacheKey, String(finalCount));
-                                return finalCount;
-                            } else {
-                                localStorage.setItem(reviewLikesCacheKey, String(count));
-                                return count;
-                            }
-                        } catch (e) { /* ignore */ }
-                    }
-                    return count;
-                })
-                .catch(err => {
-                    console.warn('Error obteniendo likes:', err);
-                    return cachedReviewLikes !== null ? cachedReviewLikes : 0;
-                })
-        ]);
-        
-        const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
-        const likesFromBackend = likesResult.status === 'fulfilled' ? likesResult.value : 0;
-        
-        // Usar cache como valor inicial si está disponible, sino usar backend
-        const likes = cachedReviewLikes !== null ? cachedReviewLikes : likesFromBackend;
-        
-        // Obtener datos del usuario
-        let username = `Usuario ${String(review.UserId || review.userId || '').substring(0, 8)}`;
-        let avatar = '../../Assets/default-avatar.png';
-        
-        if (review.UserId || review.userId) {
-            try {
-                const userId = review.UserId || review.userId;
-                const userData = await getUserFn(userId);
-                if (userData) {
-                    username = userData.Username || userData.username || userData.UserName || username;
-                    avatar = userData.imgProfile || userData.ImgProfile || userData.image || avatar;
-                }
-            } catch (userError) {
-                console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
-            }
-        }
-        
-        const storageKey = `review_content_${reviewId}`;
-        const storedContentData = localStorage.getItem(storageKey);
-        let contentData = null;
-        if (storedContentData) {
-            try { contentData = JSON.parse(storedContentData); } catch (e) {}
-        }
-        
-        let songName = 'Canción', albumName = 'Álbum', artistName = 'Artista', contentType = 'song';
-        
-        if (contentData) {
-            contentType = contentData.type || 'song';
-            if (contentData.type === 'song') songName = contentData.name || songName;
-            else albumName = contentData.name || albumName;
-            artistName = contentData.artist || artistName;
-        } else if (review.song) {
-            songName = review.song.Title || review.song.title || songName;
-            artistName = review.song.ArtistName || review.song.artistName || artistName;
-        } else if (review.album) {
-            albumName = review.album.Title || review.album.title || albumName;
-            artistName = review.album.ArtistName || review.album.artistName || artistName;
-        }
-        
-        const reviewTitle = review.Title || review.title || '';
-        const reviewContent = review.Content || review.content || review.comment || '';
-        const reviewRating = review.Rating || review.rating || 0;
-        const createdAt = review.CreatedAt || review.Created || new Date();
-        const timeAgo = formatNotificationTimeFn(createdAt); 
-        
-        const currentUserId = localStorage.getItem('userId');
-        const reviewUserId = review.UserId || review.userId || '';
-        
-        let userLiked = false;
-        if (currentUserId) {
-            const storedReactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-            const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-            userLiked = storedReactionId !== null || localLike === 'true';
-        }
-        
-        const contentName = contentType === 'song' ? songName : albumName;
-        
-        if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="review-detail-main">
-                    <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" class="review-detail-avatar profile-navigation-trigger" data-user-id="${reviewUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
-                        <div class="review-detail-user-info">
-                            <span class="review-detail-username profile-navigation-trigger" data-user-id="${reviewUserId}" style="cursor: pointer;">${username}</span>
-                            <span class="review-detail-time">${timeAgo}</span>
-                        </div>
-                    </div>
-                    <div class="review-detail-meta">
-                        <span class="review-detail-content-type">${contentType === 'song' ? 'Canción' : 'Álbum'}</span>
-                        <span class="review-detail-separator">-</span>
-                        <span class="review-detail-content-name">${contentName}</span>
-                        <span class="review-detail-separator">-</span>
-                        <span class="review-detail-artist">${artistName}</span>
-                    </div>
-                    ${reviewTitle ? `<h2 class="review-detail-title">${reviewTitle}</h2>` : ''}
-                    <p class="review-detail-text">${reviewContent}</p>
-                    <div class="review-detail-rating">
-                        <div class="review-detail-stars">${renderStars(reviewRating)}</div>
-                    </div>
-                    <div class="review-detail-interactions">
-                        <button class="review-detail-interaction-btn ${userLiked ? 'liked' : ''}" 
-                                data-review-id="${reviewId}" id="reviewDetailLikeBtn">
-                            <i class="fas fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'};"></i>
-                            <span class="review-detail-likes-count">${likes}</span>
-                        </button>
-                        <span class="review-detail-comments-icon">
-                            <i class="fas fa-comment"></i>
-                            <span class="review-detail-comments-count">${comments.length}</span>
-                        </span>
-                    </div>
-                </div>
-            `;
-        }
-        
-        await loadReviewDetailComments(reviewId, comments);
-        
-        // Agregar event listeners para navegación a perfil en la reseña principal
-        attachProfileNavigationListeners();
-        
-        const likeBtn = document.getElementById('reviewDetailLikeBtn');
-        if (likeBtn) {
-            likeBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (!localStorage.getItem('authToken')) {
-                    if (typeof showLoginRequiredModal === 'function') {
-                        showLoginRequiredModal();
-                    }
-                    return;
-                }
-                toggleReviewLikeInDetail(reviewId, this);
-            });
-        }
-        
-        const inputAvatar = document.getElementById('reviewDetailInputAvatar');
-        if (inputAvatar) {
-            inputAvatar.src = localStorage.getItem('userAvatar') || '../../Assets/default-avatar.png';
-        }
-        
-    } catch (error) {
-        console.error('Error cargando vista detallada:', error);
-        if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="review-detail-loading" style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.7);">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem; color: #ff6b6b;"></i>
-                    <p style="margin: 0;">Error al cargar la reseña. Por favor, intenta nuevamente.</p>
-                </div>
-            `;
-        }
-        // Aún así, cargar los comentarios si es posible
-        try {
-            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
-            const comments = await getCommentsByReviewFn(reviewId).catch(() => []);
-            await loadReviewDetailComments(reviewId, comments);
-        } catch (commentError) {
-            console.warn('No se pudieron cargar los comentarios:', commentError);
-        }
-    }
-}
-
-async function loadReviewDetailComments(reviewId, comments) {
-    const commentsList = document.getElementById('reviewDetailCommentsList');
-    const commentsCountEl = document.getElementById('reviewDetailCommentsCount');
-    if (!commentsList) return;
-    
-    try {
-        // Si no nos pasan los comentarios, los buscamos
-        if (!comments) {
-            const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
-            comments = await getCommentsByReviewFn(reviewId);
-        }
-        
-        // Enriquecer comentarios con datos de usuario si no tienen username
-        // Usar getUserProfile de userApi que ya está bien implementada
-        const getUserFn = window.userApi?.getUserProfile || (async (userId) => {
-            try {
-                // Usar axios directamente con el endpoint correcto
-                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
-                const token = localStorage.getItem('authToken');
-                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-                const response = await axios.get(`${API_BASE_URL}/api/gateway/users/${userId}`, { headers });
-                return response.data;
-            } catch (error) {
-                console.debug(`No se pudo obtener usuario ${userId}:`, error);
-                return null;
-            }
-        });
-        
-        comments = await Promise.all(comments.map(async (comment) => {
-            // Si ya tiene username, devolverlo tal cual
-            if (comment.UserName || comment.username) {
-                return comment;
-            }
-            
-            // Si no tiene username, obtenerlo del User Service
-            const userId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId;
-            if (userId) {
-                try {
-                    const userData = await getUserFn(userId);
-                    if (userData) {
-                        return {
-                            ...comment,
-                            UserName: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            username: userData.Username || userData.username || userData.UserName || 'Usuario',
-                            UserProfilePicUrl: userData.imgProfile || userData.ImgProfile || userData.image || comment.UserProfilePicUrl
-                        };
-                    }
-                } catch (error) {
-                    console.debug(`No se pudo obtener usuario ${userId} para comentario:`, error);
-                }
-            }
-            
-            // Fallback: usar el username del localStorage si es el comentario del usuario actual
-            const currentUserId = localStorage.getItem('userId');
-            if (userId && currentUserId && String(userId).trim() === String(currentUserId).trim()) {
-                const currentUsername = localStorage.getItem('username');
-                if (currentUsername) {
-                    return {
-                        ...comment,
-                        UserName: currentUsername,
-                        username: currentUsername
-                    };
-                }
-            }
-            
-            // Si aún no tenemos username, devolver con "Usuario" como fallback
-            return {
-                ...comment,
-                UserName: 'Usuario',
-                username: 'Usuario'
-            };
-        }));
-        
-        const formatNotificationTimeFn = window.formatNotificationTime || ((date) => 'Ahora');
-        const currentUserIdRaw = localStorage.getItem('userId');
-        const currentUserId = currentUserIdRaw ? String(currentUserIdRaw).trim() : null;
-        
-        if (commentsCountEl) commentsCountEl.textContent = comments.length;
-        
-        if (comments.length === 0) {
-            commentsList.innerHTML = `
-                <div class="review-detail-comment-empty">
-                    <i class="fas fa-comment-slash"></i>
-                    <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
-                </div>
-            `;
-    } else {
-            commentsList.innerHTML = comments.map(comment => {
-                const timeAgo = formatNotificationTimeFn(comment.Created || comment.CreatedAt || comment.date);
-                const username = comment.UserName || comment.username || 'Usuario';
-                const text = comment.Text || comment.text || '';
-                let commentId = comment.Id_Comment || comment.id_Comment || comment.IdComment || comment.idComment || comment.id || comment.Id || '';
-                if (commentId) {
-                    commentId = String(commentId).trim();
-                }
-                const commentUserId = comment.IdUser || comment.idUser || comment.Id_User || comment.id_user || comment.userId || '';
-                
-                // Verificar likes desde cache primero (igual que en reviewDetailModal.js)
-                const commentLikesCacheKey = `comment_likes_${commentId}`;
-                let cachedCommentLikes = null;
-                try {
-                    const cached = localStorage.getItem(commentLikesCacheKey);
-                    if (cached !== null) {
-                        cachedCommentLikes = parseInt(cached, 10);
-                        if (isNaN(cachedCommentLikes)) cachedCommentLikes = null;
-                    }
-                } catch (e) { /* ignore */ }
-                
-                const likes = cachedCommentLikes !== null ? cachedCommentLikes : (comment.Likes || comment.likes || 0);
-                
-                // Verificar si el usuario actual le dio like desde localStorage
-                let userLiked = false;
-                if (currentUserId) {
-                    const storedReactionId = localStorage.getItem(`reaction_comment_${commentId}_${currentUserId}`);
-                    const localLike = localStorage.getItem(`like_comment_${commentId}_${currentUserId}`);
-                    userLiked = storedReactionId !== null || localLike === 'true';
-                }
-                
-                // Si no hay en localStorage, usar el valor del backend
-                if (!userLiked && comment.userLiked) {
-                    userLiked = comment.userLiked;
-                }
-                
-                const normalizedCommentUserId = commentUserId ? String(commentUserId).trim() : '';
-                const normalizedCurrentUserId = currentUserId ? String(currentUserId).trim() : '';
-                const isOwnComment = normalizedCurrentUserId && normalizedCommentUserId && 
-                    normalizedCommentUserId.toLowerCase() === normalizedCurrentUserId.toLowerCase();
-                
-                let actionButtons = '';
-                if (isOwnComment) {
-                    actionButtons = `
-                        <div class="review-detail-comment-actions">
-                            <button class="review-detail-comment-action-btn comment-edit-btn" data-comment-id="${commentId}" title="Editar">
-                                <i class="fas fa-pencil"></i>
-                            </button>
-                            <button class="review-detail-comment-action-btn comment-delete-btn" data-comment-id="${commentId}" title="Eliminar">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                      </div>
-                    `;
-                }
-                
-                return `
-                    <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="../../Assets/default-avatar.png" alt="${username}" class="review-detail-comment-avatar profile-navigation-trigger" data-user-id="${commentUserId}" onerror="this.src='../../Assets/default-avatar.png'" style="cursor: pointer;">
-                        <div class="review-detail-comment-content">
-                            <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username profile-navigation-trigger" data-user-id="${commentUserId}" style="cursor: pointer;">${username}</span>
-                                <span class="review-detail-comment-time">${timeAgo}</span>
-                            </div>
-                            <p class="review-detail-comment-text">${text}</p>
-                            <div class="review-detail-comment-footer">
-                                <button class="review-detail-comment-like-btn ${userLiked ? 'liked' : ''}" 
-                                        data-comment-id="${commentId}">
-                                    <i class="fa-solid fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.6)'};"></i>
-                                    <span class="review-detail-comment-likes-count">${likes}</span>
-                                </button>
-                                ${actionButtons}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // Agregar event listeners para navegación a perfil
-        attachProfileNavigationListeners();
-        
-        attachReviewDetailCommentListeners(reviewId);
-    } catch (error) {
-        console.error('Error cargando comentarios en vista detallada:', error);
-        commentsList.innerHTML = '<div class="review-detail-comment-empty">Error al cargar comentarios.</div>';
-    }
-}
-
-/**
- * Adjunta listeners para navegación a perfil desde avatares y usernames
- */
-function attachProfileNavigationListeners() {
-    document.querySelectorAll('.profile-navigation-trigger').forEach(element => {
-        if (!element.hasAttribute('data-navigation-listener-attached')) {
-            element.setAttribute('data-navigation-listener-attached', 'true');
-            element.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const userId = this.getAttribute('data-user-id');
-                if (userId && typeof window.navigateToProfile === 'function') {
-                    window.navigateToProfile(userId);
-                }
-            });
-        }
-    });
-}
-
-function attachReviewDetailCommentListeners(reviewId) {
-    document.querySelectorAll('.review-detail-comment-like-btn').forEach(btn => {
-        // Verificar si ya tiene un listener (usando un atributo de datos)
-        if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const commentId = this.getAttribute('data-comment-id');
-                if (commentId) {
-                    toggleCommentLikeInDetail(commentId, this, reviewId);
-                }
-            });
-        }
-    });
-    
-    // Botones de editar
-    document.querySelectorAll('.review-detail-comment-item .comment-edit-btn').forEach(btn => {
-        // Verificar si ya tiene un listener
-        if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const commentId = this.getAttribute('data-comment-id');
-                if (commentId) {
-                    editCommentInDetail(commentId, reviewId);
-                }
-            });
-        }
-    });
-    
-    // Botones de eliminar
-    document.querySelectorAll('.review-detail-comment-item .comment-delete-btn').forEach(btn => {
-        // Verificar si ya tiene un listener
-        if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                const commentId = this.getAttribute('data-comment-id');
-                if (commentId && reviewId) {
-                    deleteCommentInDetail(commentId, reviewId);
-                }
-            });
-        }
-    });
-}
-
-async function toggleReviewLikeInDetail(reviewId, btn) {
-    const authToken = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-    if (!authToken || !userId) {
-        if (typeof showLoginRequiredModal === 'function') {
-            showLoginRequiredModal();
-        }
-        return;
-    }
-    
-    const icon = btn.querySelector('i');
-    const likesSpan = btn.querySelector('.review-detail-likes-count');
-    const isLiked = btn.classList.contains('liked');
-    const currentLikes = parseInt(likesSpan.textContent) || 0;
-    
-    if (isLiked) {
-        // Quitar like (Optimistic Update)
-        btn.classList.remove('liked');
-        icon.style.color = 'rgba(255,255,255,0.7)';
-        const newLikesCount = Math.max(0, currentLikes - 1);
-        likesSpan.textContent = newLikesCount;
-        
-        // Actualizar cache
-        const likesCacheKey = `review_likes_${reviewId}`;
-        try {
-            localStorage.setItem(likesCacheKey, String(newLikesCount));
-        } catch (e) { /* ignore */ }
-        
-        const reactionId = localStorage.getItem(`reaction_${reviewId}_${userId}`);
-        const deleteReviewReactionFn = window.socialApi?.deleteReviewReaction || (typeof deleteReviewReaction !== 'undefined' ? deleteReviewReaction : null);
-        if (deleteReviewReactionFn) {
-            deleteReviewReactionFn(reviewId, userId, authToken, reactionId)
-                .then(() => {
-                    localStorage.removeItem(`like_${reviewId}_${userId}`);
-                    localStorage.removeItem(`reaction_${reviewId}_${userId}`);
-                    
-                    // Sincronizar con el feed si la reseña está visible
-                    const feedLikeBtn = document.querySelector(`.btn-like[data-review-id="${reviewId}"]`);
-                    if (feedLikeBtn && feedLikeBtn.classList.contains('liked')) {
-                        feedLikeBtn.classList.remove('liked');
-                        const feedIcon = feedLikeBtn.querySelector('i');
-                        const feedLikesSpan = feedLikeBtn.parentElement.querySelector('.review-likes-count');
-                        if (feedIcon) feedIcon.style.color = 'rgba(255,255,255,0.7)';
-                        if (feedLikesSpan) feedLikesSpan.textContent = newLikesCount;
-                    }
-                })
-                .catch(err => {
-                    console.warn('No se pudo eliminar like del backend', err);
-                    // Revertir cambio si falla
-                    btn.classList.add('liked');
-                    icon.style.color = 'var(--magenta, #EC4899)';
-                    likesSpan.textContent = currentLikes;
-                    try {
-                        localStorage.setItem(likesCacheKey, String(currentLikes));
-                    } catch (e) { /* ignore */ }
-                });
-        }
-    } else {
-        // Agregar like (Optimistic Update)
-        btn.classList.add('liked');
-        icon.style.color = 'var(--magenta, #EC4899)';
-        const newLikesCount = currentLikes + 1;
-        likesSpan.textContent = newLikesCount;
-        
-        // Actualizar cache
-        const likesCacheKey = `review_likes_${reviewId}`;
-        try {
-            localStorage.setItem(likesCacheKey, String(newLikesCount));
-        } catch (e) { /* ignore */ }
-        
-        localStorage.setItem(`like_${reviewId}_${userId}`, 'true');
-        
-        const addReviewReactionFn = window.socialApi?.addReviewReaction || (typeof addReviewReaction !== 'undefined' ? addReviewReaction : null);
-        if (addReviewReactionFn) {
-            addReviewReactionFn(reviewId, userId, authToken)
-                .then(data => {
-                    const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-                    if (reactionId) {
-                        localStorage.setItem(`reaction_${reviewId}_${userId}`, String(reactionId));
-                    }
-                    
-                    // Sincronizar con el feed si la reseña está visible
-                    const feedLikeBtn = document.querySelector(`.btn-like[data-review-id="${reviewId}"]`);
-                    if (feedLikeBtn && !feedLikeBtn.classList.contains('liked')) {
-                        feedLikeBtn.classList.add('liked');
-                        const feedIcon = feedLikeBtn.querySelector('i');
-                        const feedLikesSpan = feedLikeBtn.parentElement.querySelector('.review-likes-count');
-                        if (feedIcon) feedIcon.style.color = 'var(--magenta, #EC4899)';
-                        if (feedLikesSpan) feedLikesSpan.textContent = newLikesCount;
-                    }
-                })
-                .catch(err => {
-                    console.warn('No se pudo guardar like en el backend', err);
-                    // Revertir cambio si falla
-                    btn.classList.remove('liked');
-                    icon.style.color = 'rgba(255,255,255,0.7)';
-                    likesSpan.textContent = currentLikes;
-                    localStorage.removeItem(`like_${reviewId}_${userId}`);
-                    try {
-                        localStorage.setItem(likesCacheKey, String(currentLikes));
-                    } catch (e) { /* ignore */ }
-                });
-        }
-    }
-}
-
-async function toggleCommentLikeInDetail(commentId, btn, reviewId) {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-        if (typeof showLoginRequiredModal === 'function') {
-            showLoginRequiredModal();
-        }
-        return;
-    }
-    
-    const icon = btn.querySelector('i');
-    const likesSpan = btn.querySelector('.review-detail-comment-likes-count');
-    const isLiked = btn.classList.contains('liked');
-    const currentLikes = parseInt(likesSpan.textContent) || 0;
-    const currentUserId = localStorage.getItem('userId');
-    
-    if (isLiked) {
-        // Quitar like (Optimistic Update)
-        btn.classList.remove('liked');
-        icon.style.color = 'rgba(255,255,255,0.6)';
-        const newLikesCount = Math.max(0, currentLikes - 1);
-        likesSpan.textContent = newLikesCount;
-        
-        // Actualizar cache
-        const likesCacheKey = `comment_likes_${commentId}`;
-        try {
-            localStorage.setItem(likesCacheKey, String(newLikesCount));
-        } catch (e) { /* ignore */ }
-        
-        // Sincronizar con backend
-        const deleteCommentReactionFn = window.socialApi?.deleteCommentReaction || (typeof deleteCommentReaction !== 'undefined' ? deleteCommentReaction : null);
-        if (deleteCommentReactionFn) {
-            deleteCommentReactionFn(commentId, currentUserId, authToken)
-                .then(() => {
-                    localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
-                    localStorage.removeItem(`reaction_comment_${commentId}_${currentUserId}`);
-                    
-                    // Sincronizar con el modal de comentarios si está abierto
-                    const commentsModal = document.getElementById('commentsModalOverlay');
-                    if (commentsModal && commentsModal.style.display === 'flex') {
-                        const commentLikeBtn = document.querySelector(`.comment-like-btn[data-comment-id="${commentId}"]`);
-                        if (commentLikeBtn && commentLikeBtn.classList.contains('liked')) {
-                            commentLikeBtn.classList.remove('liked');
-                            const commentIcon = commentLikeBtn.querySelector('i');
-                            const commentLikesSpan = commentLikeBtn.querySelector('.comment-likes-count');
-                            if (commentIcon) commentIcon.style.color = 'rgba(255,255,255,0.6)';
-                            if (commentLikesSpan) commentLikesSpan.textContent = newLikesCount;
-                        }
-                    }
-                })
-                .catch(err => {
-                    console.warn('No se pudo eliminar like del comentario en el backend', err);
-                    // Revertir cambio si falla
-                    btn.classList.add('liked');
-                    icon.style.color = 'var(--magenta, #EC4899)';
-                    likesSpan.textContent = currentLikes;
-                    try {
-                        localStorage.setItem(likesCacheKey, String(currentLikes));
-                    } catch (e) { /* ignore */ }
-                });
-        }
-    } else {
-        // Agregar like (Optimistic Update)
-        btn.classList.add('liked');
-        icon.style.color = 'var(--magenta, #EC4899)';
-        const newLikesCount = currentLikes + 1;
-        likesSpan.textContent = newLikesCount;
-        
-        // Actualizar cache
-        const likesCacheKey = `comment_likes_${commentId}`;
-        try {
-            localStorage.setItem(likesCacheKey, String(newLikesCount));
-        } catch (e) { /* ignore */ }
-        
-        localStorage.setItem(`like_comment_${commentId}_${currentUserId}`, 'true');
-        
-        // Sincronizar con backend
-        const addCommentReactionFn = window.socialApi?.addCommentReaction || (typeof addCommentReaction !== 'undefined' ? addCommentReaction : null);
-        if (addCommentReactionFn) {
-            addCommentReactionFn(commentId, currentUserId, authToken)
-                .then(data => {
-                    const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
-                    if (reactionId) {
-                        localStorage.setItem(`reaction_comment_${commentId}_${currentUserId}`, String(reactionId));
-                    }
-                    
-                    // Sincronizar con el modal de comentarios si está abierto
-                    const commentsModal = document.getElementById('commentsModalOverlay');
-                    if (commentsModal && commentsModal.style.display === 'flex') {
-                        const commentLikeBtn = document.querySelector(`.comment-like-btn[data-comment-id="${commentId}"]`);
-                        if (commentLikeBtn && !commentLikeBtn.classList.contains('liked')) {
-                            commentLikeBtn.classList.add('liked');
-                            const commentIcon = commentLikeBtn.querySelector('i');
-                            const commentLikesSpan = commentLikeBtn.querySelector('.comment-likes-count');
-                            if (commentIcon) commentIcon.style.color = 'var(--magenta, #EC4899)';
-                            if (commentLikesSpan) commentLikesSpan.textContent = newLikesCount;
-                        }
-                    }
-                })
-                .catch(err => {
-                    console.warn('No se pudo guardar like del comentario en el backend', err);
-                    // Revertir cambio si falla
-                    btn.classList.remove('liked');
-                    icon.style.color = 'rgba(255,255,255,0.6)';
-                    likesSpan.textContent = currentLikes;
-                    localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
-                    try {
-                        localStorage.setItem(likesCacheKey, String(currentLikes));
-                    } catch (e) { /* ignore */ }
-                });
-        }
-    }
-    
-    // Actualizar visualmente
-    if (isLiked) {
-        btn.classList.remove('liked');
-        icon.style.color = 'rgba(255,255,255,0.6)';
-        likesSpan.textContent = Math.max(0, currentLikes - 1);
-    } else {
-        btn.classList.add('liked');
-        icon.style.color = 'var(--magenta, #EC4899)';
-        likesSpan.textContent = currentLikes + 1;
-    }
-    
-    // TODO: Enviar like al backend cuando esté disponible
-}
-
-function editCommentInDetail(commentId, reviewId) {
-    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
-    const commentTextElement = commentItem?.querySelector('.review-detail-comment-text');
-    
-    if (!commentItem || !commentTextElement) {
-        console.error('No se encontró commentItem o commentTextElement en vista detallada');
-        return;
-    }
-    
-    // Si ya está en modo edición, no hacer nada
-    if (commentItem.classList.contains('editing')) {
-        return;
-    }
-    
-    // Guardar el texto original
-    const originalText = commentTextElement.textContent.trim();
-    
-    // Crear textarea para edición
-    const textarea = document.createElement('textarea');
-    textarea.className = 'comment-text-edit';
-    textarea.value = originalText;
-    textarea.maxLength = 500;
-    textarea.rows = 3;
-    
-    // Crear contenedor de botones
-    const buttonsContainer = document.createElement('div');
-    buttonsContainer.className = 'comment-edit-buttons';
-    
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'comment-edit-action-btn comment-edit-cancel';
-    cancelBtn.textContent = 'Cancelar';
-    cancelBtn.type = 'button';
-    cancelBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        cancelEditCommentInDetail(commentId, originalText);
-    });
-    
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'comment-edit-action-btn comment-edit-confirm';
-    confirmBtn.textContent = 'Guardar';
-    confirmBtn.type = 'button';
-    confirmBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const newText = textarea.value.trim();
-        if (newText && newText !== originalText) {
-            saveCommentEditInDetail(commentId, newText, reviewId);
-        } else {
-            cancelEditCommentInDetail(commentId, originalText);
-        }
-    });
-    
-    buttonsContainer.appendChild(cancelBtn);
-    buttonsContainer.appendChild(confirmBtn);
-    
-    // Reemplazar el texto con el textarea
-    commentTextElement.style.display = 'none';
-    commentItem.classList.add('editing');
-    commentTextElement.parentNode.insertBefore(textarea, commentTextElement);
-    commentTextElement.parentNode.insertBefore(buttonsContainer, commentTextElement.nextSibling);
-    
-    textarea.focus();
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-}
-
-function cancelEditCommentInDetail(commentId, originalText) {
-    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
-    if (!commentItem) return;
-    
-    const textarea = commentItem.querySelector('.comment-text-edit');
-    const buttonsContainer = commentItem.querySelector('.comment-edit-buttons');
-    const commentTextElement = commentItem.querySelector('.review-detail-comment-text');
-    
-    if (textarea) textarea.remove();
-    if (buttonsContainer) buttonsContainer.remove();
-    if (commentTextElement) {
-        commentTextElement.textContent = originalText;
-        commentTextElement.style.display = 'block';
-    }
-    
-    commentItem.classList.remove('editing');
-}
-
-async function saveCommentEditInDetail(commentId, newText, reviewId) {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-        if (typeof showLoginRequiredModal === 'function') {
-            showLoginRequiredModal();
-        }
-        return;
-    }
-    
-    try {
-        const updateCommentFn = window.socialApi?.updateComment || window.reviewApi?.updateComment;
-        if (updateCommentFn) {
-            await updateCommentFn(commentId, newText, authToken);
-            
-            // Actualizar el texto en el DOM
-            const commentTextElement = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"] .review-detail-comment-text`);
-            if (commentTextElement) {
-                commentTextElement.textContent = newText;
-            }
-            
-            cancelEditCommentInDetail(commentId, newText);
-            
-            if (typeof showAlert === 'function') {
-                showAlert('Comentario actualizado', 'success');
-            }
-        }
-    } catch (error) {
-        console.error('Error actualizando comentario:', error);
-        if (typeof showAlert === 'function') {
-            showAlert('Error al actualizar el comentario', 'danger');
-        }
-    }
-}
-
-// Variable global para almacenar el ID del comentario a eliminar
-let deletingCommentId = null;
-let deletingCommentReviewId = null;
-
-function showDeleteCommentModal(commentId, reviewId) {
-    deletingCommentId = commentId;
-    deletingCommentReviewId = reviewId;
-    
-    const modal = document.getElementById('deleteCommentModalOverlay');
-    if (modal) {
-        // Asegurar que el modal tenga el z-index más alto
-        modal.style.display = 'flex';
-        modal.style.zIndex = '10005';
-        // Asegurar que el modal esté visible
-        modal.style.visibility = 'visible';
-        modal.style.opacity = '1';
-    } else {
-        // Fallback a confirm si no hay modal
-        if (confirm('¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.')) {
-            confirmDeleteComment();
-        }
-    }
-}
-
-function hideDeleteCommentModal() {
-    const modal = document.getElementById('deleteCommentModalOverlay');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-    deletingCommentId = null;
-    deletingCommentReviewId = null;
-}
-
-async function confirmDeleteComment() {
-    if (!deletingCommentId) return;
-    
-    const commentId = deletingCommentId;
-    const reviewId = deletingCommentReviewId;
-    
-    hideDeleteCommentModal();
-    
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-        if (typeof showLoginRequiredModal === 'function') {
-            showLoginRequiredModal();
-        }
-        return;
-    }
-    
-    try {
-        const deleteCommentFn = window.socialApi?.deleteComment || window.reviewApi?.deleteComment;
-        if (deleteCommentFn) {
-            await deleteCommentFn(commentId, authToken);
-            
-            // Remover el comentario del DOM
-            const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
-            if (commentItem) {
-                commentItem.remove();
-            }
-            
-            // Actualizar el contador de comentarios en el modal de detalles
-            const commentsCountEl = document.getElementById('reviewDetailCommentsCount');
-            if (commentsCountEl) {
-                const currentCount = parseInt(commentsCountEl.textContent) || 0;
-                commentsCountEl.textContent = Math.max(0, currentCount - 1);
-            }
-            
-            // Actualizar el contador de comentarios en la tarjeta de reseña del perfil
-            const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
-            if (reviewItem) {
-                const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
-                if (reviewCommentsCount) {
-                    const currentCardCount = parseInt(reviewCommentsCount.textContent) || 0;
-                    reviewCommentsCount.textContent = Math.max(0, currentCardCount - 1);
-                }
-            }
-            
-            // Si no hay más comentarios, mostrar mensaje vacío
-            const commentsList = document.getElementById('reviewDetailCommentsList');
-            if (commentsList && commentsList.querySelectorAll('.review-detail-comment-item').length === 0) {
-                commentsList.innerHTML = `
-                    <div class="review-detail-comment-empty">
-                        <i class="fas fa-comment-slash"></i>
-                        <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
-                    </div>
-                `;
-            }
-            
-            if (typeof showAlert === 'function') {
-                showAlert('Comentario eliminado', 'success');
-            }
-        }
-    } catch (error) {
-        console.error('Error eliminando comentario:', error);
-        if (typeof showAlert === 'function') {
-            showAlert('Error al eliminar el comentario', 'danger');
-        }
-    }
-}
-
-async function deleteCommentInDetail(commentId, reviewId) {
-    showDeleteCommentModal(commentId, reviewId);
-}
-
-function hideReviewDetailModal() {
-    const modal = document.getElementById('reviewDetailModalOverlay');
-    if (modal) modal.style.display = 'none';
 }
 
 // Variable global para almacenar el ID de la reseña a eliminar
@@ -2326,139 +1284,6 @@ async function confirmDeleteReview() {
     await deleteReviewLogic(reviewId);
 }
 
-function initializeReviewDetailModalLogic() {
-    const closeReviewDetailModal = document.getElementById('closeReviewDetailModal');
-    const reviewDetailModalOverlay = document.getElementById('reviewDetailModalOverlay');
-    const reviewDetailSubmitCommentBtn = document.getElementById('reviewDetailSubmitCommentBtn');
-    const reviewDetailCommentInput = document.getElementById('reviewDetailCommentInput');
-    
-    if (closeReviewDetailModal) {
-        closeReviewDetailModal.addEventListener('click', hideReviewDetailModal);
-    }
-    
-    if (reviewDetailModalOverlay) {
-        reviewDetailModalOverlay.addEventListener('click', (e) => {
-            if (e.target === reviewDetailModalOverlay) {
-                hideReviewDetailModal();
-            }
-        });
-    }
-    
-    if (reviewDetailSubmitCommentBtn) {
-        reviewDetailSubmitCommentBtn.addEventListener('click', submitReviewDetailComment);
-    }
-    
-    if (reviewDetailCommentInput) {
-        reviewDetailCommentInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                submitReviewDetailComment();
-            }
-        });
-    }
-}
-
-async function submitReviewDetailComment() {
-    const modal = document.getElementById('reviewDetailModalOverlay');
-    if (!modal || modal.style.display !== 'flex') return;
-    
-    const reviewId = modal.getAttribute('data-review-id');
-    const commentInput = document.getElementById('reviewDetailCommentInput');
-    
-    if (!reviewId || !commentInput) {
-        console.warn('No se pudo obtener reviewId o commentInput en modal de detalle');
-        return;
-    }
-    
-    const commentText = commentInput.value.trim();
-    if (!commentText) {
-        if (typeof showAlert === 'function') {
-            showAlert('Por favor, escribe un comentario', 'warning');
-        }
-        return;
-    }
-    
-    try {
-        const authToken = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-        
-        if (!authToken) {
-            if (typeof showLoginRequiredModal === 'function') {
-                showLoginRequiredModal();
-            }
-            return;
-        }
-        
-        // Crear comentario usando la API - intentar múltiples fuentes
-        let createCommentFn = null;
-        
-        // Intentar desde socialApi (importado como módulo)
-        if (typeof window.socialApi !== 'undefined' && window.socialApi.createComment) {
-            createCommentFn = window.socialApi.createComment;
-        } else if (typeof window.reviewApi !== 'undefined' && window.reviewApi.createComment) {
-            createCommentFn = window.reviewApi.createComment;
-        } else if (typeof createComment === 'function') {
-            // Intentar función global directa
-            createCommentFn = createComment;
-        } else {
-            // Intentar importar dinámicamente
-            try {
-                const socialApiModule = await import('../../APIs/socialApi.js');
-                if (socialApiModule && socialApiModule.createComment) {
-                    createCommentFn = socialApiModule.createComment;
-                    // Guardar para uso futuro
-                    if (typeof window !== 'undefined') {
-                        if (!window.socialApi) window.socialApi = {};
-                        window.socialApi.createComment = socialApiModule.createComment;
-                    }
-                }
-            } catch (importError) {
-                console.warn('No se pudo importar socialApi dinámicamente:', importError);
-            }
-        }
-        
-        if (createCommentFn) {
-            await createCommentFn(reviewId, commentText);
-        } else {
-            console.error('No se encontró función createComment en ninguna fuente disponible');
-            if (typeof showAlert === 'function') {
-                showAlert('Error: No se pudo encontrar la función para crear comentarios', 'danger');
-            }
-            return;
-        }
-        
-        // Limpiar input
-        commentInput.value = '';
-        
-        // Recargar comentarios para obtener el username del backend
-        const getCommentsByReviewFn = window.socialApi?.getCommentsByReview || window.reviewApi?.getCommentsByReview || (() => Promise.resolve([]));
-        const comments = await getCommentsByReviewFn(reviewId);
-        await loadReviewDetailComments(reviewId, comments);
-        
-        // Actualizar contador en el modal de detalles
-        const commentsCount = document.getElementById('reviewDetailCommentsCount');
-        if (commentsCount) {
-            commentsCount.textContent = comments.length;
-        }
-        
-        // Actualizar también el contador en la tarjeta de reseña del perfil
-        const reviewItem = document.querySelector(`.review-item[data-review-id="${reviewId}"]`);
-        if (reviewItem) {
-            const reviewCommentsCount = reviewItem.querySelector('.review-comments-count');
-            if (reviewCommentsCount) {
-                reviewCommentsCount.textContent = comments.length;
-            }
-        }
-        
-        if (typeof showAlert === 'function') {
-            showAlert('Comentario agregado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error agregando comentario en vista detallada:', error);
-        if (typeof showAlert === 'function') {
-            showAlert('Error al agregar el comentario', 'danger');
-        }
-    }
-}
 
 // --- FUNCIONES PARA CREAR RESEÑA DESDE EL PERFIL ---
 
@@ -3313,11 +2138,9 @@ function initializeFollowersModal() {
 // Hacer las funciones disponibles globalmente para que los listeners puedan usarlas
 window.showEditReviewModal = showEditReviewModal;
 window.showDeleteReviewModal = showDeleteReviewModal;
-window.showReportModal = showReportModal;
-window.reportReview = reportReview;
+window.showReportModal = typeof showReportModal !== 'undefined' ? showReportModal : null; // Safety check
+window.reportReview = typeof reportReview !== 'undefined' ? reportReview : null; // Safety check
 window.showCommentsModal = showCommentsModal;
-window.showReviewDetailModal = showReviewDetailModal;
-window.initializeReviewDetailModalLogic = initializeReviewDetailModalLogic;
 window.showCreateReviewModal = showCreateReviewModal;
 window.initializeCreateReviewModal = initializeCreateReviewModal;
 window.showFollowersModal = showFollowersModal;

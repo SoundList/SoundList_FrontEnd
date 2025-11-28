@@ -1,6 +1,7 @@
 /**
  * Módulo del modal de crear/editar reseña
- * Maneja la creación y edición de reseñas
+ * Maneja la creación y edición de reseñas.
+ * MERGE FINAL: Incluye lógica de bloqueo de edición de contenido.
  */
 
 import { fetchSearchResults } from '../../APIs/searchApi.js';
@@ -316,13 +317,23 @@ export function showCreateReviewModal(contentData = null, state) {
     const contentInfo = document.getElementById('createReviewContentInfo');
     const contentSearchInput = document.getElementById('contentSearchInput');
     const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+    const changeContentBtn = document.getElementById('changeContentBtn');
     
     if (!modal) return;
     
+    // Resetear UI al estado "Crear" (habilitar todo)
+    if (changeContentBtn) changeContentBtn.style.display = 'flex';
+    if (contentSearchInput) {
+        contentSearchInput.disabled = false;
+        contentSearchInput.style.pointerEvents = "auto";
+    }
+
+    const modalTitle = modal.querySelector('.create-review-title');
+    const submitBtn = document.getElementById('submitCreateReviewBtn');
+    if (modalTitle) modalTitle.textContent = 'CREA UNA RESEÑA';
+    if (submitBtn) submitBtn.textContent = 'SUBIR';
 
     clearReviewFormErrors();
-
-
 
     if (contentData && contentData.type === 'artist') {
         showAlert('No se pueden crear reseñas de artistas. Por favor, selecciona una canción o un álbum.', 'warning');
@@ -347,7 +358,6 @@ export function showCreateReviewModal(contentData = null, state) {
     const textInput = document.getElementById('createReviewTextInput');
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
-    
     
     const stars = document.querySelectorAll('#createReviewStars .star-input');
     if (stars.length > 0) {
@@ -466,11 +476,6 @@ function clearReviewFormErrors() {
     displayFieldError('createReviewStars', null); 
 }
 
-
-
-
-
-
 /**
  * Envía la reseña (nueva o editada) al backend.
  */
@@ -501,7 +506,6 @@ async function submitCreateReview(state) {
         displayFieldError('createReviewTitleInput', null);
     }
 
-    // 2. Validar Texto
     if (!content) {
         displayFieldError('createReviewTextInput', 'El contenido de la reseña es obligatorio.');
         hasError = true;
@@ -509,7 +513,6 @@ async function submitCreateReview(state) {
         displayFieldError('createReviewTextInput', null);
     }
 
-    // 3. Validar Calificación
     if (rating === 0) { 
         displayFieldError('createReviewStars', 'Debes seleccionar una calificación (1-5 estrellas).');
         hasError = true;
@@ -586,7 +589,6 @@ async function submitCreateReview(state) {
 
             console.log(' Reseña editada exitosamente');
             
-            // Recargar las reseñas si hay una función disponible
             if (state && state.loadReviews && typeof state.loadReviews === 'function') {
                 await state.loadReviews();
             } else if (typeof window.loadReviews === 'function') {
@@ -668,19 +670,12 @@ async function submitCreateReview(state) {
         
         try {
             console.log("🔄 1. Iniciando cálculo de promedio...");
-            
-            // A. Pedir promedio a Social
-            // IMPORTANTE: contentGuid es el ID interno (Guid)
             const rawAverage = await getAverageRating(contentGuid, state.currentReviewData.type);
-            
-            // Aseguramos que sea un entero
             const newAverage = parseInt(rawAverage); 
-            
             console.log(`⭐ 2. Promedio recibido de Social: ${rawAverage} -> Convertido: ${newAverage}`);
 
             if (newAverage > 0) {
-                // B. Enviar a Content
-                const spotifyId = state.currentReviewData.id; // ID de Spotify (String corto)
+                const spotifyId = state.currentReviewData.id;
                 console.log(`📤 3. Enviando PATCH a Content. ID: ${spotifyId}, Rating: ${newAverage}`);
 
                 if (state.currentReviewData.type === 'song') {
@@ -717,48 +712,24 @@ async function submitCreateReview(state) {
         hideCreateReviewModal(state);
         
         // Esperar un momento para que el backend procese la reseña antes de recargar
-        // Aumentamos el timeout a 800ms para dar más tiempo al backend
         setTimeout(() => {
             if (typeof state.loadReviews === 'function') {
                 console.log('[CREATE REVIEW] ✅ Recargando reseñas con filtro "recent"...');
-                console.log('[CREATE REVIEW] 📅 ReviewId de la reseña creada:', reviewId);
-                
-                // Obtener las funciones de setCurrentFilter y getCurrentFilter si están disponibles
-                // Estas funciones deberían estar en el scope de homeAdmin.js
                 let setCurrentFilterFn = null;
-                let getCurrentFilterFn = null;
+                if (typeof window.setCurrentReviewFilter === 'function') setCurrentFilterFn = window.setCurrentReviewFilter;
                 
-                // Intentar obtener desde window si están expuestas
-                if (typeof window.setCurrentReviewFilter === 'function') {
-                    setCurrentFilterFn = window.setCurrentReviewFilter;
-                }
-                if (typeof window.getCurrentReviewFilter === 'function') {
-                    getCurrentFilterFn = window.getCurrentReviewFilter;
-                }
-                
-                // Si tenemos setReviewFilter disponible, usarlo (es la forma correcta)
                 if (typeof setReviewFilter === 'function') {
-                    // setReviewFilter actualiza el estado y recarga las reseñas
-                    console.log('[CREATE REVIEW] 🔄 Cambiando filtro a "recent" y recargando...');
                     setReviewFilter('recent', setCurrentFilterFn || (() => {}), state.loadReviews);
                 } else {
-                    // Fallback: cambiar UI manualmente y recargar
-                    console.log('[CREATE REVIEW] 🔄 Fallback: cambiando UI y recargando...');
-                    const filterButtons = document.querySelectorAll('.filter-btn');
-                    filterButtons.forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.filter === 'recent');
-                    });
-                    // Luego recargar las reseñas
                     state.loadReviews();
                 }
             } else if (typeof setReviewFilter === 'function') {
                 setReviewFilter('recent', () => {}, state.loadReviews);
             }
-            
             if (typeof window.reloadCarousel === 'function') {
                 window.reloadCarousel();
             }
-        }, 800); // Esperar 800ms para que el backend procese la reseña nueva
+        }, 800);
         
         setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 1000);
         
@@ -775,6 +746,7 @@ async function submitCreateReview(state) {
 
 /**
  * Muestra el modal de editar reseña
+ * MERGE: Incluye lógica recuperada para bloquear cambios de contenido al editar.
  */
 export async function showEditReviewModal(reviewId, title, content, rating, state) {
     const modal = document.getElementById('createReviewModalOverlay');
@@ -784,6 +756,25 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
     }
     clearReviewFormErrors();
     modal.setAttribute('data-edit-review-id', reviewId);
+    
+    // 🔒 LÓGICA RECUPERADA: BLOQUEO DE EDICIÓN DE CONTENIDO
+    const changeContentBtn = document.getElementById('changeContentBtn');
+    const contentSelector = document.getElementById('createReviewContentSelector');
+    const contentSearchInput = document.getElementById('contentSearchInput');
+    const contentSearchDropdown = document.getElementById('contentSearchDropdown');
+
+    // Ocultar botón "Cambiar contenido"
+    if (changeContentBtn) changeContentBtn.style.display = 'none';
+    // Ocultar selector
+    if (contentSelector) contentSelector.style.display = 'none';
+    // Deshabilitar input de búsqueda por completo
+    if (contentSearchInput) {
+        contentSearchInput.disabled = true;
+        contentSearchInput.style.pointerEvents = "none";
+    }
+    // Ocultar dropdown de búsqueda
+    if (contentSearchDropdown) contentSearchDropdown.style.display = 'none';
+    // ----------------------------------------------------
     
     const normalizedReviewId = String(reviewId).trim();
     const storageKey = `review_content_${normalizedReviewId}`;
@@ -803,10 +794,12 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
                 image: contentData.image || '../Assets/default-avatar.png'
             };
             
+            const contentInfo = document.getElementById('createReviewContentInfo');
             const contentInfoImage = document.getElementById('contentInfoImage');
             const contentInfoName = document.getElementById('contentInfoName');
             const contentInfoType = document.getElementById('contentInfoType');
             
+            if (contentInfo) contentInfo.style.display = 'flex';
             if (contentInfoImage) {
                 contentInfoImage.src = state.currentReviewData.image;
                 contentInfoImage.onerror = function() { this.src = '../Assets/default-avatar.png'; };
@@ -840,17 +833,15 @@ export async function showEditReviewModal(reviewId, title, content, rating, stat
     }
     
     const modalTitle = modal.querySelector('.create-review-title');
-    if (modalTitle) modalTitle.textContent = 'Editar Reseña';
+    const submitBtn = document.getElementById('submitCreateReviewBtn');
+    if (modalTitle) modalTitle.textContent = 'EDITAR RESEÑA';
+    if (submitBtn) submitBtn.textContent = 'CONFIRMAR';
     
-    const contentSelector = document.getElementById('createReviewContentSelector');
     const contentInfo = document.getElementById('createReviewContentInfo');
-    
-    if (contentSelector) contentSelector.style.display = 'none';
-    if (contentInfo) contentInfo.style.display = 'block';
+    if (contentInfo) contentInfo.style.display = 'flex';
     
     // Asegurar que el modal se muestre
     modal.style.display = 'flex';
     
     console.log('✅ Modal de edición abierto correctamente');
 }
-

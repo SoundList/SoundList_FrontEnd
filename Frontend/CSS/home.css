@@ -808,8 +808,8 @@ position: relative;
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding-bottom: 10px; 
-    margin-bottom: 0.5rem;
+    padding-bottom: 25px; 
+    margin-bottom: 2rem;
 }
 
 .carousel-nav-btn {
@@ -919,14 +919,13 @@ position: relative;
 }
 
 .carousel-indicators {
-position: relative;
+    position: relative;
     display: flex;
     bottom:0.1rem;
     align-items: center;
     gap: 1rem;
-    padding-bottom: 0; 
-    margin-top: 0.5rem;
-    margin-bottom: 1.5rem;
+    padding-bottom: 10px;
+    margin-bottom: 2rem;
 }
 
 
@@ -4390,7 +4389,7 @@ body #alertContainer .custom-alert {
         overflow-y: visible !important;
     }
     .home-container {
-    background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
+        background: linear-gradient(to bottom, #5a189a 0%, #0d1120 50%, #0a0e1a 100%);
         background-attachment: fixed;
         background-size: cover;
         min-height: 100vh;        

@@ -144,6 +144,12 @@ async function confirmDeleteComment(state) {
         const comments = await getCommentsByReview(reviewId);
         const newCommentsCount = comments.length;
         
+        // Actualizar cache de comentarios
+        const commentsCacheKey = `review_comments_${reviewId}`;
+        try {
+            localStorage.setItem(commentsCacheKey, String(newCommentsCount));
+        } catch (e) { /* ignore */ }
+        
         // Actualizar contador en el botón de comentarios de la reseña (siempre, no solo si el modal está abierto)
         // Buscar en todas las páginas (home, perfil, canciones, álbum)
         const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);

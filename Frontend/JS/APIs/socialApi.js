@@ -254,6 +254,23 @@ export async function getReviewReactionCount(reviewId) {
 }
 
 /**
+ * Obtiene el contador de reacciones (likes) de un comentario desde el backend
+ * @param {string} commentId - ID del comentario
+ * @returns {Promise<number>} - Número de reacciones
+ */
+export async function getCommentReactionCount(commentId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/gateway/comments/${commentId}/reactions/count`);
+        const count = response.data?.count ?? response.data ?? 0;
+        return count;
+    } catch (error) {
+        // Si el endpoint no existe o hay error, retornar 0
+        console.debug(`No se pudo obtener contador de reacciones del comentario ${commentId}:`, error);
+        return 0;
+    }
+}
+
+/**
  * Agrega Like a Reseña.
  * CAMBIO CRÍTICO: Eliminado userId.
  */
@@ -340,11 +357,25 @@ export async function addCommentReaction(commentId) {
         });
         return response.data;
     } catch (error) {
-         // Fallback directo (por si acaso)
-         const response = await axios.post(`${SOCIAL_DIRECT_URL}/api/reactions`, reactionData, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
+        // Si el error es 400, puede ser que la reacción ya existe (sincronización)
+        // No loguear aquí, el código que llama lo manejará
+        if (error.response?.status === 400) {
+            throw error; // Lanzar para que el código que llama lo maneje silenciosamente
+        }
+        
+        // Fallback directo (por si acaso)
+        try {
+            const response = await axios.post(`${SOCIAL_DIRECT_URL}/api/reactions`, reactionData, {
+                headers: getAuthHeaders()
+            });
+            return response.data;
+        } catch (fallbackError) {
+            // Si el fallback también falla con 400, lanzar el error original
+            if (fallbackError.response?.status === 400) {
+                throw error; // Lanzar el error original del gateway
+            }
+            throw fallbackError;
+        }
     }
 }
 
@@ -354,7 +385,12 @@ export async function deleteCommentReaction(commentId) {
             headers: getAuthHeaders()
         });
     } catch (error) {
-        console.error('Error en deleteCommentReaction:', error);
+        // Si el error es 404, significa que la reacción ya no existe (aceptable, no lanzar error)
+        if (error.response?.status === 404) {
+            // No loguear ni lanzar error, solo retornar silenciosamente
+            return; // No lanzar error, solo retornar
+        }
+        // Para otros errores, lanzar normalmente
         throw error;
     }
 }

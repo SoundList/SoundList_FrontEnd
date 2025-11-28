@@ -410,3 +410,27 @@ export async function getCommentById(commentId) {
         return null;
     }
 }
+
+export async function markNotificationAsRead(notificationId) {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken || !notificationId) return;
+
+    try {
+        // El endpoint en tu NotificationController es: [HttpPatch("read/{notificationId}")]
+        // Ruta completa: /api/Notification/read/{id}
+        
+        const response = await fetch(`${API_BASE_URL}/api/Notification/read/${notificationId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            console.warn(`No se pudo marcar como leída la notificación ${notificationId}. Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error al marcar notificación como leída:', error);
+    }
+}

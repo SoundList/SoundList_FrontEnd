@@ -1,8 +1,13 @@
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
 import { initializeCommentsModalLogic, showCommentsModal } from '../Components/modals/commentsModal.js';
 import { initializeDeleteModalsLogic } from '../Components/modals/deleteModals.js';
+import { initializeCreateReviewModal, showCreateReviewModal, showEditReviewModal } from '../Components/modals/createReviewModal.js';
+import { formatNotificationTime } from '../Handlers/headerHandler.js';
 import '../APIs/reactionApi.js'; // Importar para inicializar window.reactionApi
 import '../Handlers/likesHandler.js'; // Importar para tener window.handleLikeToggle disponible
+
+// Exponer formatNotificationTime globalmente para que profileHandler.js pueda usarla
+window.formatNotificationTime = formatNotificationTime;
 
 async function reloadProfileReviews() {
     await loadAllFeaturedLists();
@@ -85,14 +90,26 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const modalState = window.modalsState;
     
-    // Inicializar todos los modals
+    // Inicializar todos los modals (igual que en home)
+    initializeCreateReviewModal(modalState);
     initializeReviewDetailModalLogic(modalState);
     initializeCommentsModalLogic(modalState);
     initializeDeleteModalsLogic(modalState);
 
-    // Exponer las funciones globalmente para que los onclicks del HTML funcionen
+    // Exponer las funciones globalmente para que los onclicks del HTML funcionen (igual que en home)
+    window.showCreateReviewModal = (contentData = null) => showCreateReviewModal(contentData, modalState);
+    window.showEditReviewModal = (reviewId, title, content, rating) => showEditReviewModal(reviewId, title, content, rating, modalState);
     window.showReviewDetailModal = (reviewId) => showReviewDetailModal(reviewId, modalState);
     window.showCommentsModal = (reviewId) => showCommentsModal(reviewId, modalState);
+    
+    // Exponer funciones de filtro (necesarias para que el modal de crear reseña funcione correctamente)
+    // Aunque el perfil no tenga filtros visibles, el modal necesita poder cambiar el estado
+    let currentReviewFilter = 'popular'; // Estado del filtro (aunque no se use visualmente en perfil)
+    window.setCurrentReviewFilter = (filter) => { 
+        currentReviewFilter = filter; 
+        console.log(`[PROFILE] Filtro cambiado a: ${filter}`);
+    };
+    window.getCurrentReviewFilter = () => currentReviewFilter;
 
     if (typeof loadUserProfile === 'function') {
         loadUserProfile(userIdToLoad);

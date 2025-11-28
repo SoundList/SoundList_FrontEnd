@@ -751,9 +751,11 @@ async function submitCreateReview(state) {
         hideCreateReviewModal(state);
         
         // Esperar un momento para que el backend procese la reseña antes de recargar
+        // Aumentado a 1500ms para dar más tiempo al backend, especialmente en perfil
         setTimeout(() => {
             if (typeof state.loadReviews === 'function') {
                 console.log('[CREATE REVIEW] ✅ Recargando reseñas con filtro "recent"...');
+                console.log(`[CREATE REVIEW] ⏰ Timestamp guardado: ${localStorage.getItem(`review_created_at_${reviewId}`)}`);
                 let setCurrentFilterFn = null;
                 if (typeof window.setCurrentReviewFilter === 'function') setCurrentFilterFn = window.setCurrentReviewFilter;
                 
@@ -768,7 +770,7 @@ async function submitCreateReview(state) {
             if (typeof window.reloadCarousel === 'function') {
                 window.reloadCarousel();
             }
-        }, 800);
+        }, 1500);
         
         setTimeout(() => showAlert('Tu reseña ya está visible en la lista', 'info'), 1000);
         

@@ -197,11 +197,34 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
                         userLiked = localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true';
                     }
 
-                    const createdAtRaw = review.date || review.Date || review.CreatedAt || review.Created || review.createdAt;
+                    // Extraer fecha de creación de todas las variantes posibles
+                    const createdAtRaw = review.date || review.Date || review.CreatedAt || review.Created || 
+                                        review.createdAt || review.created || review.DateCreated || review.dateCreated || 
+                                        review.createdDate || review.CreatedDate;
                     let createdAtDate = new Date(0);
                     if (createdAtRaw) {
                         const parsed = new Date(createdAtRaw);
-                        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1970) createdAtDate = parsed;
+                        // Solo aceptar fechas válidas (año > 2000)
+                        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
+                            createdAtDate = parsed;
+                            
+                            // Guardar timestamp en localStorage si no existe
+                            // IMPORTANTE: NO sobrescribir si ya existe un timestamp válido
+                            // Esto protege el timestamp guardado al crear la reseña (Date.now())
+                            const timestampKey = `review_created_at_${reviewId}`;
+                            const existingTs = localStorage.getItem(timestampKey);
+                            
+                            // Solo guardar si NO existe un timestamp previo
+                            // El timestamp del backend puede ser más antiguo que el guardado al crear
+                            if (!existingTs) {
+                                const ts = parsed.getTime();
+                                // Solo guardar si es una fecha válida (año > 2023)
+                                if (ts > 1672531200000) { // 1 Enero 2023
+                                    localStorage.setItem(timestampKey, String(ts));
+                                }
+                            }
+                            // Si ya existe un timestamp, mantenerlo (no sobrescribir con fecha del backend)
+                        }
                     }
 
                     return {
@@ -236,15 +259,48 @@ export function initializeReviews(commentsData, setLoadReviews, getCurrentFilter
             if (currentFilter === 'popular') {
                 validReviews.sort((a, b) => (b.likes - a.likes) || (b.createdAt - a.createdAt));
             } else {
-                // Filtro Recent (lógica timestamp)
+                // Filtro Recent: Lógica mejorada con boost para reseñas muy recientes
                 const now = Date.now();
-                const fiveMin = 300000;
+                const fiveMin = 300000; // 5 minutos en milisegundos
+                
                 const getTimestamp = (r) => {
+                    // 1. Prioridad: Timestamp de localStorage (si existe y es válido)
                     const localTs = localStorage.getItem(`review_created_at_${r.id}`);
-                    if (localTs && (parseInt(localTs) >= now - fiveMin)) return parseInt(localTs) + 1e12;
-                    return r.createdAt.getTime();
+                    if (localTs) {
+                        const parsedTs = parseInt(localTs, 10);
+                        // Validar que sea una fecha razonable (año > 2023)
+                        // 1672531200000 = 1 Enero 2023
+                        if (!isNaN(parsedTs) && parsedTs > 1672531200000) {
+                            // BOOST: Si la reseña fue creada en los últimos 5 minutos, darle prioridad absoluta
+                            if (parsedTs >= now - fiveMin) {
+                                return parsedTs + 1e12; // Sumar 1 billón de ms para prioridad absoluta
+                            }
+                            return parsedTs;
+                        } else {
+                            // Si el timestamp no es válido, limpiarlo
+                            localStorage.removeItem(`review_created_at_${r.id}`);
+                        }
+                    }
+                    
+                    // 2. Fallback: Fecha del backend
+                    if (r.createdAt && r.createdAt instanceof Date && !isNaN(r.createdAt.getTime())) {
+                        const year = r.createdAt.getFullYear();
+                        // Solo aceptar fechas válidas (año > 2000)
+                        if (year > 2000) {
+                            return r.createdAt.getTime();
+                        }
+                    }
+                    
+                    // 3. Si no hay fecha válida, devolver un número muy negativo para que quede al final
+                    return -9999999999999;
                 };
-                validReviews.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+                
+                // Ordenar por timestamp descendente (más recientes primero)
+                validReviews.sort((a, b) => {
+                    const tsA = getTimestamp(a);
+                    const tsB = getTimestamp(b);
+                    return tsB - tsA; // Descendente: más reciente primero
+                });
             }
 
             renderReviews(validReviews);

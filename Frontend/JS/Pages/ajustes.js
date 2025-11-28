@@ -186,52 +186,59 @@ function customConfirmAsync(message) {
 
     // Formulario de eliminar cuenta
     const deleteAccountForm = document.getElementById('form-delete-account');
-    if (deleteAccountForm) {
-        deleteAccountForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+   if (deleteAccountForm) {
+    deleteAccountForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // 1. Obtener datos de confirmación
+        const confirmPassword = document.getElementById('delete-confirm-password').value.trim();
+        const confirmCheckbox = document.getElementById('delete-confirm-checkbox').checked;
+
+        // 2. Validaciones UX (Sigue siendo buena práctica validar que ingresó la contraseña,
+        // aunque no la enviemos, para confirmar intención).
+        if (!confirmPassword) {
+            showAlert('Por favor, ingresa tu contraseña', 'danger');
+            return;
+        }
+
+        if (!confirmCheckbox) {
+            showAlert('Debes confirmar que entiendes que esta acción es permanente', 'danger');
+            return;
+        }
+
+        const confirmationMessage = '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es permanente y no se puede deshacer.';
+        const userConfirm = await customConfirmAsync(confirmationMessage);
+        if (!userConfirm) {
+            return;
+        }
+
+        const submitButton = deleteAccountForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        setButtonLoading(submitButton, true);
+        showAlert('Eliminando cuenta...', 'info');
+
+        try {
+            // 3. 💡 LLAMADA CORREGIDA: Llamamos a la API sin argumentos (sin userId ni password),
+            // ya que el JWT debe manejar la autenticación y el endpoint no espera cuerpo.
+            await window.userApi.deleteUserAccount();
             
-            const confirmPassword = document.getElementById('delete-confirm-password').value.trim();
-            const confirmCheckbox = document.getElementById('delete-confirm-checkbox').checked;
-
-            // Validaciones
-            if (!confirmPassword) {
-                showAlert('Por favor, ingresa tu contraseña', 'danger');
-                return;
-            }
-
-            if (!confirmCheckbox) {
-                showAlert('Debes confirmar que entiendes que esta acción es permanente', 'danger');
-                return;
-            }
-
-            const confirmationMessage = '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es permanente y no se puede deshacer.';
-            const userConfirm = await customConfirmAsync(confirmationMessage);
-            if (!userConfirm) {
-                return;
-            }
-
-            const submitButton = deleteAccountForm.querySelector('button[type="submit"]');
-            setButtonLoading(submitButton, true);
-            showAlert('Eliminando cuenta...', 'info');
-
-            try {
-                await window.userApi.deleteUserAccount(userId);
-                showAlert('Tu cuenta ha sido eliminada exitosamente', 'success');
-                
-                // Limpiar localStorage y redirigir al login
-                setTimeout(() => {
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('userId');
-                    localStorage.removeItem('username');
-                    window.location.href = '../login.html';
-                }, 2000);
-            } catch (error) {
-                showAlert(getErrorMessage(error), 'danger');
-            } finally {
-                setButtonLoading(submitButton, false);
-            }
-        });
-    }
+            showAlert('Tu cuenta ha sido eliminada exitosamente', 'success');
+            
+            // Limpiar localStorage y redirigir al login
+            setTimeout(() => {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('username');
+                window.location.href = '../login.html';
+            }, 2000);
+            
+        } catch (error) {
+            showAlert(getErrorMessage(error), 'danger');
+        } finally {
+            setButtonLoading(submitButton, false);
+        }
+    });
+}
 
     // Funciones auxiliares
     function showSection(sectionId) {

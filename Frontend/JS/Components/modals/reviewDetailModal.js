@@ -188,9 +188,49 @@ export async function showReviewDetailModal(reviewId, state = null) {
         const reviewTitle = review.Title || review.title || '';
         const reviewContent = review.Content || review.content || '';
         const reviewRating = review.Rating || review.rating || 0;
-        const createdAt = review.CreatedAt || review.Created || review.createdAt || review.created || review.date || new Date();
-        const timeAgo = formatNotificationTime(createdAt);
         
+        // --- FIX FECHAS: Búsqueda exhaustiva de la propiedad de fecha ---
+        // --- FIX FECHAS V5: MANEJO DE "FECHA NULA" (0001-01-01) ---
+        
+        // 1. Buscamos cualquier rastro de fecha
+        const rawDate = review.CreatedAt || review.Created || review.createdAt || review.created || 
+                       review.Date || review.date || review.DateCreated || review.dateCreated || 
+                       review.createdDate || review.CreatedDate;
+        
+        let createdAtDate = null;
+
+        // 2. Intentamos parsear si existe
+        if (rawDate) {
+            const parsed = new Date(rawDate);
+            // Solo aceptamos fechas mayores al año 2000. 
+            // El año 0001 (backend default) y 1970 (unix 0) quedan descartados.
+            if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
+                createdAtDate = parsed;
+            }
+        }
+
+        // 3. Fallback a caché local (por si el feed la tenía bien)
+        if (!createdAtDate) {
+            const normalizedId = String(reviewId).trim();
+            const cachedTimestamp = localStorage.getItem(`review_created_at_${normalizedId}`);
+            if (cachedTimestamp) {
+                const ts = parseInt(cachedTimestamp, 10);
+                if (!isNaN(ts) && ts > 0) {
+                    createdAtDate = new Date(ts);
+                }
+            }
+        }
+
+        // 4. GENERACIÓN DEL STRING DE TIEMPO
+        // Si después de todo createdAtDate sigue siendo null, significa que la fecha PERDIDA.
+        // No usamos "new Date()" (Ahora) para no mentir. Dejamos string vacío.
+        let timeAgo = ""; 
+        
+        if (createdAtDate) {
+            timeAgo = typeof formatNotificationTime === 'function' 
+                ? formatNotificationTime(createdAtDate) 
+                : createdAtDate.toLocaleDateString();
+        }
         // Likes
         const reviewLikesCacheKey = `review_likes_${reviewId}`;
         let cachedReviewLikes = localStorage.getItem(reviewLikesCacheKey);
@@ -215,11 +255,11 @@ export async function showReviewDetailModal(reviewId, state = null) {
                              onerror="this.src='../Assets/default-avatar.png'">
                         
                         <div class="review-detail-user-info">
-                            <span class="review-detail-username clickable-user"
-                                  onclick="window.location.href='${userProfileUrl}'">
-                                ${username}
-                            </span>
-                            <span class="review-detail-time">${timeAgo}</span>
+                        <span class="review-detail-username clickable-user"
+                              onclick="window.location.href='${userProfileUrl}'">
+                            ${username}
+                        </span>
+                            ${timeAgo ? `<span class="review-detail-time">${timeAgo}</span>` : ''}
                         </div>
                     </div>
 

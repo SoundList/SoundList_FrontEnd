@@ -1,4 +1,6 @@
 
+import { showAlert } from '../Utils/reviewHelpers.js';
+window.showAlert = showAlert;
 let selectedAvatarFile = null;
 
 function showSection(sectionId) {
@@ -25,7 +27,7 @@ async function loadCurrentProfileData() {
     try {
         const currentUserId = localStorage.getItem('userId');
         if (!currentUserId) {
-            window.showAlert("Sesión no encontrada. Redirigiendo a login.", "danger");
+            showAlert("Sesión no encontrada. Redirigiendo a login.", "danger");
             window.location.href = '../login.html';
             return;
         }
@@ -52,7 +54,7 @@ async function loadCurrentProfileData() {
         
     } catch (error) {
         console.error("Error al cargar datos del perfil:", error);
-        (window.showAlert || alert)("Error al cargar datos actuales. Por favor, verifica tu sesión.", "danger");
+        showAlert("Error al cargar datos actuales. Por favor, verifica tu sesión.", "danger");
     }
 }
 
@@ -63,13 +65,13 @@ async function handleDescriptionSubmit(e) {
     const newQuote = newDescriptionInput.value.trim();
 
     if (!newQuote) {
-        (window.showAlert || alert)("La nueva descripción no puede estar vacía.", "warning");
+            showAlert("La nueva descripción no puede estar vacía.", "warning");
         return;
     }
     
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
-        (window.showAlert || alert)("Error de sesión. Por favor, reinicia la sesión.", "danger");
+        showAlert("Error de sesión. Por favor, reinicia la sesión.", "danger");
         return;
     }
 
@@ -80,18 +82,10 @@ async function handleDescriptionSubmit(e) {
     let isSuccess = false; 
 
     try {
-        // 💡 CORRECCIÓN CLAVE: Enviar solo la propiedad 'Bio' (PascalCase) o 'bio' (camelCase)
-        // Ya que tu backend espera 'Bio' o 'bio', solo enviamos una para evitar conflictos.
-        // Usaremos 'Bio' ya que es la convención en tu clase UserPatchRequest.
-        const updateData = { 
-            Bio: newQuote
-            // Si el backend es estricto en camelCase, usa: bio: newQuote
-        };
-        
-        // 💡 IMPLEMENTACIÓN: Pasamos el ID del usuario primero.
+        const updateData = { Bio: newQuote };
         await window.userApi.updateUserProfile(currentUserId, updateData);
 
-        (window.showAlert || alert)("Descripción actualizada exitosamente.", "success");
+       showAlert("Descripción actualizada exitosamente.", "success");
         newDescriptionInput.value = ''; 
 
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
@@ -109,7 +103,7 @@ async function handleDescriptionSubmit(e) {
 
     } catch (error) {
         console.error("Error al guardar la descripción:", error);
-        (window.showAlert || alert)("Error al actualizar la descripción.", "danger");
+        showAlert("Error al actualizar la descripción.", "danger");
     
     } finally {
 
@@ -124,14 +118,14 @@ async function handleImageSubmit(e) {
     e.preventDefault();
     
     if (!selectedAvatarFile) {
-        (window.showAlert || alert)("Por favor, selecciona una imagen primero.", "warning");
+        showAlert("Por favor, selecciona una imagen primero.", "warning");
         return;
     }
     
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
         // Mejorar el mensaje de error de sesión
-        (window.showAlert || alert)("Error de sesión. El ID de usuario no está disponible.", "danger");
+         showAlert("Error de sesión. El ID de usuario no está disponible.", "danger");
         return;
     }
 
@@ -149,19 +143,11 @@ async function handleImageSubmit(e) {
             reader.onload = resolve;
             reader.onerror = reject;
         });
-
-        const base64Url = reader.result; // URL completa: data:image/png;base64,...
-
-        // ❌ ELIMINAMOS esta línea: const base64Data = base64Url.split(',')[1];
-        // ❌ Y ELIMINAMOS esta línea: const updateData = { imgProfile: base64Data };
-
-        // 1. CORRECCIÓN CLAVE: Usamos la URL completa (base64Url) para enviar
+        const base64Url = reader.result; 
         const updateData = { imgProfile: base64Url }; 
-        
-        // 2. CORRECCIÓN DE LA API: Llamar con el userId y el objeto de datos
+
         await window.userApi.updateUserProfile(currentUserId, updateData); 
         
-        // 3. CORRECCIÓN DE DOM/LOCALSTORAGE: Usamos base64Url para todo, ya que es la URL completa.
         document.getElementById('avatar-preview').src = base64Url;
         document.getElementById('image-upload-preview').src = base64Url;
         localStorage.setItem('userAvatar', base64Url); 
@@ -170,7 +156,7 @@ async function handleImageSubmit(e) {
         confirmBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i> ¡Guardado!';
         confirmBtn.classList.add('btn-success-feedback');
         
-        (window.showAlert || alert)("¡Imagen de perfil actualizada con éxito!", "success"); 
+        showAlert("¡Imagen de perfil actualizada con éxito!", "success"); 
         isSuccess = true; 
         
         await loadCurrentProfileData();
@@ -187,8 +173,7 @@ async function handleImageSubmit(e) {
         
         // Mostrar el estado de error si está disponible (ej: 400, 403)
         const status = error.response?.status || 'desconocido';
-        (window.showAlert || alert)(`Error al actualizar la imagen (Estado: ${status}).`, "danger");
-
+        showAlert(`Error al actualizar la imagen (Estado: ${status}).`, "danger");
     } finally {
         if (!isSuccess) {
             confirmBtn.disabled = false;

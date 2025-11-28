@@ -235,7 +235,30 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     }
                 } catch (e) { /* ignore */ }
                 
-                const likes = cachedCommentLikes !== null ? cachedCommentLikes : (comment.Likes || comment.likes || 0);
+                // Usar el valor del backend como base, pero si hay cache y es mayor o igual, usar el cache
+                const backendLikes = comment.Likes || comment.likes || comment.ReactionCount || comment.reactionCount || 0;
+                let likes = backendLikes;
+                
+                // Si hay cache, usar el mayor entre cache y backend (para evitar perder likes)
+                // PERO: Si el backend dice que tiene likes y el cache dice 0, confiar en el backend
+                if (cachedCommentLikes !== null) {
+                    if (backendLikes > 0 && cachedCommentLikes === 0) {
+                        // El backend tiene likes pero el cache dice 0, confiar en el backend
+                        likes = backendLikes;
+                    } else {
+                        // Usar el mayor entre cache y backend
+                        likes = Math.max(cachedCommentLikes, backendLikes);
+                    }
+                    // Actualizar cache con el valor correcto
+                    try {
+                        localStorage.setItem(commentLikesCacheKey, String(likes));
+                    } catch (e) { /* ignore */ }
+                } else {
+                    // Si no hay cache, guardar el valor del backend (incluso si es 0)
+                    try {
+                        localStorage.setItem(commentLikesCacheKey, String(likes));
+                    } catch (e) { /* ignore */ }
+                }
                 
                 // Verificar si el usuario actual le dio like desde localStorage
                 let userLiked = false;
@@ -262,11 +285,14 @@ export async function loadCommentsIntoModal(reviewId, state) {
                 const isOwnComment = normalizedCurrentUserId && normalizedCommentUserId && 
                     normalizedCommentUserId.toLowerCase() === normalizedCurrentUserId.toLowerCase();
                 
+                // --- LÓGICA: Ocultar botón editar si tiene likes (igual que con reviews) ---
+                const editButtonStyle = (likes > 0) ? 'display: none !important;' : '';
+                
                 let actionButtons = '';
                 if (isOwnComment) {
                     actionButtons = `
                         <div class="comment-actions">
-                            <button class="comment-action-btn comment-edit-btn" data-comment-id="${commentId}" title="Editar">
+                            <button class="comment-action-btn comment-edit-btn" data-comment-id="${commentId}" title="Editar" style="${editButtonStyle}">
                                 <i class="fas fa-pencil"></i>
                             </button>
                             <button class="comment-action-btn comment-delete-btn" data-comment-id="${commentId}" title="Eliminar">
@@ -309,6 +335,12 @@ export async function loadCommentsIntoModal(reviewId, state) {
         }
         
         attachCommentActionListeners(state, reviewId);
+        
+        // Actualizar cache de comentarios
+        const commentsCacheKey = `review_comments_${reviewId}`;
+        try {
+            localStorage.setItem(commentsCacheKey, String(comments.length));
+        } catch (e) { /* ignore */ }
         
         // Actualizar contador en el botón de comentarios de la reseña usando los comentarios ya cargados
         // Buscar en todas las páginas (home, perfil, canciones, álbum)
@@ -369,6 +401,12 @@ async function submitComment(state) {
         
         // Recargar comentarios para obtener el username del backend
         await loadCommentsIntoModal(reviewId, state);
+        
+        // Actualizar cache de comentarios
+        const commentsCacheKey = `review_comments_${reviewId}`;
+        try {
+            localStorage.setItem(commentsCacheKey, String(newCommentsCount));
+        } catch (e) { /* ignore */ }
         
         // Actualizar contador en el botón de comentarios de la reseña (igual que en loadCommentsIntoModal)
         // Buscar en todas las páginas (home, perfil, canciones, álbum)
@@ -476,7 +514,62 @@ function attachCommentActionListeners(state, reviewId) {
                 console.warn('Botón de like sin data-comment-id');
                 return;
             }
-            toggleCommentLike(commentId, this);
+            // Usar la función global handleLikeToggle para mantener sincronización (igual que en home)
+            if (typeof window.handleLikeToggle === 'function') {
+                const commentItem = this.closest('.comment-item');
+                const editBtn = commentItem?.querySelector('.comment-edit-btn');
+                const likesSpan = this.querySelector('.comment-likes-count');
+                const oldLikesCount = parseInt(likesSpan?.textContent) || 0;
+                
+                // Llamar handleLikeToggle (puede ser async o no)
+                const result = window.handleLikeToggle(e);
+                
+                // Manejar tanto si retorna promesa como si no
+                const handleAfterLike = () => {
+                    // --- LÓGICA: Ocultar/mostrar botón editar según likes (igual que en reviews) ---
+                    if (editBtn && likesSpan) {
+                        // Esperar un momento para que handleLikeToggle actualice el contador
+                        setTimeout(() => {
+                            const newLikesCount = parseInt(likesSpan.textContent) || 0;
+                            if (newLikesCount > 0) {
+                                editBtn.style.setProperty('display', 'none', 'important');
+                            } else {
+                                editBtn.style.removeProperty('display');
+                            }
+                            
+                            // Si el contador llegó a 0 después de quitar un like, recargar comentarios para sincronizar
+                            if (oldLikesCount > 0 && newLikesCount === 0) {
+                                const modal = document.getElementById('commentsModalOverlay');
+                                const reviewId = modal ? modal.getAttribute('data-review-id') : null;
+                                if (reviewId && state) {
+                                    // Esperar un poco más para asegurar que el backend procesó la eliminación
+                                    setTimeout(() => {
+                                        // Recargar comentarios para sincronizar con el backend
+                                        loadCommentsIntoModal(reviewId, state).catch(err => {
+                                            console.debug('Error al recargar comentarios después de quitar like:', err);
+                                        });
+                                    }, 500);
+                                }
+                            }
+                        }, 300);
+                    }
+                    // ------------------------------------------------------------
+                };
+                
+                // Si retorna una promesa, usar .then(), sino ejecutar directamente
+                if (result && typeof result.then === 'function') {
+                    result.then(handleAfterLike).catch(err => {
+                        console.debug('Error en handleLikeToggle:', err);
+                        handleAfterLike(); // Ejecutar de todas formas
+                    });
+                } else {
+                    handleAfterLike();
+                }
+            } else {
+                // Fallback a la función local si no está disponible
+                console.warn('handleLikeToggle no está disponible, usando toggleCommentLike local');
+                toggleCommentLike(commentId, this);
+            }
         });
     });
 }
@@ -490,9 +583,25 @@ async function toggleCommentLike(commentId, btn) {
     
     const icon = btn.querySelector('i');
     const likesSpan = btn.querySelector('.comment-likes-count');
-    const isLiked = btn.classList.contains('liked');
     const currentLikes = parseInt(likesSpan.textContent) || 0;
     const currentUserId = localStorage.getItem('userId');
+    
+    // Verificar localStorage primero (más confiable que la clase CSS)
+    let isLiked = false;
+    if (currentUserId) {
+        const storedLike = localStorage.getItem(`like_comment_${commentId}_${currentUserId}`);
+        const storedReactionId = localStorage.getItem(`reaction_comment_${commentId}_${currentUserId}`);
+        isLiked = storedLike === 'true' || storedReactionId !== null;
+    }
+    
+    // Si no hay en localStorage, verificar por el estado visual del botón
+    if (!isLiked) {
+        const iconColor = icon.style.color || window.getComputedStyle(icon).color;
+        isLiked = btn.classList.contains('liked') || 
+                  iconColor === 'var(--magenta)' || 
+                  iconColor === 'rgb(236, 72, 153)' || 
+                  iconColor === '#EC4899';
+    }
     
     if (isLiked) {
         // Quitar like (Optimistic Update)
@@ -508,21 +617,29 @@ async function toggleCommentLike(commentId, btn) {
         } catch (e) { /* ignore */ }
         
         // Sincronizar con backend
+        // IMPORTANTE: deleteCommentReaction solo acepta commentId, el backend obtiene userId del token
         const { deleteCommentReaction } = await import('../../APIs/socialApi.js');
-        deleteCommentReaction(commentId, currentUserId, authToken)
+        deleteCommentReaction(commentId)
             .then(() => {
                 localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
                 localStorage.removeItem(`reaction_comment_${commentId}_${currentUserId}`);
             })
             .catch(err => {
-                console.warn('No se pudo eliminar like del comentario en el backend', err);
-                // Revertir cambio si falla
-                btn.classList.add('liked');
-                icon.style.color = 'var(--magenta, #EC4899)';
-                likesSpan.textContent = currentLikes;
-                try {
-                    localStorage.setItem(likesCacheKey, String(currentLikes));
-                } catch (e) { /* ignore */ }
+                // Si el error es 404, significa que la reacción ya no existe (aceptable)
+                if (err.response?.status === 404) {
+                    console.debug('Reacción de comentario ya no existe en el servidor, limpiando localStorage');
+                    localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
+                    localStorage.removeItem(`reaction_comment_${commentId}_${currentUserId}`);
+                } else {
+                    console.warn('No se pudo eliminar like del comentario en el backend', err);
+                    // Revertir cambio solo si no es 404
+                    btn.classList.add('liked');
+                    icon.style.color = 'var(--magenta, #EC4899)';
+                    likesSpan.textContent = currentLikes;
+                    try {
+                        localStorage.setItem(likesCacheKey, String(currentLikes));
+                    } catch (e) { /* ignore */ }
+                }
             });
     } else {
         // Agregar like (Optimistic Update)
@@ -540,8 +657,9 @@ async function toggleCommentLike(commentId, btn) {
         localStorage.setItem(`like_comment_${commentId}_${currentUserId}`, 'true');
         
         // Sincronizar con backend
+        // IMPORTANTE: addCommentReaction solo acepta commentId, el backend obtiene userId del token
         const { addCommentReaction } = await import('../../APIs/socialApi.js');
-        addCommentReaction(commentId, currentUserId, authToken)
+        addCommentReaction(commentId)
             .then(data => {
                 const reactionId = data?.Id_Reaction || data?.ReactionId || data?.id;
                 if (reactionId) {
@@ -565,14 +683,14 @@ async function toggleCommentLike(commentId, btn) {
 /**
  * Inicia la edición de un comentario
  */
-function editComment(commentId, state) {
-    showEditCommentModal(commentId, state);
+async function editComment(commentId, state) {
+    await showEditCommentModal(commentId, state);
 }
 
 /**
  * Muestra el modal de edición de comentario
  */
-function showEditCommentModal(commentId, state) {
+async function showEditCommentModal(commentId, state) {
     if (!commentId || !state) {
         console.error('showEditCommentModal: commentId o state no está definido', { commentId, state });
         return;
@@ -610,6 +728,7 @@ function showEditCommentModal(commentId, state) {
     }
     
     // Verificar si el comentario tiene likes antes de permitir editar
+    // Verificar el contador del DOM primero (rápido)
     try {
         const likeBtn = commentItem.querySelector('.comment-like-btn');
         if (likeBtn) {
@@ -628,6 +747,56 @@ function showEditCommentModal(commentId, state) {
         }
     } catch (error) {
         console.warn('Error al verificar likes del comentario:', error);
+    }
+    
+    // Verificar el estado real desde el backend antes de permitir editar
+    // Esto evita problemas de desincronización
+    try {
+        const modal = document.getElementById('commentsModalOverlay');
+        const reviewId = modal ? modal.getAttribute('data-review-id') : null;
+        if (reviewId) {
+            // Obtener los comentarios del backend para verificar el estado real
+            const comments = await getCommentsByReview(reviewId);
+            const currentComment = comments.find(c => {
+                const cId = c.Id_Comment || c.id_Comment || c.IdComment || c.idComment || c.id || c.Id || '';
+                return String(cId).trim() === String(commentId).trim();
+            });
+            
+            if (currentComment) {
+                // Verificar si tiene reacciones en el backend
+                const backendLikes = currentComment.Likes || currentComment.likes || currentComment.ReactionCount || currentComment.reactionCount || 0;
+                if (backendLikes > 0) {
+                    // El backend dice que tiene likes, actualizar el DOM y no permitir editar
+                    const likeBtn = commentItem.querySelector('.comment-like-btn');
+                    if (likeBtn) {
+                        const likesCountEl = likeBtn.querySelector('.comment-likes-count');
+                        if (likesCountEl) {
+                            likesCountEl.textContent = backendLikes;
+                            // Actualizar cache
+                            const likesCacheKey = `comment_likes_${commentId}`;
+                            try {
+                                localStorage.setItem(likesCacheKey, String(backendLikes));
+                            } catch (e) { /* ignore */ }
+                        }
+                    }
+                    
+                    // Ocultar botón de editar
+                    const editBtn = commentItem.querySelector('.comment-edit-btn');
+                    if (editBtn) {
+                        editBtn.style.setProperty('display', 'none', 'important');
+                    }
+                    
+                    if (typeof window.showAlert === 'function') {
+                        window.showAlert('No se puede editar este comentario porque ya tiene reacciones (likes).', 'warning');
+                    } else {
+                        alert('No se puede editar este comentario porque ya tiene reacciones (likes).');
+                    }
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.debug('No se pudo verificar estado del comentario desde el backend, continuando con edición:', error);
         // Continuar con la edición si no se puede verificar
     }
     
@@ -791,6 +960,17 @@ async function confirmEditComment(commentId, state) {
         let errorMessage = 'Error al actualizar el comentario. Por favor, intenta nuevamente.';
         
         if (error.response?.status === 409) {
+            // El backend dice que tiene reacciones (409 Conflict)
+            // Cancelar la edición y recargar los comentarios para sincronizar el estado real del backend
+            cancelEditComment(commentId, state);
+            
+            // Recargar los comentarios para obtener el estado real
+            try {
+                await loadCommentsIntoModal(reviewId, state);
+            } catch (reloadError) {
+                console.warn('Error al recargar comentarios después de 409:', reloadError);
+            }
+            
             errorMessage = 'No se puede editar este comentario porque ya tiene reacciones (likes).';
         } else if (error.response?.status === 404) {
             errorMessage = 'El comentario no fue encontrado o no tienes permiso para editarlo.';

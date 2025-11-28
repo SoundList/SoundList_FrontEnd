@@ -8,6 +8,7 @@ import { initializeCommentsModalLogic, showCommentsModal } from '../Components/m
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
 import { initializeDeleteModalsLogic, showDeleteReviewModal } from '../Components/modals/deleteModals.js';
 import { AmigosHandler } from '../Handlers/amigosHandler.js';
+import '../Handlers/likesHandler.js'; // Importar para tener window.handleLikeToggle disponible
 
 // --- 2. VARIABLES GLOBALES (ESPECÍFICAS DEL HOME) ---
 let currentReviewFilter = 'popular'; // Filtro actual de reseñas: 'popular' o 'recent'

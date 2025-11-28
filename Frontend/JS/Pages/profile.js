@@ -1,11 +1,15 @@
 import { initializeReviewDetailModalLogic, showReviewDetailModal } from '../Components/modals/reviewDetailModal.js';
+import { initializeCommentsModalLogic, showCommentsModal } from '../Components/modals/commentsModal.js';
+import { initializeDeleteModalsLogic } from '../Components/modals/deleteModals.js';
+import '../APIs/reactionApi.js'; // Importar para inicializar window.reactionApi
+import '../Handlers/likesHandler.js'; // Importar para tener window.handleLikeToggle disponible
 
 async function reloadProfileReviews() {
     await loadAllFeaturedLists();
-    if (typeof loadRecentReviews === 'function' && window.currentProfileUserId) {
-        await loadRecentReviews(window.currentProfileUserId);
+    if (typeof loadRecentProfile === 'function' && window.currentProfileUserId) {
+        await loadUserProfile(window.currentProfileUserId);
     } else {
-        console.warn("loadRecentReviews no está definida. Solo se recargaron las destacadas.");
+        console.warn("loadUserProfile no está definida. Solo se recargaron las destacadas.");
     }
 }
 
@@ -62,17 +66,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.currentProfileUserId = userIdToLoad;
-    if (window.modalsState) {
+    
+    // --- INICIALIZACIÓN DE MODALS (igual que en home) ---
+    // Crear estado de modals si no existe
+    if (!window.modalsState) {
+        window.modalsState = {
+            currentReviewData: null,
+            editingCommentId: null,
+            originalCommentText: null,
+            deletingReviewId: null,
+            deletingCommentId: null,
+            commentsData: {},
+            loadReviews: reloadProfileReviews
+        };
+    } else {
         window.modalsState.loadReviews = reloadProfileReviews;
     }
-
-    // --- INICIALIZACIÓN DEL MODAL DE DETALLE (NUEVO) ---
-    // Pasamos un estado básico o el global si existe
-    const modalState = window.modalsState || {};
+    
+    const modalState = window.modalsState;
+    
+    // Inicializar todos los modals
     initializeReviewDetailModalLogic(modalState);
+    initializeCommentsModalLogic(modalState);
+    initializeDeleteModalsLogic(modalState);
 
-    // Exponer la función globalmente para que los onclicks del HTML funcionen
-    window.showReviewDetailModal = showReviewDetailModal;
+    // Exponer las funciones globalmente para que los onclicks del HTML funcionen
+    window.showReviewDetailModal = (reviewId) => showReviewDetailModal(reviewId, modalState);
+    window.showCommentsModal = (reviewId) => showCommentsModal(reviewId, modalState);
 
     if (typeof loadUserProfile === 'function') {
         loadUserProfile(userIdToLoad);

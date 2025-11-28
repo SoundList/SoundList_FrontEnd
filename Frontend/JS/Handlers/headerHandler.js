@@ -1888,23 +1888,24 @@ async function handleNotificationClick(type, referenceId, notificationId, elemen
 
 
 // =========================================================================
-// 2. FUNCIÓN AUXILIAR: POBLAR Y MOSTRAR EL MODAL
+// 2. FUNCIÓN AUXILIAR: POBLAR Y MOSTRAR EL MODAL (MODO VISUALIZACIÓN)
 // =========================================================================
 async function openReviewModal(review, user, content) {
     const modalOverlay = document.getElementById('reviewDetailModalOverlay');
     const closeBtn = document.getElementById('closeReviewDetailModal');
     const contentDiv = document.getElementById('reviewDetailContent'); 
 
-    // Si no existe el modal en el HTML, salimos
     if (!modalOverlay) return;
 
-    // --- A. PREPARACIÓN DE DATOS (Sin Fechas) ---
+    console.log("🔍 [Modal] Abriendo para reseña:", review);
+
+    // --- A. DATOS BÁSICOS ---
     const reviewId = review.reviewId || review.Id_Review || review.id;
     const ratingVal = review.rating || review.Rating || 0;
     const reviewBody = review.content || review.Content || review.text || review.Text || "";
     const reviewTitle = review.title || review.Title || "";
     
-    // Usuario
+    // --- B. DATOS DE USUARIO ---
     let username = "Usuario";
     let avatar = "../Assets/default-avatar.png";
     const userId = review.userId || review.UserId || (user ? (user.userId || user.UserId) : null);
@@ -1925,12 +1926,13 @@ async function openReviewModal(review, user, content) {
         } catch(e) {}
     }
 
-    // Contenido
+    // --- C. DATOS DE CONTENIDO ---
     let contentName = "Contenido";
     let artistName = "Artista";
     let contentImage = "../Assets/default-avatar.png";
     let contentType = "song";
 
+    // Lógica de rescate de datos (Igual que antes para asegurar que se vea bien)
     if (content) {
         contentName = content.Title || content.title || content.name || contentName;
         artistName = content.ArtistName || content.artistName || content.artist || artistName;
@@ -1951,22 +1953,47 @@ async function openReviewModal(review, user, content) {
         contentImage = a.Image || a.image || contentImage;
     }
     else {
-        if (review.SongTitle || review.songTitle) {
-            contentName = review.SongTitle || review.songTitle;
-            artistName = review.ArtistName || review.artistName || "Artista";
-            contentImage = review.SongImage || review.songImage || contentImage;
-        } else if (review.AlbumTitle || review.albumTitle) {
-            contentType = "album";
-            contentName = review.AlbumTitle || review.albumTitle;
-            artistName = review.ArtistName || review.artistName || "Artista";
-            contentImage = review.AlbumImage || review.albumImage || contentImage;
+        const rawSongId = review.songId || review.SongId;
+        const rawAlbumId = review.albumId || review.AlbumId;
+
+        if (rawSongId) {
+            contentType = 'song';
+            try {
+                const contentApi = window.contentApi || await import('../APIs/contentApi.js');
+                let songData = null;
+                if (contentApi.getSongByDbId) try { songData = await contentApi.getSongByDbId(rawSongId); } catch(e){}
+                if (!songData && contentApi.getSongById) try { songData = await contentApi.getSongById(rawSongId); } catch(e){}
+                if (!songData && contentApi.getSongByApiId) try { songData = await contentApi.getSongByApiId(rawSongId); } catch(e){}
+
+                if (songData) {
+                    contentName = songData.Title || songData.title || contentName;
+                    artistName = songData.ArtistName || songData.artistName || (songData.Artist ? songData.Artist.Name : artistName);
+                    contentImage = songData.Image || songData.image || contentImage;
+                }
+            } catch (err) { console.error(err); }
+        } 
+        else if (rawAlbumId) {
+            contentType = 'album';
+            try {
+                const contentApi = window.contentApi || await import('../APIs/contentApi.js');
+                let albumData = null;
+                if (contentApi.getAlbumById) try { albumData = await contentApi.getAlbumById(rawAlbumId); } catch(e){}
+                if (!albumData && contentApi.getAlbumByApiId) try { albumData = await contentApi.getAlbumByApiId(rawAlbumId); } catch(e){}
+
+                if (albumData) {
+                    contentName = albumData.Title || albumData.title || contentName;
+                    contentImage = albumData.Image || albumData.image || contentImage;
+                    if(albumData.ArtistName) artistName = albumData.ArtistName;
+                    else if(albumData.artistName) artistName = albumData.artistName;
+                }
+            } catch (err) { console.error(err); }
         }
     }
 
     const isDeepPath = window.location.pathname.includes('/Pages/');
     const defaultAvatarPath = isDeepPath ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
-    if (avatar.includes('default-avatar')) avatar = defaultAvatarPath;
-    if (contentImage.includes('default-avatar')) contentImage = defaultAvatarPath;
+    if (!avatar || avatar.includes('default-avatar')) avatar = defaultAvatarPath;
+    if (!contentImage || contentImage.includes('default-avatar')) contentImage = defaultAvatarPath;
 
     const likesCount = review.likes || review.Likes || 0;
     const commentsCount = review.comments || review.Comments || 0;
@@ -1979,7 +2006,7 @@ async function openReviewModal(review, user, content) {
         return stars;
     };
 
-    // --- B. RENDERIZADO HTML ---
+    // --- D. RENDERIZADO HTML (SIN LINKS) ---
     if (contentDiv) {
         contentDiv.innerHTML = `
             <div class="review-detail-main" style="padding: 1.5rem; padding-bottom: 50px; color: white;">
@@ -2029,49 +2056,30 @@ async function openReviewModal(review, user, content) {
         `;
     }
 
-    // --- C. ABRIR MODAL (Prioridad Máxima) ---
+    // --- E. APERTURA ---
     modalOverlay.style.display = 'flex';
-
     if (closeBtn) closeBtn.onclick = () => modalOverlay.style.display = 'none';
     modalOverlay.onclick = (e) => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; };
 
-
-    // --- D. OCULTAR INPUT Y TÍTULOS (Ahora que ya está abierto) ---
-    // Lo hacemos dentro de un try/catch para que NUNCA rompa el modal si no encuentra el elemento
+    // ... (El resto de la lógica de ocultar inputs y cargar comentarios sigue igual) ...
     try {
-        // 1. Buscar el input de "Escribe un comentario..." y ocultar su padre (la barra inferior)
         const inputs = modalOverlay.querySelectorAll('input');
         inputs.forEach(inp => {
             if (inp.placeholder && inp.placeholder.toLowerCase().includes('comentario')) {
-                // Subimos al padre (el div flex que contiene avatar + input + boton)
                 if(inp.parentElement) inp.parentElement.style.display = 'none';
-                // Ocultamos el input mismo por si acaso
                 inp.style.display = 'none';
             }
         });
-
-        // 2. Buscar botones de enviar (avión de papel)
         const sendBtns = modalOverlay.querySelectorAll('button');
         sendBtns.forEach(btn => {
-            if (btn.innerHTML.includes('fa-paper-plane') || btn.querySelector('i.fa-paper-plane')) {
-                btn.style.display = 'none';
-            }
+            if (btn.innerHTML.includes('fa-paper-plane') || btn.querySelector('i.fa-paper-plane')) btn.style.display = 'none';
         });
-
-        // 3. Buscar el texto "Comentarios 0" (Headers sobrantes)
         const headers = modalOverlay.querySelectorAll('h3, h4');
         headers.forEach(h => {
-            if (h.innerText.includes('Comentarios') && !h.closest('#reviewDetailContent')) {
-                h.style.display = 'none';
-            }
+            if (h.innerText.includes('Comentarios') && !h.closest('#reviewDetailContent')) h.style.display = 'none';
         });
+    } catch (err) {}
 
-    } catch (err) {
-        console.warn("No se pudo ocultar el input de comentarios (no es crítico)", err);
-    }
-
-
-    // --- E. CARGA ASÍNCRONA DE DATOS ---
     if (reviewId) {
         try {
             const comments = await fetchCommentsFallback(reviewId);
@@ -2083,12 +2091,9 @@ async function openReviewModal(review, user, content) {
             }
             const countSpan = document.getElementById('modalCommentCount');
             if(countSpan) countSpan.textContent = comments ? comments.length : 0;
-        } catch (error) {
-            console.warn("Error comentarios:", error);
-        }
+        } catch (error) {}
     }
     
-    // Likes
     if (reviewId) {
         try {
             const response = await fetch(`http://localhost:5000/api/gateway/reviews/${reviewId}/reactions/count`);

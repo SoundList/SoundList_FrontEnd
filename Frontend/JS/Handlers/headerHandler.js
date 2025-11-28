@@ -37,6 +37,18 @@ function getLoginPath() {
     return 'login.html';
 }
 
+// Función auxiliar para obtener la ruta correcta de Assets según donde estemos
+function getAssetsPath() {
+    const path = window.location.pathname;
+    
+    // Si estamos dentro de la carpeta Pages
+    if (path.includes('/Pages/') || path.includes('/pages/')) {
+        return '../../Assets/';
+    }
+    // Si estamos en la raiz o en HTML
+    return '../Assets/';
+}
+
 // --- 3. FUNCIÓN DE INICIALIZACIÓN PRINCIPAL ---
 /**
  * Inicializa todos los componentes compartidos del header.
@@ -714,124 +726,172 @@ function initializeNavigation() {
     }
 }
 
+
 function loadUserData() {
     const authToken = localStorage.getItem('authToken');
     const username = localStorage.getItem('username');
     const usernameDisplay = document.getElementById('usernameDisplay');
+    
+    // Contenedores
     const loginContainer = document.getElementById('loginContainer');
     const profileContainer = document.getElementById('profileContainer');
     const notificationsContainer = document.getElementById('notificationsContainer');
     const addReviewContainer = document.getElementById('addReviewContainer');
     const addReviewBtn = document.getElementById('addReviewBtn');
     const loginBtn = document.getElementById('loginBtn');
+
+    // Elementos de imagen
+    const profileBtn = document.getElementById('profileBtn');
     
+    // Ruta del avatar por defecto
+    const defaultAvatar = getAssetsPath() + 'default-avatar.png';
+
+    // 1. Renderizar Botón Circular del Navbar (CORREGIDO)
+    const renderProfileBtnImage = (srcUrl) => {
+        if (!profileBtn) return;
+        
+        profileBtn.innerHTML = ''; 
+        
+        // --- ESTILOS CORREGIDOS (Sin círculo gris feo) ---
+        profileBtn.style.padding = '0';
+        profileBtn.style.border = 'none'; // Quitamos el borde que causaba el anillo
+        profileBtn.style.backgroundColor = '#1e1e1e'; // Fondo más oscuro (igual al dropdown)
+        profileBtn.style.overflow = 'hidden'; 
+        profileBtn.style.display = 'flex';
+        profileBtn.style.alignItems = 'center';
+        profileBtn.style.justifyContent = 'center';
+        profileBtn.style.width = '40px'; 
+        profileBtn.style.height = '40px';
+        profileBtn.style.borderRadius = '50%';
+        profileBtn.style.cursor = 'pointer'; // Asegurar cursor de mano
+        
+        const img = document.createElement('img');
+        img.src = srcUrl;
+        img.alt = username || "Perfil";
+        
+        // La imagen cubre todo el contenedor
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = "cover";
+        img.style.display = "block"; 
+        
+        img.onerror = function() {
+            if (this.src !== defaultAvatar) this.src = defaultAvatar;
+        };
+        
+        profileBtn.appendChild(img);
+    };
+
+    // 2. Renderizar Imagen del Menú Desplegable
+    const renderDropdownImage = (srcUrl) => {
+        const dropdownHeader = document.querySelector('.profile-dropdown-header');
+        if (!dropdownHeader) return;
+
+        // Limpieza y estilos
+        const oldElements = dropdownHeader.querySelectorAll('img, i, svg');
+        oldElements.forEach(el => el.remove());
+
+        dropdownHeader.style.display = 'flex';
+        dropdownHeader.style.alignItems = 'center'; 
+        dropdownHeader.style.gap = '12px';          
+        dropdownHeader.style.padding = '15px';      
+
+        const img = document.createElement('img');
+        img.src = srcUrl;
+        img.alt = "Avatar";
+        
+        // Estilos para que coincida con el texto
+        img.style.width = '35px';       
+        img.style.height = '35px';
+        img.style.borderRadius = '50%'; 
+        img.style.objectFit = 'cover';
+        img.style.backgroundColor = '#1e1e1e'; // Fondo oscuro por seguridad
+        img.style.border = '1px solid rgba(255,255,255,0.1)'; 
+        img.style.display = 'block';
+
+        img.onerror = function() {
+            if (this.src !== defaultAvatar) this.src = defaultAvatar;
+        };
+
+        dropdownHeader.prepend(img);
+    };
+
     if (!authToken) {
+        // Estado: No Logueado
         if (loginContainer) loginContainer.style.display = 'flex';
         if (profileContainer) profileContainer.style.display = 'none';
         if (notificationsContainer) notificationsContainer.style.display = 'none';
         if (addReviewContainer) addReviewContainer.style.display = 'none';
-        
-        if (loginBtn) {
-            loginBtn.addEventListener('click', function() {
-                window.location.href = getLoginPath();
-            });
-        }
+        if (loginBtn) loginBtn.onclick = function() { window.location.href = getLoginPath(); };
     } else {
+        // Estado: Logueado
         if (loginContainer) loginContainer.style.display = 'none';
         if (profileContainer) profileContainer.style.display = 'block';
         if (notificationsContainer) notificationsContainer.style.display = 'block';
         if (addReviewContainer) addReviewContainer.style.display = 'block';
-    
-        if (username && usernameDisplay) {
-            usernameDisplay.textContent = username;
-        } else if (usernameDisplay) {
-            usernameDisplay.textContent = 'Usuario';
-        }
+        if (usernameDisplay) usernameDisplay.textContent = username || 'Usuario';
         
-        // Cargar y guardar el avatar del usuario en localStorage si no está
+        // Recuperar avatar guardado o usar default
+        const savedAvatar = localStorage.getItem('userAvatar');
+        const avatarToUse = savedAvatar && savedAvatar !== 'null' ? savedAvatar : defaultAvatar;
+
+        // Renderizar
+        renderProfileBtnImage(avatarToUse);
+        renderDropdownImage(avatarToUse);
+
+        // Actualizar en segundo plano
         const currentUserId = localStorage.getItem('userId');
-        if (currentUserId && !localStorage.getItem('userAvatar')) {
-            // Cargar el avatar en segundo plano sin bloquear
+        if (currentUserId) {
             (async () => {
                 try {
-                    if (window.userApi && window.userApi.getUserProfile) {
-                        const userData = await window.userApi.getUserProfile(currentUserId);
-                        if (userData) {
-                            const avatar = userData.imgProfile || userData.ImgProfile || userData.avatar || userData.image;
-                            if (avatar) {
-                                localStorage.setItem('userAvatar', avatar);
-                                // Actualizar el avatar en el header si existe
-                                const headerAvatar = document.getElementById('userMenuButton');
-                                if (headerAvatar) {
-                                    headerAvatar.src = avatar;
-                                }
+                    const { getUser } = await import('../APIs/socialApi.js');
+                    const userData = await getUser(currentUserId);
+                    
+                    if (userData) {
+                        const userObj = userData.result || userData.data || userData;
+                        // Lógica para detectar si NO tiene foto y limpiar caché
+                        let newAvatar = userObj.imgProfile || userObj.ImgProfile || userObj.avatar || userObj.image || userObj.profilePicture;
+                        
+                        if (!newAvatar || newAvatar === 'null' || newAvatar.trim() === '') {
+                            newAvatar = null;
+                        }
+
+                        if (newAvatar) {
+                            if (newAvatar !== savedAvatar) {
+                                localStorage.setItem('userAvatar', newAvatar);
+                                renderProfileBtnImage(newAvatar);
+                                renderDropdownImage(newAvatar);
+                            }
+                        } else {
+                            // Si el usuario no tiene foto pero nosotros teníamos una guardada, volver a default
+                            if (savedAvatar && savedAvatar !== defaultAvatar) {
+                                localStorage.removeItem('userAvatar');
+                                renderProfileBtnImage(defaultAvatar);
+                                renderDropdownImage(defaultAvatar);
                             }
                         }
                     }
-                } catch (e) {
-                    console.debug('Error cargando avatar del usuario:', e);
-                }
+                } catch (e) { }
             })();
-        } else if (localStorage.getItem('userAvatar')) {
-            // Si ya está en localStorage, actualizar el header
-            const headerAvatar = document.getElementById('userMenuButton');
-            if (headerAvatar) {
-                headerAvatar.src = localStorage.getItem('userAvatar');
-            }
         }
         
-        // Configurar el botón de agregar reseña
         if (addReviewBtn) {
-            // Remover listeners anteriores si existen
             const newAddReviewBtn = addReviewBtn.cloneNode(true);
             addReviewBtn.parentNode.replaceChild(newAddReviewBtn, addReviewBtn);
-            
             newAddReviewBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Intentar usar la función showCreateReviewModal si está disponible (desde homeAdmin o profileHandler)
-                if (typeof window.showCreateReviewModal === 'function') {
-                    window.showCreateReviewModal();
-                } else {
-                    // Si no está disponible, buscar el modal directamente
+                e.preventDefault(); e.stopPropagation();
+                if (typeof window.showCreateReviewModal === 'function') window.showCreateReviewModal();
+                else {
                     const modal = document.getElementById('createReviewModalOverlay');
-                    if (modal) {
-                        modal.style.display = 'flex';
-                    } else {
-                        console.warn('Modal de crear reseña no encontrado. Redirigiendo a home...');
-                        // Fallback: redirigir a home si no hay modal
-                        const currentPath = window.location.pathname;
-                        const currentFile = currentPath.split('/').pop();
-                        let homePath = '';
-                        
-                        if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
-                            homePath = '../home.html';
-                        } else if (currentPath.includes('/HTML/') || currentFile === 'album.html' || currentFile === 'song.html' || currentFile === 'artist.html' || currentFile === 'rankings.html' || currentFile === 'amigos.html') {
-                            homePath = 'home.html';
-                        } else {
-                            homePath = 'home.html';
-                        }
-                        
-                        window.location.href = homePath;
-                    }
+                    if (modal) modal.style.display = 'flex';
                 }
             });
         }
         
         loadNotifications();
-        
-        if (typeof signalR !== 'undefined' && signalR) {
-            initializeSignalR();
-        } else {
-            setTimeout(() => {
-                if (typeof signalR !== 'undefined' && signalR) {
-                    initializeSignalR();
-                } else {
-                    console.warn('SignalR no está disponible. Notificaciones en tiempo real no funcionarán.');
-                }
-            }, 500);
-        }
+        setTimeout(() => {
+            if (typeof signalR !== 'undefined' && signalR) initializeSignalR();
+        }, 1000);
     }
 }
 

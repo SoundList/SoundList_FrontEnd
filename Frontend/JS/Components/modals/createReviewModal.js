@@ -311,6 +311,10 @@ function displayContentSearchResults(results, query, state) {
 /**
  * Muestra el modal de "Crear Reseña", opcionalmente precargado con datos.
  */
+/**
+ * Muestra el modal de "Crear Reseña", opcionalmente precargado con datos.
+ * FIX DEFINITIVO: Recuperación de ID desde propiedades y desde la URL del navegador.
+ */
 export function showCreateReviewModal(contentData = null, state) {
     const modal = document.getElementById('createReviewModalOverlay');
     const contentSelector = document.getElementById('createReviewContentSelector');
@@ -340,11 +344,46 @@ export function showCreateReviewModal(contentData = null, state) {
         return;
     }
     
+    // ==========================================
+    // 🚑 FIX DE EMERGENCIA: RECUPERACIÓN DE ID
+    // ==========================================
     if (contentData) {
+        console.log("🔍 showCreateReviewModal recibió:", contentData);
+
+        // 1. Intentar encontrar el ID en propiedades mal escritas
+        if (!contentData.id) {
+            contentData.id = contentData.apiAlbumId || contentData.albumId || contentData.AlbumId || 
+                             contentData.apiSongId || contentData.songId || contentData.SongId || 
+                             contentData.apiId || contentData.Id || contentData._id;
+        }
+
+        // 2. INTENTO FINAL: SI EL ID SIGUE SIENDO UNDEFINED, SACARLO DE LA URL
+        // Esto asume que si estás reseñando un álbum, estás en album.html?id=XYZ
+        if (!contentData.id) {
+            console.warn('⚠️ ID no encontrado en el objeto. Intentando rescatar de la URL...');
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlId = urlParams.get('id'); // Obtiene ?id=123
+            
+            if (urlId) {
+                contentData.id = urlId;
+                console.log('✅ ID rescatado exitosamente de la URL:', contentData.id);
+            } else {
+                console.error('❌ FATAL: No se pudo encontrar el ID ni en el objeto ni en la URL.');
+            }
+        }
+
+        // Aseguramos que el nombre no esté vacío
+        if (!contentData.name) {
+            contentData.name = contentData.title || contentData.Title || contentData.itemTitle || "Contenido sin nombre";
+        }
+
+        // Guardamos en el estado
         if (state) {
             setSelectedContent(contentData, state);
         }
+
     } else {
+        // Estado limpio si no hay data
         if (state) {
             state.currentReviewData = null;
         }
@@ -359,7 +398,7 @@ export function showCreateReviewModal(contentData = null, state) {
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
     
-    const stars = document.querySelectorAll('#createReviewStars .star-input');
+    const stars = document.querySelectorAll('#createReviewStars .star-input.active');
     if (stars.length > 0) {
         stars.forEach(star => star.classList.remove('active'));
     }

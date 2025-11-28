@@ -309,19 +309,24 @@ export async function loadCommentsIntoModal(reviewId, state) {
         }
         
         attachCommentActionListeners(state, reviewId);
+        
+        // Actualizar contador en el botón de comentarios de la reseña usando los comentarios ya cargados
+        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
+        if (commentBtn) {
+            const countSpan = commentBtn.querySelector('.review-comments-count');
+            if (countSpan) {
+                countSpan.textContent = comments.length;
+            } else {
+                // Fallback: buscar cualquier span dentro del botón
+                const span = commentBtn.querySelector('span');
+                if (span) {
+                    span.textContent = comments.length;
+                }
+            }
+        }
     } catch (error) {
         console.error("Error cargando comentarios en modal:", error);
         commentsList.innerHTML = `<div class="comment-empty">Error al cargar comentarios.</div>`;
-    }
-    
-    // Actualizar contador en el botón de comentarios de la reseña
-    const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
-    if (commentBtn) {
-        const countSpan = commentBtn.querySelector('.review-comments-count');
-        if (countSpan) {
-            const comments = await getCommentsByReview(reviewId);
-            countSpan.textContent = comments.length;
-        }
     }
 }
     

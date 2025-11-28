@@ -1,692 +1,685 @@
 /**
  * Módulo del modal de vista detallada de reseña
- * Maneja la visualización detallada de reseñas y sus comentarios
+ * VERSIÓN COMBINADA:
+ * - Estructura del primer archivo
+ * - Lógica de likes / reacciones del segundo archivo (optimistic, localStorage reactionId, rollback)
+ * - data-likes y data-reaction-id en DOM para prevenir edición cuando hay interacciones
  */
 
-import { getReviews, getCommentsByReview, getReviewReactionCount, createComment, updateComment, getUser, addReviewReaction, deleteReviewReaction } from '../../APIs/socialApi.js';
+import { 
+    getReviews, 
+    getCommentsByReview, 
+    getReviewReactionCount, 
+    createComment, 
+    updateComment, 
+    deleteComment,           
+    addCommentReaction,      
+    deleteCommentReaction,   
+    getUser, 
+    addReviewReaction, 
+    deleteReviewReaction 
+} from '../../APIs/socialApi.js';
+
 import { renderStars, showAlert } from '../../Utils/reviewHelpers.js';
 import { showLoginRequiredModal, formatNotificationTime } from '../../Handlers/headerHandler.js';
 
+// Estado local para la edición
+let modalState = {
+    editingCommentId: null,
+    originalCommentText: null
+};
+
+// =========================================================
+// 1. INICIALIZACIÓN Y DELEGACIÓN
+// =========================================================
+
 export function initializeReviewDetailModalLogic(state) {
-    const closeReviewDetailModal = document.getElementById('closeReviewDetailModal');
-    const reviewDetailModalOverlay = document.getElementById('reviewDetailModalOverlay');
-    const reviewDetailSubmitCommentBtn = document.getElementById('reviewDetailSubmitCommentBtn');
-    const reviewDetailCommentInput = document.getElementById('reviewDetailCommentInput');
+    if (state) modalState = state; 
+
+    const closeBtn = document.getElementById('closeReviewDetailModal');
+    const overlay = document.getElementById('reviewDetailModalOverlay');
+    const submitBtn = document.getElementById('reviewDetailSubmitCommentBtn');
+    const input = document.getElementById('reviewDetailCommentInput');
     
-    if (closeReviewDetailModal) {
-        closeReviewDetailModal.addEventListener('click', hideReviewDetailModal);
+
+    if (closeBtn) {
+        const newBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newBtn, closeBtn);
+        newBtn.addEventListener('click', hideReviewDetailModal);
     }
     
-    if (reviewDetailModalOverlay) {
-        reviewDetailModalOverlay.addEventListener('click', (e) => {
-            if (e.target === reviewDetailModalOverlay) {
-                hideReviewDetailModal();
-            }
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) hideReviewDetailModal();
         });
     }
     
-    if (reviewDetailSubmitCommentBtn) {
-        reviewDetailSubmitCommentBtn.addEventListener('click', () => submitReviewDetailComment(state));
+    if (submitBtn) {
+        const newBtn = submitBtn.cloneNode(true);
+        submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+        newBtn.addEventListener('click', () => submitReviewDetailComment());
     }
     
-    if (reviewDetailCommentInput) {
-        reviewDetailCommentInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                submitReviewDetailComment(state);
-            }
+    if (input) {
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        newInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitReviewDetailComment();
         });
+    }
+
+    // Listener Maestro para la lista de comentarios (Delegación de eventos)
+    const commentsList = document.getElementById('reviewDetailCommentsList');
+    if (commentsList) {
+        const newList = commentsList.cloneNode(false);
+        commentsList.parentNode.replaceChild(newList, commentsList);
+        newList.addEventListener('click', handleCommentListClick);
     }
 }
 
-export async function showReviewDetailModal(reviewId, state = null) {
-    if (!state) {
-        state = { editingCommentId: null, originalCommentText: null };
+function handleCommentListClick(e) {
+    const target = e.target;
+    const modal = document.getElementById('reviewDetailModalOverlay');
+    const reviewId = modal ? modal.getAttribute('data-review-id') : null;
+
+    // 1. Like
+    const likeBtn = target.closest('.review-detail-comment-like-btn');
+    if (likeBtn) {
+        e.preventDefault(); e.stopPropagation();
+        const commentId = likeBtn.getAttribute('data-comment-id');
+        if (commentId && commentId !== 'undefined') toggleCommentLikeInDetail(commentId, likeBtn, reviewId);
+        return;
     }
+
+    // 2. Editar
+    const editBtn = target.closest('.comment-edit-btn');
+    if (editBtn) {
+        e.preventDefault(); e.stopPropagation();
+        const commentId = editBtn.getAttribute('data-comment-id');
+        if (commentId && commentId !== 'undefined') editCommentInDetail(commentId, reviewId);
+        else console.error("ID de comentario inválido para editar");
+        return;
+    }
+
+    // 3. Eliminar
+    const deleteBtn = target.closest('.comment-delete-btn');
+    if (deleteBtn) {
+        e.preventDefault(); e.stopPropagation();
+        const commentId = deleteBtn.getAttribute('data-comment-id');
+        if (commentId && commentId !== 'undefined') deleteCommentInDetail(commentId, reviewId);
+        else console.error("ID de comentario inválido para eliminar");
+        return;
+    }
+
+    // 4. Cancelar Edición
+    if (target.classList.contains('comment-edit-cancel')) {
+        e.preventDefault(); e.stopPropagation();
+        const commentItem = target.closest('.review-detail-comment-item');
+        const commentId = commentItem.getAttribute('data-comment-id');
+        cancelEditCommentInDetail(commentId);
+        return;
+    }
+
+    // 5. Confirmar Edición
+    if (target.classList.contains('comment-edit-confirm')) {
+        e.preventDefault(); e.stopPropagation();
+        const commentItem = target.closest('.review-detail-comment-item');
+        const commentId = commentItem.getAttribute('data-comment-id');
+        confirmEditCommentInDetail(commentId, reviewId);
+        return;
+    }
+}
+
+// =========================================================
+// 2. CARGA Y RENDERIZADO
+// =========================================================
+
+export async function showReviewDetailModal(reviewId) {
     const modal = document.getElementById('reviewDetailModalOverlay');
     if (!modal) return;
     
+    // Reactivar listener de lista por si el modal se cerró y abrió
+    const commentsList = document.getElementById('reviewDetailCommentsList');
+    if (commentsList) {
+        const newList = commentsList.cloneNode(false);
+        commentsList.parentNode.replaceChild(newList, commentsList);
+        newList.id = 'reviewDetailCommentsList';
+        newList.addEventListener('click', handleCommentListClick);
+    }
+
     modal.setAttribute('data-review-id', reviewId);
     modal.style.display = 'flex';
+    
     const contentDiv = document.getElementById('reviewDetailContent');
-    if (contentDiv) {
-        contentDiv.innerHTML = '<div class="review-detail-loading">Cargando reseña...</div>';
-    }
+    if (contentDiv) contentDiv.innerHTML = '<div class="review-detail-loading">Cargando...</div>';
     
     try {
-        const [allReviewsResult, commentsResult, likesResult] = await Promise.allSettled([
-            getReviews().catch(() => []), 
-            getCommentsByReview(reviewId).catch(() => []),
-            getReviewReactionCount(reviewId).catch(() => 0)
+        // Carga paralela de datos
+        const [reviewsData, commentsData, likesData] = await Promise.allSettled([
+            getReviews(), 
+            getCommentsByReview(reviewId),
+            getReviewReactionCount(reviewId) 
         ]);
+
+        const allReviews = reviewsData.status === 'fulfilled' ? reviewsData.value : [];
+        const comments = commentsData.status === 'fulfilled' ? commentsData.value : [];
+        const likesRaw = likesData.status === 'fulfilled' ? likesData.value : 0;
         
-        const allReviews = allReviewsResult.status === 'fulfilled' ? allReviewsResult.value : [];
-        const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
-        const likes = likesResult.status === 'fulfilled' ? likesResult.value : 0;
-        
+
+        let likes = 0;
+        let userLiked = false;
+        let reactionId = null;
+        if (likesRaw && typeof likesRaw === 'object') {
+            likes = Number(likesRaw.likes || 0);
+            userLiked = !!likesRaw.userLiked;
+            reactionId = likesRaw.reactionId || null;
+        } else {
+            likes = Number(likesRaw || 0);
+        }
+
+    
         let review = null;
-        if (allReviews && allReviews.length > 0) {
+        if (Array.isArray(allReviews) && allReviews.length > 0) {
             review = allReviews.find(r => {
                 const rId = r.ReviewId || r.reviewId || r.id || r.Id_Review;
                 return String(rId).trim() === String(reviewId).trim();
             });
+        } else if (typeof allReviews === 'object' && allReviews !== null) {
+
+            const rId = allReviews.ReviewId || allReviews.reviewId || allReviews.id || allReviews.Id_Review;
+            if (String(rId).trim() === String(reviewId).trim()) review = allReviews;
         }
         
         if (!review) {
-            if (contentDiv) contentDiv.innerHTML = '<div class="review-detail-loading" style="color: #ff6b6b;">No se pudo cargar la reseña.</div>';
+            if (contentDiv) contentDiv.innerHTML = '<div class="review-detail-loading">Reseña no encontrada o eliminada.</div>';
             return;
         }
-        
-        let username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará si está eliminado
-        let avatar = '../Assets/default-avatar.png';
-        const reviewUserId = review.UserId || review.userId;
 
-        if (reviewUserId) {
-            try {
-                const userData = await getUser(reviewUserId);
-                if (userData) {
-                    username = userData.Username || userData.username || username;
-                    avatar = userData.imgProfile || userData.ImgProfile || avatar;
-                } else {
-                    // Si getUser devuelve null, puede ser un 404 (usuario eliminado)
-                    // Verificar si es un usuario eliminado
-                    isUserDeleted = true;
-                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
-                    console.debug(`Usuario eliminado detectado (getUser devolvió null): ${review.UserId || review.userId}`);
-                }
-            } catch (userError) {
-                // Detectar si el usuario fue eliminado (404)
-                if (userError.response && userError.response.status === 404) {
-                    isUserDeleted = true;
-                    username = "Usuario"; // Mantener "Usuario" genérico, el badge indicará que está eliminado
-                    console.debug(`Usuario eliminado detectado (404): ${review.UserId || review.userId}`);
-                } else {
-                    console.debug(`No se pudo obtener usuario ${review.UserId || review.userId}`);
-                }
-            }
-        }
-        
-        const userProfileUrl = `profile.html?userId=${reviewUserId}`;
-
-        // --- DATOS DE CONTENIDO (MÚSICA) ---
-        const storageKey = `review_content_${reviewId}`;
-        const storedContentData = localStorage.getItem(storageKey);
-        let contentData = null;
-        if (storedContentData) {
-            try { contentData = JSON.parse(storedContentData); } catch (e) {}
-        }
-        
-        let songName = 'Canción', albumName = 'Álbum', artistName = 'Artista';
-        let contentType = 'song'; 
-        let contentImage = '../Assets/default-avatar.png';
-        let contentApiId = ''; 
-
-        // 1. Intentar desde LocalStorage
-        if (contentData) {
-            contentType = (contentData.type || 'song').toLowerCase();
-            contentApiId = contentData.id;
-            contentImage = contentData.image || contentImage;
-            
-            if (contentType === 'song') songName = contentData.name || songName;
-            else albumName = contentData.name || albumName;
-            
-            artistName = contentData.artist || artistName;
-        } 
-        // 2. Intentar desde el objeto Review
-        else {
-            console.log("🔍 Debug Review Data:", review); // DEBUG LOG
-
-            if (review.song || review.Song) {
-                const s = review.song || review.Song;
-                contentType = 'song';
-                songName = s.Title || s.title || songName;
-                artistName = s.ArtistName || s.artistName || artistName;
-                contentImage = s.Image || s.image || contentImage;
-                contentApiId = s.APISongId || s.apiSongId || s.Id || s.id; 
-            } else if (review.album || review.Album) {
-                const a = review.album || review.Album;
-                contentType = 'album'; 
-                albumName = a.Title || a.title || albumName;
-                artistName = a.ArtistName || a.artistName || artistName;
-                contentImage = a.Image || a.image || contentImage;
-                
-                // Múltiples intentos para encontrar el ID del álbum
-                contentApiId = a.APIAlbumId || a.apiAlbumId || a.Id || a.id || a.AlbumId || a.albumId;
-                
-                console.log("💿 Álbum detectado. ID extraído:", contentApiId); // DEBUG LOG
-            }
-            // Fallback de IDs planos
-            else if (review.SongId) { contentType = 'song'; contentApiId = review.SongId; }
-            else if (review.AlbumId) { 
-                contentType = 'album'; 
-                contentApiId = review.AlbumId; 
-                console.log("💿 Álbum detectado por ID plano:", contentApiId);
-            }
-        }
-        
-        const contentName = contentType === 'song' ? songName : albumName;
-        const contentLabel = contentType === 'song' ? 'Canción' : 'Álbum';
-
-        // --- CONSTRUCCIÓN DE URL DE NAVEGACIÓN ---
-        let navUrl = 'javascript:void(0)'; // Default safe URL
-        let cursorStyle = 'default';
-        
-        if (contentApiId) {
-                cursorStyle = 'pointer';
-                
-                // CORRECCIÓN: Usamos ruta absoluta desde la raíz (/Frontend/HTML/)
-                // Esto evita que falle si estamos dentro de /Pages/ (como en profile.html)
-                if (contentType === 'album') {
-                    navUrl = `/Frontend/HTML/album.html?id=${contentApiId}`;
-                } else {
-                    navUrl = `/Frontend/HTML/song.html?id=${contentApiId}`;
-                }
-        } else {
-            console.warn("⚠️ No se encontró ID para redirigir al contenido.");
-        }
-
-        // --- RESTO DE DATOS ---
-        const reviewTitle = review.Title || review.title || '';
-        const reviewContent = review.Content || review.content || '';
-        const reviewRating = review.Rating || review.rating || 0;
-        
-        // --- FIX FECHAS: Búsqueda exhaustiva de la propiedad de fecha ---
-        // --- FIX FECHAS V5: MANEJO DE "FECHA NULA" (0001-01-01) ---
-        
-        // 1. Buscamos cualquier rastro de fecha
-        const rawDate = review.CreatedAt || review.Created || review.createdAt || review.created || 
-                       review.Date || review.date || review.DateCreated || review.dateCreated || 
-                       review.createdDate || review.CreatedDate;
-        
-        let createdAtDate = null;
-
-        // 2. Intentamos parsear si existe
-        if (rawDate) {
-            const parsed = new Date(rawDate);
-            // Solo aceptamos fechas mayores al año 2000. 
-            // El año 0001 (backend default) y 1970 (unix 0) quedan descartados.
-            if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
-                createdAtDate = parsed;
-            }
-        }
-
-        // 3. Fallback a caché local (por si el feed la tenía bien)
-        if (!createdAtDate) {
-            const normalizedId = String(reviewId).trim();
-            const cachedTimestamp = localStorage.getItem(`review_created_at_${normalizedId}`);
-            if (cachedTimestamp) {
-                const ts = parseInt(cachedTimestamp, 10);
-                if (!isNaN(ts) && ts > 0) {
-                    createdAtDate = new Date(ts);
-                }
-            }
-        }
-
-        // 4. GENERACIÓN DEL STRING DE TIEMPO
-        // Si después de todo createdAtDate sigue siendo null, significa que la fecha PERDIDA.
-        // No usamos "new Date()" (Ahora) para no mentir. Dejamos string vacío.
-        let timeAgo = ""; 
-        
-        if (createdAtDate) {
-            timeAgo = typeof formatNotificationTime === 'function' 
-                ? formatNotificationTime(createdAtDate) 
-                : createdAtDate.toLocaleDateString();
-        }
-        // Likes
-        const reviewLikesCacheKey = `review_likes_${reviewId}`;
-        let cachedReviewLikes = localStorage.getItem(reviewLikesCacheKey);
-        const finalLikes = cachedReviewLikes !== null ? parseInt(cachedReviewLikes) : (likes || 0);
-        
+       
         const currentUserId = localStorage.getItem('userId');
-        let userLiked = false;
-        if (currentUserId) {
-            const localLike = localStorage.getItem(`like_${reviewId}_${currentUserId}`);
-            userLiked = localLike === 'true';
+        if (reactionId && currentUserId) {
+            localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, String(reactionId));
         }
+
         
-        // --- RENDERIZADO HTML (USANDO <a> TAG) ---
-        if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="review-detail-main" style="padding: 1.5rem;">
-                    
-                    <div class="review-detail-user">
-                        <img src="${avatar}" alt="${username}" 
-                             class="review-detail-avatar clickable-user" 
-                             onclick="window.location.href='${userProfileUrl}'"
-                             onerror="this.src='../Assets/default-avatar.png'">
-                        
-                        <div class="review-detail-user-info">
-                        <span class="review-detail-username clickable-user"
-                              onclick="window.location.href='${userProfileUrl}'">
-                            ${username}
-                        </span>
-                            ${timeAgo ? `<span class="review-detail-time">${timeAgo}</span>` : ''}
-                        </div>
+        await renderMainReviewContent(contentDiv, review, likes, reviewId, userLiked);
+        
+       
+        await loadReviewDetailComments(reviewId, comments);
+
+    } catch (error) {
+        console.error("Error en modal detalle:", error);
+        if (contentDiv) contentDiv.innerHTML = '<div class="review-detail-loading">Error de conexión.</div>';
+    }
+}
+
+async function renderMainReviewContent(container, review, likes, reviewId, userLikedFromServer = false) {
+    const user = await getUser(review.UserId || review.userId).catch(() => ({ username: 'Usuario' }));
+    const username = user.Username || user.username || 'Usuario';
+    const avatar = user.imgProfile || user.avatar || '../Assets/default-avatar.png';
+    const userProfileUrl = `profile.html?userId=${review.UserId || review.userId}`;
+    
+    const currentUserId = localStorage.getItem('userId');
+
+    const userLikedLocal = currentUserId ? (localStorage.getItem(`like_${reviewId}_${currentUserId}`) === 'true') : false;
+    const userLiked = userLikedFromServer || userLikedLocal;
+
+
+    const cachedLikes = localStorage.getItem(`review_likes_${reviewId}`);
+    const displayLikes = (typeof likes === 'number' && !isNaN(likes)) ? likes : (cachedLikes ? parseInt(cachedLikes) : 0);
+
+    let contentImage = '../Assets/default-avatar.png';
+    let contentName = 'Contenido';
+    let artistName = 'Artista';
+    let contentType = 'song';
+    let contentApiId = '';
+   
+    const storedContent = localStorage.getItem(`review_content_${reviewId}`);
+    let foundContent = false;
+
+    if (storedContent) {
+        try {
+            const parsed = JSON.parse(storedContent);
+            if (parsed && parsed.name) {
+                contentName = parsed.name;
+                artistName = parsed.artist || 'Artista Desconocido';
+                contentImage = parsed.image || contentImage;
+                contentType = parsed.type || 'song';
+                contentApiId = parsed.id;
+                foundContent = true;
+            }
+        } catch(e) {}
+    }
+
+   
+    if (!foundContent) {
+        if (review.song || review.Song) {
+            const s = review.song || review.Song;
+            contentName = s.Title || s.title || contentName;
+            artistName = s.ArtistName || s.artistName || artistName;
+            contentImage = s.Image || s.image || contentImage;
+            contentApiId = s.APISongId || s.apiSongId || s.Id || s.id;
+        } else if (review.album || review.Album) {
+            const a = review.album || review.Album;
+            contentType = 'album';
+            contentName = a.Title || a.title || contentName;
+            artistName = a.ArtistName || a.artistName || artistName;
+            contentImage = a.Image || a.image || contentImage;
+            contentApiId = a.APIAlbumId || a.apiAlbumId || a.Id || a.id;
+        }
+    }
+
+    const contentLabel = contentType === 'song' ? 'Canción' : 'Álbum';
+    let navUrl = '#';
+    let cursorStyle = 'default';
+    if (contentApiId) {
+        cursorStyle = 'pointer';
+        navUrl = contentType === 'album' 
+            ? `/Frontend/HTML/album.html?id=${contentApiId}` 
+            : `/Frontend/HTML/song.html?id=${contentApiId}`;
+    }
+
+
+    container.innerHTML = `
+        <div class="review-detail-main" style="padding: 1.5rem;">
+            <div class="review-detail-user">
+                <img src="${avatar}" class="review-detail-avatar clickable-user" 
+                     onclick="window.location.href='${userProfileUrl}'"
+                     onerror="this.src='../Assets/default-avatar.png'">
+                <div class="review-detail-user-info">
+                    <span class="review-detail-username clickable-user" onclick="window.location.href='${userProfileUrl}'">${username}</span>
+                </div>
+            </div>
+
+            <a href="${navUrl}" class="modal-music-pill" style="cursor: ${cursorStyle}; text-decoration: none; color: inherit; display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; margin-top: 15px;">
+                <img src="${contentImage}" class="modal-music-cover" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; margin-right: 12px;" onerror="this.src='../Assets/default-avatar.png'">
+                <div class="modal-music-info" style="display: flex; flex-direction: column;">
+                    <h3 style="margin: 0; font-size: 1rem; color: #fff;">${contentName}</h3>
+                    <p style="margin: 0; font-size: 0.8rem; color: rgba(255,255,255,0.6);">${artistName} • ${contentLabel}</p>
+                </div>
+                <i class="fas fa-chevron-right" style="margin-left: auto; color: rgba(255,255,255,0.3);"></i>
+            </a>
+
+            <h2 class="review-detail-title" style="margin-top:15px;">${review.Title || review.title || ''}</h2>
+            <p class="review-detail-text">${review.Content || review.content || ''}</p>
+            <div class="review-detail-rating"><div class="review-detail-stars">${renderStars(review.Rating || review.rating || 0)}</div></div>
+            
+            <div class="review-detail-interactions">
+                <button class="review-detail-interaction-btn ${userLiked ? 'liked' : ''}" id="reviewDetailLikeBtn" data-review-id="${reviewId}">
+                    <i class="fas fa-heart" style="color: ${userLiked ? '#EC4899' : 'rgba(255,255,255,0.7)'}"></i>
+                    <span class="review-detail-likes-count">${displayLikes}</span>
+                </button>
+                <span class="review-detail-comments-icon">
+                    <i class="fas fa-comment"></i>
+                    <span id="reviewDetailCommentsCount" style="margin-left:5px;">0</span>
+                </span>
+            </div>
+        </div>
+    `;
+
+  
+    const likeBtn = document.getElementById('reviewDetailLikeBtn');
+    if (likeBtn) {
+        likeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleReviewLikeInDetail(reviewId, e.currentTarget);
+        });
+    }
+}
+
+// =========================================================
+// Comentarios: render + listeners
+// =========================================================
+
+export async function loadReviewDetailComments(reviewId, comments = null) {
+    const list = document.getElementById('reviewDetailCommentsList');
+    const countEl = document.getElementById('reviewDetailCommentsCount');
+    if (!list) return;
+
+
+    if (!comments) {
+        list.innerHTML = '<div style="padding:20px; text-align:center;">Cargando comentarios...</div>';
+        try { comments = await getCommentsByReview(reviewId); } catch (e) { comments = []; }
+    }
+  
+
+    if (countEl) countEl.textContent = comments? comments.length:0;
+    
+    let currentUserId = localStorage.getItem('userId');
+    if (currentUserId) currentUserId = String(currentUserId).trim();
+
+    if (comments.length === 0) {
+        list.innerHTML = '<div class="review-detail-comment-empty">No hay comentarios aún.</div>';
+        return;
+    }
+
+    const htmlPromises = comments.map(async (c) => {
+
+        let commentUserId = c.IdUser || c.userId || c.UserId || c.id_user || c.idUser;
+        if (commentUserId) commentUserId = String(commentUserId).trim();
+
+        const cId = c.Id_Comment || c.id_Comment || c.CommentId || c.id || c.Id;
+        
+        let uName = c.username || c.UserName || 'Usuario';
+        let uAvatar = c.avatar || c.UserProfilePicUrl || '../Assets/default-avatar.png';
+        
+        if (commentUserId && uName === 'Usuario') {
+            try {
+                const u = await getUser(commentUserId);
+                if (u) { uName = u.username || u.Username; uAvatar = u.imgProfile || u.image; }
+            } catch(e){}
+        }
+
+        const isOwn = currentUserId && commentUserId && (currentUserId === commentUserId);
+
+   
+        const likesCount = Number(c.Likes || c.likes || 0);
+
+        const backendUserLiked = !!(c.userLiked || c.userReaction);
+        const backendReactionId = c.reactionId || c.ReactionId || c.Id_Reaction || null;
+
+        const likedLocal = currentUserId ? (localStorage.getItem(`like_comment_${cId}_${currentUserId}`) === 'true') : false;
+        const liked = backendUserLiked || likedLocal;
+
+
+        const actions = (isOwn && cId) ? `
+            <div class="review-detail-comment-actions">
+                <button class="review-detail-comment-action-btn comment-edit-btn" data-comment-id="${cId}"><i class="fas fa-pencil"></i></button>
+                <button class="review-detail-comment-action-btn comment-delete-btn" data-comment-id="${cId}"><i class="fas fa-trash"></i></button>
+            </div>` : '';
+
+    
+        if (backendReactionId && currentUserId) {
+            localStorage.setItem(`reaction_comment_${cId}_${currentUserId}`, String(backendReactionId));
+
+            if (backendUserLiked) localStorage.setItem(`like_comment_${cId}_${currentUserId}`, 'true');
+        }
+
+        return `
+            <div class="review-detail-comment-item" data-comment-id="${cId}" data-likes="${likesCount}" data-reaction-id="${backendReactionId ? backendReactionId : ''}">
+                <img src="${uAvatar}" class="review-detail-comment-avatar clickable-user" 
+                     onclick="window.location.href='${commentUserId ? `profile.html?userId=${commentUserId}` : '#'}'"
+                     onerror="this.src='../Assets/default-avatar.png'">
+                <div class="review-detail-comment-content">
+                    <div class="review-detail-comment-header">
+                        <span class="review-detail-comment-username clickable-user" onclick="window.location.href='${commentUserId ? `profile.html?userId=${commentUserId}` : '#'}'">${uName}</span>
+                        <span class="review-detail-comment-time">${formatNotificationTime(c.Created || c.date)}</span>
                     </div>
-
-                    <a href="${navUrl}" class="modal-music-pill" style="cursor: ${cursorStyle}; text-decoration: none; color: inherit; display: flex; align-items: center;">
-                        <img src="${contentImage}" class="modal-music-cover" onerror="this.src='../Assets/default-avatar.png'">
-                        <div class="modal-music-info">
-                            <h3>${contentName}</h3>
-                            <p>${artistName} • ${contentLabel}</p>
-                        </div>
-                        <i class="fas fa-chevron-right" style="margin-left: auto; color: rgba(255,255,255,0.3);"></i>
-                    </a>
-
-                    ${reviewTitle ? `<h2 class="review-detail-title" style="margin-top: 1rem;">${reviewTitle}</h2>` : ''}
-                    <p class="review-detail-text">${reviewContent}</p>
-                    
-                    <div class="review-detail-rating">
-                        <div class="review-detail-stars">${renderStars(reviewRating)}</div>
-                    </div>
-
-                    <div class="review-detail-interactions">
-                        <button class="review-detail-interaction-btn ${userLiked ? 'liked' : ''}" 
-                                data-review-id="${reviewId}" id="reviewDetailLikeBtn">
-                                <i class="fas fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.7)'};"></i>
-                                <span class="review-detail-likes-count" style="margin-left: 6px;">${finalLikes}</span>
+                    <p class="review-detail-comment-text" id="comment-text-${cId}">${c.Text || c.text || ''}</p>
+                    <div class="review-detail-comment-footer">
+                        <button class="review-detail-comment-like-btn ${liked ? 'liked' : ''}" data-comment-id="${cId}">
+                            <i class="fa-solid fa-heart" style="color: ${liked ? '#EC4899' : 'rgba(255,255,255,0.6)'}"></i>
+                            <span class="review-detail-comment-likes-count">${likesCount}</span>
                         </button>
-                        <span class="review-detail-comments-icon">
-                            <i class="fas fa-comment"></i>
-                            <span class="review-detail-comments-count" style="margin-left: 6px;">${comments.length}</span>
-                        </span>
+                        ${actions}
                     </div>
                 </div>
-            `;
-        }
-        
-        await loadReviewDetailComments(reviewId, comments, state);
-        
-        const likeBtn = document.getElementById('reviewDetailLikeBtn');
-        if (likeBtn) {
-            likeBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (!localStorage.getItem('authToken')) return showLoginRequiredModal();
-                toggleReviewLikeInDetail(reviewId, this);
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error cargando vista detallada:', error);
-        if (contentDiv) contentDiv.innerHTML = '<div class="review-detail-loading">Error al cargar.</div>';
-    }
-}
-
-export async function loadReviewDetailComments(reviewId, comments, state) {
-    const commentsList = document.getElementById('reviewDetailCommentsList');
-    const commentsCountEl = document.getElementById('reviewDetailCommentsCount');
-    if (!commentsList) return;
-    
-    try {
-        if (!comments) comments = await getCommentsByReview(reviewId);
-        
-        // Enriquecer con usuarios
-        const getUserFn = window.socialApi?.getUser || getUser;
-        comments = await Promise.all(comments.map(async (comment) => {
-            // Buscamos ID para enriquecer
-            const userId = comment.IdUser || comment.idUser || comment.UserId || comment.userId || comment.Id_User;
-            
-            if (userId && !comment.username) {
-                try {
-                    const userData = await getUserFn(userId);
-                    if (userData) {
-                        // Devolvemos el comentario con datos de usuario y EL ID NORMALIZADO 'userId'
-                        return { 
-                            ...comment, 
-                            username: userData.username || 'Usuario', 
-                            avatar: userData.imgProfile || userData.image,
-                            userId: userId // Guardamos el ID encontrado en una propiedad estándar
-                        };
-                    }
-                } catch (e) {}
-            }
-            // Si no se enriqueció, aseguramos que tenga la propiedad userId seteada
-            if (!comment.userId && userId) comment.userId = userId;
-            return comment;
-        }));
-        
-        if (commentsCountEl) commentsCountEl.textContent = comments.length;
-        const currentUserId = localStorage.getItem('userId');
-        
-        if (comments.length === 0) {
-            commentsList.innerHTML = `<div class="review-detail-comment-empty"><p>No hay comentarios aún.</p></div>`;
-        } else {
-            commentsList.innerHTML = comments.map(comment => {
-                const dateRaw = comment.Created || comment.CreatedAt || comment.created || comment.createdAt || comment.date;
-                const timeAgo = formatNotificationTime(dateRaw);
-                const username = comment.username || comment.UserName || 'Usuario';
-                const text = comment.Text || comment.text || '';
-                const commentId = comment.Id_Comment || comment.id || '';
-                
-                // --- CORRECCIÓN CRÍTICA: EXTRACCIÓN ROBUSTA DEL ID DE USUARIO ---
-                // Buscamos en todas las variantes posibles para que nunca sea undefined
-                const commentUserId = comment.userId || comment.UserId || comment.IdUser || comment.idUser || comment.Id_User;
-
-                const avatar = comment.avatar || comment.UserProfilePicUrl || '../Assets/default-avatar.png';
-                
-                // Link al perfil con ruta absoluta
-                // Si por alguna razón sigue siendo undefined, ponemos # para no romper la URL
-                const profileUrl = commentUserId ? `/Frontend/HTML/Pages/profile.html?userId=${commentUserId}` : '#';
-
-                const likes = comment.Likes || 0;
-                let userLiked = false;
-                if (currentUserId) {
-                    userLiked = localStorage.getItem(`like_comment_${commentId}_${currentUserId}`) === 'true';
-                }
-
-                // Comparación de Strings para asegurar que coincida aunque uno sea número y otro texto
-                const isOwnComment = currentUserId && commentUserId && String(commentUserId).trim() === String(currentUserId).trim();
-                
-                let actionButtons = isOwnComment ? `
-                    <div class="review-detail-comment-actions">
-                        <button class="review-detail-comment-action-btn comment-edit-btn" data-comment-id="${commentId}"><i class="fas fa-pencil"></i></button>
-                        <button class="review-detail-comment-action-btn comment-delete-btn" data-comment-id="${commentId}"><i class="fas fa-trash"></i></button>
-                    </div>` : '';
-
-                return `
-                    <div class="review-detail-comment-item" data-comment-id="${commentId}">
-                        <img src="${avatar}" class="review-detail-comment-avatar clickable-user" 
-                             onclick="window.location.href='${profileUrl}'"
-                             onerror="this.src='../Assets/default-avatar.png'">
-                        
-                        <div class="review-detail-comment-content">
-                            <div class="review-detail-comment-header">
-                                <span class="review-detail-comment-username clickable-user"
-                                      onclick="window.location.href='${profileUrl}'">
-                                    ${username}
-                                </span>
-                                <span class="review-detail-comment-time">${timeAgo}</span>
-                            </div>
-                            <p class="review-detail-comment-text">${text}</p>
-                            
-                            <div class="review-detail-comment-footer">
-                                <button class="review-detail-comment-like-btn ${userLiked ? 'liked' : ''}" data-comment-id="${commentId}">
-                                    <i class="fa-solid fa-heart" style="color: ${userLiked ? 'var(--magenta, #EC4899)' : 'rgba(255,255,255,0.6)'};"></i>
-                                    <span class="review-detail-comment-likes-count">${likes}</span>
-                                </button>
-                                ${actionButtons}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        attachReviewDetailCommentListeners(reviewId, state);
-    } catch (error) {
-        console.error('Error comentarios:', error);
-    }
-}
-
-function attachReviewDetailCommentListeners(reviewId, state) {
-    document.querySelectorAll('.review-detail-comment-like-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault(); e.stopPropagation();
-            const commentId = this.getAttribute('data-comment-id');
-            if (commentId) toggleCommentLikeInDetail(commentId, this, reviewId);
-        });
+            </div>
+        `;
     });
 
-    document.querySelectorAll('.review-detail-comment-item .comment-edit-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault(); e.stopPropagation();
-            const commentId = this.getAttribute('data-comment-id');
-            if (commentId) editCommentInDetail(commentId, reviewId, state);
-        });
-    });
-    document.querySelectorAll('.review-detail-comment-item .comment-delete-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault(); e.stopPropagation();
-            const commentId = this.getAttribute('data-comment-id');
-            if (commentId) deleteCommentInDetail(commentId, reviewId, state);
-        });
-    });
+    const htmlItems = await Promise.all(htmlPromises);
+    list.innerHTML = htmlItems.join('');
 }
 
-async function toggleCommentLikeInDetail(commentId, btn, reviewId) {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) return showLoginRequiredModal();
-    
+
+async function toggleCommentLikeInDetail(commentId, btn, reviewId = null) {
+    const token = localStorage.getItem('authToken');
+    if (!token) return showLoginRequiredModal();
+
     const icon = btn.querySelector('i');
-    const likesSpan = btn.querySelector('.review-detail-comment-likes-count');
+    const span = btn.querySelector('.review-detail-comment-likes-count');
     const isLiked = btn.classList.contains('liked');
-    const currentLikes = parseInt(likesSpan.textContent) || 0;
-    const currentUserId = localStorage.getItem('userId');
-    
+    const userId = localStorage.getItem('userId');
+    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+    let currentLikes = 0;
+    if (commentItem) {
+        currentLikes = parseInt(commentItem.getAttribute('data-likes') || '0');
+    } else {
+        currentLikes = parseInt(span.textContent) || 0;
+    }
+
+    const newCount = isLiked ? Math.max(0, currentLikes - 1) : (currentLikes + 1);
+
     if (isLiked) {
         btn.classList.remove('liked');
         icon.style.color = 'rgba(255,255,255,0.6)';
-        likesSpan.textContent = Math.max(0, currentLikes - 1);
-        localStorage.setItem(`comment_likes_${commentId}`, String(Math.max(0, currentLikes - 1)));
-        
-        const { deleteCommentReaction } = await import('../../APIs/socialApi.js');
-        deleteCommentReaction(commentId, currentUserId, authToken).then(() => {
-            localStorage.removeItem(`like_comment_${commentId}_${currentUserId}`);
-        });
+        localStorage.removeItem(`like_comment_${commentId}_${userId}`);
     } else {
         btn.classList.add('liked');
-        icon.style.color = 'var(--magenta, #EC4899)';
-        likesSpan.textContent = currentLikes + 1;
-        localStorage.setItem(`comment_likes_${commentId}`, String(currentLikes + 1));
-        
-        const { addCommentReaction } = await import('../../APIs/socialApi.js');
-        addCommentReaction(commentId, currentUserId, authToken).then(() => {
-            localStorage.setItem(`like_comment_${commentId}_${currentUserId}`, 'true');
-        });
+        icon.style.color = '#EC4899';
+        localStorage.setItem(`like_comment_${commentId}_${userId}`, 'true');
+    }
+    span.textContent = newCount;
+    if (commentItem) commentItem.setAttribute('data-likes', String(newCount));
+
+    
+    try {
+        if (isLiked) {
+            
+            let rId = localStorage.getItem(`reaction_comment_${commentId}_${userId}`) || commentItem?.getAttribute('data-reaction-id') || null;
+            
+            await deleteCommentReaction(commentId, userId, token, rId);
+
+            if (rId) localStorage.removeItem(`reaction_comment_${commentId}_${userId}`);
+     
+            localStorage.removeItem(`like_comment_${commentId}_${userId}`);
+        } else {
+    
+            const data = await addCommentReaction(commentId, userId, token);
+            const returnedId = data?.Id_Reaction || data?.reactionId || data?.id;
+            if (returnedId) {
+                localStorage.setItem(`reaction_comment_${commentId}_${userId}`, String(returnedId));
+                if (commentItem) commentItem.setAttribute('data-reaction-id', String(returnedId));
+            }
+            localStorage.setItem(`like_comment_${commentId}_${userId}`, 'true');
+        }
+    } catch (e) {
+        console.error('Error toggling comment reaction:', e);
+
+        if (isLiked) {
+            btn.classList.add('liked');
+            icon.style.color = '#EC4899';
+            span.textContent = currentLikes;
+            if (commentItem) commentItem.setAttribute('data-likes', String(currentLikes));
+            localStorage.setItem(`like_comment_${commentId}_${userId}`, 'true');
+        } else {
+            btn.classList.remove('liked');
+            icon.style.color = 'rgba(255,255,255,0.6)';
+            span.textContent = currentLikes;
+            if (commentItem) commentItem.setAttribute('data-likes', String(currentLikes));
+            localStorage.removeItem(`like_comment_${commentId}_${userId}`);
+        }
+        showAlert('Error al actualizar la reacción. Intenta de nuevo.', 'danger');
     }
 }
 
+/**
+ * toggleReviewLikeInDetail - similar estrategia para la review (optimistic + reactionId)
+ */
 async function toggleReviewLikeInDetail(reviewId, btn) {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) return showLoginRequiredModal();
+    const token = localStorage.getItem('authToken');
+    if (!token) return showLoginRequiredModal();
     
     const icon = btn.querySelector('i');
-    const likesSpan = btn.querySelector('.review-detail-likes-count');
+    const span = btn.querySelector('.review-detail-likes-count');
     const isLiked = btn.classList.contains('liked');
-    const currentLikes = parseInt(likesSpan.textContent) || 0;
-    const currentUserId = localStorage.getItem('userId');
+    const userId = localStorage.getItem('userId');
+    let count = parseInt(span.textContent) || 0;
 
-    btn.style.transform = 'scale(1.2)';
-    setTimeout(() => { btn.style.transform = ''; }, 200);
-    
+    btn.style.transform = 'scale(1.12)';
+    setTimeout(() => { btn.style.transform = ''; }, 180);
+
     if (isLiked) {
+        // optimistic remove
         btn.classList.remove('liked');
         icon.style.color = 'rgba(255,255,255,0.7)';
-        likesSpan.textContent = Math.max(0, currentLikes - 1);
-        
-        localStorage.removeItem(`like_${reviewId}_${currentUserId}`);
-        localStorage.setItem(`review_likes_${reviewId}`, String(Math.max(0, currentLikes - 1)));
+        const newCount = Math.max(0, count - 1);
+        span.textContent = newCount;
+        localStorage.removeItem(`like_${reviewId}_${userId}`);
+        localStorage.setItem(`review_likes_${reviewId}`, String(newCount));
+
         
         try {
-            const reactionId = localStorage.getItem(`reaction_${reviewId}_${currentUserId}`);
-            await deleteReviewReaction(reviewId, currentUserId, authToken, reactionId);
-            localStorage.removeItem(`reaction_${reviewId}_${currentUserId}`);
-        } catch(e) { console.warn(e); }
-
+            const rId = localStorage.getItem(`reaction_${reviewId}_${userId}`) || null;
+            await deleteReviewReaction(reviewId, userId, token, rId);
+            if (rId) localStorage.removeItem(`reaction_${reviewId}_${userId}`);
+        } catch (e) {
+            console.error('Error removing review reaction:', e);
+            // rollback
+            btn.classList.add('liked');
+            icon.style.color = '#EC4899';
+            span.textContent = count;
+            localStorage.setItem(`like_${reviewId}_${userId}`, 'true');
+            localStorage.setItem(`review_likes_${reviewId}`, String(count));
+            showAlert('Error al quitar like. Intenta de nuevo.', 'danger');
+        }
     } else {
+      
         btn.classList.add('liked');
-        icon.style.color = 'var(--magenta, #EC4899)';
-        likesSpan.textContent = currentLikes + 1;
-        
-        localStorage.setItem(`like_${reviewId}_${currentUserId}`, 'true');
-        localStorage.setItem(`review_likes_${reviewId}`, String(currentLikes + 1));
+        icon.style.color = '#EC4899';
+        const newCount = count + 1;
+        span.textContent = newCount;
+        localStorage.setItem(`like_${reviewId}_${userId}`, 'true');
+        localStorage.setItem(`review_likes_${reviewId}`, String(newCount));
 
         try {
-            const data = await addReviewReaction(reviewId, currentUserId, authToken);
-            if (data?.Id_Reaction) {
-                localStorage.setItem(`reaction_${reviewId}_${currentUserId}`, data.Id_Reaction);
-            }
-        } catch(e) { console.warn(e); }
+            const data = await addReviewReaction(reviewId, userId, token);
+            const returnedId = data?.Id_Reaction || data?.reactionId || data?.id;
+            if (returnedId) localStorage.setItem(`reaction_${reviewId}_${userId}`, String(returnedId));
+        } catch (e) {
+            console.error('Error adding review reaction:', e);
+            btn.classList.remove('liked');
+            icon.style.color = 'rgba(255,255,255,0.7)';
+            span.textContent = count;
+            localStorage.removeItem(`like_${reviewId}_${userId}`);
+            localStorage.setItem(`review_likes_${reviewId}`, String(count));
+            showAlert('Error al dar like. Intenta de nuevo.', 'danger');
+        }
     }
 }
 
-function editCommentInDetail(commentId, reviewId, state) {
-    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
-    const commentTextElement = commentItem?.querySelector('.review-detail-comment-text');
-    if (!commentItem || !commentTextElement) return;
-    if (commentItem.classList.contains('editing')) return;
-    
-    state.originalCommentText = commentTextElement.textContent.trim();
-    state.editingCommentId = commentId;
-    
-    const textarea = document.createElement('textarea');
-    textarea.className = 'comment-text-edit';
-    textarea.id = `comment-text-edit-${commentId}`;
-    textarea.value = state.originalCommentText;
-    textarea.maxLength = 500;
-    textarea.rows = 3;
-    
-    const buttonsContainer = document.createElement('div');
-    buttonsContainer.className = 'comment-edit-buttons';
-    
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'comment-edit-action-btn comment-edit-cancel';
-    cancelBtn.textContent = 'Cancelar';
-    cancelBtn.addEventListener('click', (e) => { e.preventDefault(); cancelEditCommentInDetail(commentId, state); });
-    
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'comment-edit-action-btn comment-edit-confirm';
-    confirmBtn.textContent = 'Confirmar';
-    confirmBtn.addEventListener('click', (e) => { e.preventDefault(); confirmEditCommentInDetail(commentId, reviewId, state); });
-    
-    buttonsContainer.appendChild(cancelBtn);
-    buttonsContainer.appendChild(confirmBtn);
-    
-    commentTextElement.replaceWith(textarea);
-    textarea.parentNode.insertBefore(buttonsContainer, textarea.nextSibling);
-    commentItem.classList.add('editing');
-}
+/**
+ * editCommentInDetail - bloquea edición si data-likes > 0 (evita 409 del backend)
+ */
+function editCommentInDetail(commentId, reviewId = null) {
+    const item = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+    if (!item || item.classList.contains('editing')) return;
 
-function cancelEditCommentInDetail(commentId, state) {
-    const commentItem = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
-    if (!commentItem) return;
-    const textarea = document.getElementById(`comment-text-edit-${commentId}`);
-    const buttonsContainer = commentItem.querySelector('.comment-edit-buttons');
-    
-    if (textarea) {
-        const p = document.createElement('p');
-        p.className = 'review-detail-comment-text';
-        p.textContent = state.originalCommentText;
-        textarea.replaceWith(p);
+    const likesReal = parseInt(item.getAttribute('data-likes') || '0');
+    if (likesReal > 0) {
+        showAlert('No puedes editar este comentario porque ya tiene interacciones.', 'warning');
+        return;
     }
-    if (buttonsContainer) buttonsContainer.remove();
-    commentItem.classList.remove('editing');
-    state.editingCommentId = null;
+
+    const p = document.getElementById(`comment-text-${commentId}`);
+    if (!p) return;
+
+    modalState.originalCommentText = p.textContent;
+    modalState.editingCommentId = commentId;
+
+    const div = document.createElement('div');
+    div.className = 'edit-wrapper';
+    div.innerHTML = `
+        <textarea class="comment-text-edit" id="edit-area-${commentId}" style="width: 100%; background: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 6px;">${modalState.originalCommentText}</textarea>
+        <div class="comment-edit-buttons" style="margin-top: 5px; display: flex; gap: 5px;">
+            <button class="comment-edit-action-btn comment-edit-cancel" style="padding: 4px 8px; border-radius: 4px; border: none; background: #555; color: white; cursor: pointer;">Cancelar</button>
+            <button class="comment-edit-action-btn comment-edit-confirm" style="padding: 4px 8px; border-radius: 4px; border: none; background: #EC4899; color: white; cursor: pointer;">Guardar</button>
+        </div>
+    `;
+
+    p.style.display = 'none';
+    p.parentNode.insertBefore(div, p.nextSibling);
+    item.classList.add('editing');
 }
 
-async function confirmEditCommentInDetail(commentId, reviewId, state) {
-    const textarea = document.getElementById(`comment-text-edit-${commentId}`);
-    if (!textarea) return;
-    const newText = textarea.value.trim();
+function cancelEditCommentInDetail(commentId) {
+    const item = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+    if (!item) return;
+    
+    const wrapper = item.querySelector('.edit-wrapper');
+    if (wrapper) wrapper.remove();
+    
+    const p = document.getElementById(`comment-text-${commentId}`);
+    if (p) p.style.display = 'block';
+    
+    item.classList.remove('editing');
+    modalState.editingCommentId = null;
+}
+
+async function confirmEditCommentInDetail(commentId, reviewId) {
+    const area = document.getElementById(`edit-area-${commentId}`);
+    if (!area) return;
+
+    const newText = area.value.trim();
     if (!newText) return showAlert('El comentario no puede estar vacío', 'warning');
-    
+
+    // Antes de enviar, volvemos a validar que no haya interacciones en DOM (evitar 409)
+    const item = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+    const likesReal = item ? parseInt(item.getAttribute('data-likes') || '0') : 0;
+    if (likesReal > 0) {
+        cancelEditCommentInDetail(commentId);
+        showAlert('No puedes editar este comentario porque ya tiene interacciones.', 'warning');
+        return;
+    }
+
     try {
         await updateComment(commentId, newText);
-        await loadReviewDetailComments(reviewId, null, state);
+        const p = document.getElementById(`comment-text-${commentId}`);
+        if(p) p.textContent = newText;
+        cancelEditCommentInDetail(commentId);
         showAlert('Comentario editado', 'success');
-    } catch (e) { showAlert('Error al editar', 'danger'); }
-    state.editingCommentId = null;
-}
-
-async function deleteCommentInDetail(commentId, reviewId, state) {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) return showLoginRequiredModal();
-    if (!confirm('¿Eliminar comentario?')) return;
-    
-    try {
-        const { deleteComment } = await import('../../APIs/socialApi.js');
-        await deleteComment(commentId, authToken);
-        
-        // Obtener el nuevo número de comentarios
-        const comments = await getCommentsByReview(reviewId);
-        const newCommentsCount = comments.length;
-        
-        // Recargar comentarios en el modal de detalle
-        await loadReviewDetailComments(reviewId, comments, state);
-        
-        // Actualizar contador en el botón de comentarios de la reseña (igual que en deleteModals)
-        // Buscar en todas las páginas (home, perfil, canciones, álbum)
-        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
-        commentBtns.forEach(commentBtn => {
-            const countSpan = commentBtn.querySelector('.review-comments-count');
-            if (countSpan) {
-                countSpan.textContent = newCommentsCount;
-            } else {
-                // Fallback: buscar cualquier span dentro del botón
-                const span = commentBtn.querySelector('span');
-                if (span) {
-                    span.textContent = newCommentsCount;
-                }
-            }
-        });
-        
-        // Actualizar contador en el modal de comentarios si está abierto
-        const commentsModal = document.getElementById('commentsModalOverlay');
-        if (commentsModal && commentsModal.style.display === 'flex') {
-            const commentsCount = document.getElementById('commentsCount');
-            if (commentsCount) {
-                commentsCount.textContent = newCommentsCount;
-            }
-            // Recargar comentarios en el modal de comentarios
-            const { loadCommentsIntoModal } = await import('./commentsModal.js');
-            await loadCommentsIntoModal(reviewId, state);
+    } catch (e) {
+        console.error("Error al editar:", e);
+        if (e.response && e.response.status === 409) {
+             showAlert('No puedes editar este comentario porque ya tiene interacciones.', 'warning');
+        } else {
+             showAlert('Error al editar. Ver consola.', 'danger');
         }
-        
-        showAlert('Comentario eliminado', 'success');
-    } catch (e) { 
-        console.error('Error al eliminar:', e);
-        showAlert('Error al eliminar', 'danger'); 
     }
 }
 
-async function submitReviewDetailComment(state) {
+async function deleteCommentInDetail(commentId, reviewId = null) {
+    if (!confirm('¿Eliminar comentario?')) return;
+    const token = localStorage.getItem('authToken');
+
+    try {
+        await deleteComment(commentId, token);
+        const item = document.querySelector(`.review-detail-comment-item[data-comment-id="${commentId}"]`);
+        if (item) item.remove();
+        
+        const countEl = document.getElementById('reviewDetailCommentsCount');
+        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent)-1);
+        
+        showAlert('Comentario eliminado', 'success');
+    } catch (e) {
+        console.error(e);
+        // Manejo específico si el backend rechaza el borrado
+        if (e.response && e.response.status === 409) {
+             showAlert('No se puede eliminar el comentario debido a sus interacciones.', 'warning');
+        } else {
+             showAlert('Error al eliminar. Ver consola.', 'danger');
+        }
+    }
+}
+
+async function submitReviewDetailComment() {
     const modal = document.getElementById('reviewDetailModalOverlay');
     const reviewId = modal.getAttribute('data-review-id');
     const input = document.getElementById('reviewDetailCommentInput');
     const text = input.value.trim();
     
-    if (!text) return showAlert('Escribe un comentario', 'warning');
+    if (!text) return showAlert('Escribe algo...', 'warning');
     if (!localStorage.getItem('authToken')) return showLoginRequiredModal();
     
     try {
         await createComment(reviewId, text);
         input.value = '';
-        
-        // Obtener el nuevo número de comentarios
-        const comments = await getCommentsByReview(reviewId);
-        const newCommentsCount = comments.length;
-        
-        // Recargar comentarios en el modal de detalle
-        await loadReviewDetailComments(reviewId, comments, state);
-        
-        // Actualizar contador en el botón de comentarios de la reseña (igual que en commentsModal)
-        // Buscar en todas las páginas (home, perfil, canciones, álbum)
-        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
-        commentBtns.forEach(commentBtn => {
-            const countSpan = commentBtn.querySelector('.review-comments-count');
-            if (countSpan) {
-                countSpan.textContent = newCommentsCount;
-            } else {
-                // Fallback: buscar cualquier span dentro del botón
-                const span = commentBtn.querySelector('span');
-                if (span) {
-                    span.textContent = newCommentsCount;
-                }
-            }
-        });
-        
-        // Actualizar contador en el modal de comentarios si está abierto
-        const commentsModal = document.getElementById('commentsModalOverlay');
-        if (commentsModal && commentsModal.style.display === 'flex') {
-            const commentsCount = document.getElementById('commentsCount');
-            if (commentsCount) {
-                commentsCount.textContent = newCommentsCount;
-            }
-        }
-        
-        showAlert('Comentario agregado', 'success');
-    } catch (e) { 
-        console.error('Error al comentar:', e);
-        showAlert('Error al comentar', 'danger'); 
+        await loadReviewDetailComments(reviewId); // Recargar
+        showAlert('Comentario enviado', 'success');
+    } catch (e) {
+        console.error(e);
+        showAlert('Error al enviar', 'danger');
     }
 }
 

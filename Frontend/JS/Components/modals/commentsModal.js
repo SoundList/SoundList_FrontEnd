@@ -311,8 +311,9 @@ export async function loadCommentsIntoModal(reviewId, state) {
         attachCommentActionListeners(state, reviewId);
         
         // Actualizar contador en el botón de comentarios de la reseña usando los comentarios ya cargados
-        const commentBtn = document.querySelector(`.comment-btn[data-review-id="${reviewId}"]`);
-        if (commentBtn) {
+        // Buscar en todas las páginas (home, perfil, canciones, álbum)
+        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
+        commentBtns.forEach(commentBtn => {
             const countSpan = commentBtn.querySelector('.review-comments-count');
             if (countSpan) {
                 countSpan.textContent = comments.length;
@@ -323,7 +324,7 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     span.textContent = comments.length;
                 }
             }
-        }
+        });
     } catch (error) {
         console.error("Error cargando comentarios en modal:", error);
         commentsList.innerHTML = `<div class="comment-empty">Error al cargar comentarios.</div>`;
@@ -361,17 +362,37 @@ async function submitComment(state) {
         await createComment(reviewId, commentText);
         
         commentInput.value = '';
+        
+        // Obtener el nuevo número de comentarios
+        const comments = await getCommentsByReview(reviewId);
+        const newCommentsCount = comments.length;
+        
         // Recargar comentarios para obtener el username del backend
         await loadCommentsIntoModal(reviewId, state);
+        
+        // Actualizar contador en el botón de comentarios de la reseña (igual que en loadCommentsIntoModal)
+        // Buscar en todas las páginas (home, perfil, canciones, álbum)
+        const commentBtns = document.querySelectorAll(`.comment-btn[data-review-id="${reviewId}"]`);
+        commentBtns.forEach(commentBtn => {
+            const countSpan = commentBtn.querySelector('.review-comments-count');
+            if (countSpan) {
+                countSpan.textContent = newCommentsCount;
+            } else {
+                // Fallback: buscar cualquier span dentro del botón
+                const span = commentBtn.querySelector('span');
+                if (span) {
+                    span.textContent = newCommentsCount;
+                }
+            }
+        });
         
         // Actualizar vista detallada si está abierta
         const reviewDetailModal = document.getElementById('reviewDetailModalOverlay');
         if (reviewDetailModal && reviewDetailModal.style.display === 'flex') {
             const { loadReviewDetailComments } = await import('./reviewDetailModal.js');
-            const detailComments = await getCommentsByReview(reviewId);
-            await loadReviewDetailComments(reviewId, detailComments, state);
+            await loadReviewDetailComments(reviewId, comments, state);
             const commentsCount = document.getElementById('reviewDetailCommentsCount');
-            if (commentsCount) commentsCount.textContent = detailComments.length;
+            if (commentsCount) commentsCount.textContent = newCommentsCount;
         }
         
         showAlert('Comentario agregado exitosamente', 'success');

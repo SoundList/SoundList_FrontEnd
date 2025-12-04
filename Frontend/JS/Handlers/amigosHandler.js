@@ -197,7 +197,7 @@ function attachProfileRedirectionListeners(container) {
             const followBtn = card.querySelector('.follow-btn');
             if (followBtn) {
                 const userId = followBtn.getAttribute('data-user-id');
-                if (userId) window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
+                if (userId) window.location.href = `/HTML/Pages/profile.html?userId=${userId}`;
             }
         });
     });
@@ -339,7 +339,7 @@ export function addReviewEventListeners(reviewsListElement, state) {
             if (this.classList.contains('feed-user-info')) {
                 const followBtn = this.parentElement.querySelector('.feed-follow-btn');
                 const userId = followBtn ? followBtn.getAttribute('data-user-id') : null;
-                if (userId) window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
+                if (userId) window.location.href = `/HTML/Pages/profile.html?userId=${userId}`;
                 
             } else {
                 if (window.showReviewDetailModal) window.showReviewDetailModal(id);

@@ -384,7 +384,7 @@ function navigateToContentView(type, id) {
     // Determinar la ruta correcta según dónde estemos
     if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
         // Estamos en Pages/, necesitamos subir un nivel para llegar a HTML/
-        destinationUrl = `../${fileName}?id=${encodedId}`;
+        destinationUrl = `./../${fileName}?id=${encodedId}`;
     } else if (currentPath.includes('/HTML/') || 
                currentFile === 'home.html' || 
                currentFile === 'album.html' || 
@@ -420,7 +420,7 @@ function navigateToProfile(userId) {
     // Determinar la ruta correcta según dónde estemos
     if (currentPath.includes('/Pages/') || currentFile === 'profile.html' || currentFile === 'editProfile.html' || currentFile === 'ajustes.html') {
         // Ya estamos en Pages/, solo necesitamos el nombre del archivo
-        destinationUrl = `profile.html?userId=${encodedUserId}`;
+        destinationUrl = `/HTML/Pages/profile.html?userId=${encodedUserId}`;
     } else if (currentPath.includes('/HTML/') || 
                currentFile === 'home.html' || 
                currentFile === 'album.html' || 

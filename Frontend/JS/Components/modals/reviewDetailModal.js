@@ -180,9 +180,9 @@ export async function showReviewDetailModal(reviewId, state = null) {
                 // CORRECCIÓN: Usamos ruta absoluta desde la raíz (/Frontend/HTML/)
                 // Esto evita que falle si estamos dentro de /Pages/ (como en profile.html)
                 if (contentType === 'album') {
-                    navUrl = `/Frontend/HTML/album.html?id=${contentApiId}`;
+                    navUrl = `/HTML/album.html?id=${contentApiId}`;
                 } else {
-                    navUrl = `/Frontend/HTML/song.html?id=${contentApiId}`;
+                    navUrl = `/HTML/song.html?id=${contentApiId}`;
                 }
         } else {
             console.warn("⚠️ No se encontró ID para redirigir al contenido.");

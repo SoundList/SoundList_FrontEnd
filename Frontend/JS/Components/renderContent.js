@@ -23,7 +23,7 @@ export function createSongListItem(song, index) {
 
     // 3. Acción de navegación segura
     const rowAction = apiId 
-        ? `window.location.href='song.html?id=${apiId}'`
+        ? `window.location.href='/HTML/song.html?id=${apiId}'`
         : `console.warn('Fila sin ID:', '${title}')`;
 
     return `

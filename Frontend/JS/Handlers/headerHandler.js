@@ -977,7 +977,6 @@ function performLogout() {
         // Encontrar el índice de 'HTML' en el path
         const htmlIndex = pathParts.indexOf('HTML');
         if (htmlIndex !== -1) {
-            // Construir ruta absoluta: /SoundList_FrontEnd/Frontend/HTML/login.html
             const baseParts = pathParts.slice(0, htmlIndex + 1);
             loginPath = '/' + baseParts.join('/') + '/login.html';
         } else {

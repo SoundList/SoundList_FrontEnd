@@ -177,7 +177,6 @@ export async function showReviewDetailModal(reviewId, state = null) {
         if (contentApiId) {
                 cursorStyle = 'pointer';
                 
-                // CORRECCIÓN: Usamos ruta absoluta desde la raíz (/Frontend/HTML/)
                 // Esto evita que falle si estamos dentro de /Pages/ (como en profile.html)
                 if (contentType === 'album') {
                     navUrl = `/HTML/album.html?id=${contentApiId}`;
@@ -434,7 +433,7 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                 
                 // Link al perfil con ruta absoluta
                 // Si por alguna razón sigue siendo undefined, ponemos # para no romper la URL
-                const profileUrl = commentUserId ? `/Frontend/HTML/Pages/profile.html?userId=${commentUserId}` : '#';
+                const profileUrl = commentUserId ? `/HTML/Pages/profile.html?userId=${commentUserId}` : '#';
 
                 // Verificar likes desde cache primero (igual que con reseñas)
                 const commentLikesCacheKey = `comment_likes_${commentId}`;

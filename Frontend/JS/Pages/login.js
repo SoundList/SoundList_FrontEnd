@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../APIs/configApi.js";
 // Login Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar si ya hay una sesión activa (token guardado)
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showAlert('Iniciando sesión...', 'info');
         
         // Usar el gateway directamente
-        const GATEWAY_BASE_URL = 'http://localhost:5000';
+        const GATEWAY_BASE_URL = API_BASE_URL;
         const loginEndpoint = `${GATEWAY_BASE_URL}/api/gateway/users/login`;
         
         axios.post(loginEndpoint, {

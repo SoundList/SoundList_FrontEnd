@@ -1,6 +1,8 @@
 // JavaScript/API/apiConfig.js
 // Esta es la URL de tu API Gateway, basada en tu configuración de Docker.
-export const API_BASE_URL = 'http://localhost:5000';
+export const API_BASE_URL = 'https://gateway-1024349878515.us-central1.run.app';
+//export const API_BASE_URL = 'http://localhost:5000';
+//export const API_BASE_URL = 'https://closer-except-background-key.trycloudflare.com';
 
 // Interceptor global para suprimir errores esperados (404, 500) que no deben mostrarse en consola
 // Este interceptor debe ejecutarse ANTES que otros interceptores

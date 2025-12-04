@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../APIs/configApi.js";
 // Ajustes Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar si el usuario está logueado
@@ -292,7 +293,7 @@ function customConfirmAsync(message) {
 
     async function updateUserEmail(userId, newEmail, confirmEmail) {
         const PORTS = [
-            { url: 'http://localhost:5000', isGateway: true },
+            { url: API_BASE_URL, isGateway: true },
             { url: 'http://localhost:8003', isGateway: false }
         ];
 
@@ -341,7 +342,7 @@ function customConfirmAsync(message) {
 
     async function updateUserPassword(userId, oldPassword, newPassword) {
         const PORTS = [
-            { url: 'http://localhost:5000', isGateway: true },
+            { url: API_BASE_URL, isGateway: true },
             { url: 'http://localhost:8003', isGateway: false }
         ];
 

@@ -79,7 +79,7 @@ export async function showReviewDetailModal(reviewId, state = null) {
         
         let username = 'Usuario'; // Mantener "Usuario" genérico, el badge indicará si está eliminado
         // Detectar la ruta correcta según la página actual
-        const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+        const isProfilePage = window.location.pathname.includes('/HTML/Pages/profile.html');
         const defaultAvatarPath = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
         let avatar = defaultAvatarPath;
         const reviewUserId = review.UserId || review.userId;
@@ -427,7 +427,7 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                 const commentUserId = comment.userId || comment.UserId || comment.IdUser || comment.idUser || comment.Id_User;
 
                 // Detectar la ruta correcta según la página actual
-                const isProfilePage = window.location.pathname.includes('/Pages/profile.html');
+                const isProfilePage = window.location.pathname.includes('/HTML/Pages/profile.html');
                 const commentDefaultAvatar = isProfilePage ? '../../Assets/default-avatar.png' : '../Assets/default-avatar.png';
                 const avatar = comment.avatar || comment.UserProfilePicUrl || commentDefaultAvatar;
                 

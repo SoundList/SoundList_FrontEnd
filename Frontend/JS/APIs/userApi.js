@@ -1,7 +1,7 @@
+import { API_BASE_URL } from './configApi.js';
 (function() {
 
     // 1. CONSTANTES CENTRALIZADAS (Para evitar errores de URL)
-    const API_BASE_URL = "http://localhost:5000";
     const GATEWAY_USERS = `${API_BASE_URL}/api/gateway/users`; 
 
     

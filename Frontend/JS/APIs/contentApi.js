@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './configApi.js'; // Asegúrate de que apunte a 'http://localhost:5000'
+import { API_BASE_URL } from './configApi.js'; 
 
 // ===========================================
 //  HELPER DE AUTENTICACIÓN

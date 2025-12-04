@@ -14,7 +14,7 @@ function getAuthHeaders() {
 }
 
 // Fallback URL (Solo para desarrollo si el Gateway falla)
-const SOCIAL_DIRECT_URL = 'http://localhost:8002';
+const SOCIAL_DIRECT_URL = 'https://social-service-1024349878515.us-central1.run.app';
 
 // =========================================================
 // 📡 INTERCEPTORES AXIOS (Manejo de errores global)
@@ -440,7 +440,7 @@ export async function getCommentById(commentId) {
         
         // Si falla, intentamos ruta directa (Fallback)
         // Ajusta el puerto si tu servicio de comentarios corre en otro (ej: 8002)
-        const responseDirect = await axios.get(`http://localhost:8002/api/comments/${commentId}`, {
+        const responseDirect = await axios.get(`https://social-service-1024349878515.us-central1.run.app/api/comments/${commentId}`, {
             validateStatus: status => status === 200 || status === 404
         });
         

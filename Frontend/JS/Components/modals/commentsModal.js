@@ -77,7 +77,7 @@ export async function showCommentsModal(reviewId, state) {
                         if (window.userApi && window.userApi.getUserProfile) {
                             return await window.userApi.getUserProfile(userId);
                         }
-                        const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                        const API_BASE_URL = window.API_BASE_URL || 'https://gateway-1024349878515.us-central1.run.app';
                         const token = localStorage.getItem('authToken');
                         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                         const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);
@@ -134,7 +134,7 @@ export async function loadCommentsIntoModal(reviewId, state) {
                     return await window.userApi.getUserProfile(userId);
                 }
                 // Fallback: usar axios directamente con el endpoint correcto
-                const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
+                const API_BASE_URL = window.API_BASE_URL || 'https://gateway-1024349878515.us-central1.run.app';
                 const token = localStorage.getItem('authToken');
                 const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const axiosInstance = window.axios || (typeof axios !== 'undefined' ? axios : null);

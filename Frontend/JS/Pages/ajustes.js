@@ -294,7 +294,7 @@ function customConfirmAsync(message) {
     async function updateUserEmail(userId, newEmail, confirmEmail) {
         const PORTS = [
             { url: API_BASE_URL, isGateway: true },
-            { url: 'http://localhost:8003', isGateway: false }
+            { url: 'https://user-service-1024349878515.us-central1.run.app', isGateway: false }
         ];
 
         for (let i = 0; i < PORTS.length; i++) {
@@ -343,7 +343,7 @@ function customConfirmAsync(message) {
     async function updateUserPassword(userId, oldPassword, newPassword) {
         const PORTS = [
             { url: API_BASE_URL, isGateway: true },
-            { url: 'http://localhost:8003', isGateway: false }
+            { url: 'https://user-service-1024349878515.us-central1.run.app', isGateway: false }
         ];
 
         for (let i = 0; i < PORTS.length; i++) {

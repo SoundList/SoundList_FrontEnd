@@ -26,7 +26,7 @@ let notificationConnection = null;
 let notifications = []; // Array para almacenar notificaciones
 let userReviewsState = {}; // Estado para polling
 let notificationPollingInterval = null; // Intervalo de polling
-
+const socialAPIURL = "https://social-service-1024349878515.us-central1.run.app"; // Cambia esto si es necesario
 function getLoginPath() {
     const currentPath = window.location.pathname || '';
     const currentFile = currentPath.split('/').pop();
@@ -1376,7 +1376,7 @@ function initializeSignalR() {
     if (!userId) return;
 
     // Asegúrate de que este puerto sea el correcto (8002 o 5000 según tu setup)
-    const hubUrl = 'http://localhost:8002/notificationHub'; 
+    const hubUrl = `${socialAPIURL}/notificationHub`; 
 
     if (!notificationConnection) {
         notificationConnection = new signalR.HubConnectionBuilder()
@@ -2096,7 +2096,7 @@ async function openReviewModal(review, user, content) {
     
     if (reviewId) {
         try {
-            const response = await fetch(`http://localhost:5000/api/gateway/reviews/${reviewId}/reactions/count`);
+            const response = await fetch(`${API_BASE_URL}/api/gateway/reviews/${reviewId}/reactions/count`);
             if (response.ok) {
                 const count = await response.json();
                 const likeSpan = document.getElementById('modalLikeCount');
@@ -2113,7 +2113,7 @@ async function openReviewModal(review, user, content) {
 // Fallback para obtener comentarios si no tienes el import
 async function fetchCommentsFallback(reviewId) {
     try {
-        const response = await fetch(`http://localhost:5000/api/gateway/comments/review/${reviewId}`);
+        const response = await fetch(`${API_BASE_URL}/api/gateway/comments/review/${reviewId}`);
         if (!response.ok) return [];
         return await response.json();
     } catch (e) {

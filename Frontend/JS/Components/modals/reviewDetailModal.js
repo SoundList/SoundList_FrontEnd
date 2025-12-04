@@ -433,7 +433,7 @@ export async function loadReviewDetailComments(reviewId, comments, state) {
                 
                 // Link al perfil con ruta absoluta
                 // Si por alguna razón sigue siendo undefined, ponemos # para no romper la URL
-                const profileUrl = commentUserId ? `Frontend/HTML/Pages/profile.html?userId=${commentUserId}` : '#';
+                const profileUrl = commentUserId ? `/HTML/Pages/profile.html?userId=${commentUserId}` : '#';
 
                 // Verificar likes desde cache primero (igual que con reseñas)
                 const commentLikesCacheKey = `comment_likes_${commentId}`;

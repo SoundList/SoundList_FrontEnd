@@ -518,7 +518,7 @@ function renderReviews(reviews) {
                 const apiId = musicDiv.getAttribute('data-api-id');
                 
                 if (apiId && apiId !== 'null' && apiId !== '') {
-                    window.location.href = `/Frontend/HTML/${type}.html?id=${apiId}`;
+                    window.location.href = `/HTML/${type}.html?id=${apiId}`;
                 } else {
                     // Si no cargó el ID aún, fallback a modal
                     if (window.showReviewDetailModal) window.showReviewDetailModal(reviewId, modalsState);
@@ -528,7 +528,7 @@ function renderReviews(reviews) {
                 // ZONA USUARIO -> PERFIL
                 const userId = userDiv.getAttribute('data-user-id');
                 if (userId) {
-                    window.location.href = `/Frontend/HTML/Pages/profile.html?userId=${userId}`;
+                    window.location.href = `/HTML/Pages/profile.html?userId=${userId}`;
                 }
 
             } else {
